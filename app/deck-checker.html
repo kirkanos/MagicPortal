@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTG Sammlung – Deck-Checker</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="topnav">
+  <span class="brand">🎴 MTG Sammlung</span>
+  <a href="index.html">Grid</a>
+  <a href="binder.html">Binder</a>
+  <a href="carousel.html">Karussell</a>
+  <a href="dashboard.html">Statistik</a>
+  <a href="deck-checker.html" class="active">Deck-Checker</a>
+</nav>
+
+<main>
+  <div class="deck-checker-layout">
+    <div>
+      <label for="decklist-input" style="color:#9a9cae;font-size:0.9rem;">Deckliste einfügen (Format: <code>1 Lightning Bolt</code> oder <code>4x Brainstorm</code>, eine Karte pro Zeile)</label>
+      <textarea id="decklist-input" placeholder="1 Lightning Bolt
+4 Brainstorm
+1 Black Lotus"></textarea>
+      <button id="check-btn">Deck prüfen</button>
+    </div>
+    <div>
+      <div class="deck-summary" id="deck-summary"></div>
+      <div style="overflow-x:auto;">
+        <table class="deck-table" id="deck-table">
+          <thead><tr><th>Karte</th><th>Benötigt</th><th>Im Besitz</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-text">Lade Sammlung...</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<script src="js/shared.js"></script>
+<script src="js/deck-checker.js"></script>
+</body>
+</html>

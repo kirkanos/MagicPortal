@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTG Sammlung – Statistik</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="topnav">
+  <span class="brand">🎴 MTG Sammlung</span>
+  <a href="index.html">Grid</a>
+  <a href="binder.html">Binder</a>
+  <a href="carousel.html">Karussell</a>
+  <a href="dashboard.html" class="active">Statistik</a>
+  <a href="deck-checker.html">Deck-Checker</a>
+</nav>
+
+<main>
+  <div class="stats-bar" id="stats-bar"></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Rarität</h3><canvas id="chart-rarity"></canvas></div>
+    <div class="chart-card"><h3>Farben</h3><canvas id="chart-color"></canvas></div>
+    <div class="chart-card"><h3>Top 10 Sets nach Kartenanzahl</h3><canvas id="chart-sets"></canvas></div>
+    <div class="chart-card"><h3>Normal vs. Foil vs. Etched</h3><canvas id="chart-foil"></canvas></div>
+    <div class="chart-card"><h3>Kaufwert pro Monat (kumulativ)</h3><canvas id="chart-value-time"></canvas></div>
+    <div class="chart-card"><h3>Top 10 wertvollste Karten (Kaufpreis)</h3><canvas id="chart-top-value"></canvas></div>
+  </div>
+</main>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-text">Lade Sammlung...</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

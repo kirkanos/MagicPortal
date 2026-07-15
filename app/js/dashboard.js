@@ -1,0 +1,136 @@
+const PALETTE = {
+  W: '#f0e6c8', U: '#4fa8e0', B: '#8a8a94', R: '#e05656', G: '#4dbb6a', C: '#c9a24d',
+  common: '#9a9cae', uncommon: '#c9c9d4', rare: '#c9a24d', mythic: '#e0743d', special: '#7b5cff',
+};
+
+Chart.defaults.color = '#9a9cae';
+Chart.defaults.borderColor = '#2f3140';
+Chart.defaults.font.family = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+function renderStats(cards) {
+  const totalUnique = cards.length;
+  const totalQty = cards.reduce((s, c) => s + c.quantity, 0);
+  const totalValue = cards.reduce((s, c) => s + c.purchasePrice * c.quantity, 0);
+  const marketValue = cards.reduce((s, c) => s + (c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0) * c.quantity, 0);
+  const avgValue = totalQty ? totalValue / totalQty : 0;
+
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-tile"><div class="stat-value">${totalUnique}</div><div class="stat-label">Einzelkarten</div></div>
+    <div class="stat-tile"><div class="stat-value">${totalQty}</div><div class="stat-label">Karten gesamt</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">Kaufwert</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">Marktwert</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(avgValue, 'EUR')}</div><div class="stat-label">Ø Wert / Karte</div></div>
+  `;
+}
+
+function countBy(cards, fn) {
+  const map = {};
+  cards.forEach((c) => {
+    const key = fn(c);
+    const qty = c.quantity;
+    map[key] = (map[key] || 0) + qty;
+  });
+  return map;
+}
+
+function renderRarityChart(cards) {
+  const map = countBy(cards, (c) => c.rarity || 'unbekannt');
+  const labels = Object.keys(map);
+  new Chart(document.getElementById('chart-rarity'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: labels.map((l) => map[l]), backgroundColor: labels.map((l) => PALETTE[l] || '#7b5cff') }] },
+    options: { plugins: { legend: { position: 'bottom' } } },
+  });
+}
+
+function renderColorChart(cards) {
+  const map = { W: 0, U: 0, B: 0, R: 0, G: 0, Mehrfarbig: 0, Farblos: 0 };
+  cards.forEach((c) => {
+    const colors = (c.scryfall && c.scryfall.colors) || [];
+    if (colors.length === 0) map['Farblos'] += c.quantity;
+    else if (colors.length > 1) map['Mehrfarbig'] += c.quantity;
+    else map[colors[0]] += c.quantity;
+  });
+  const labels = Object.keys(map).filter((l) => map[l] > 0);
+  new Chart(document.getElementById('chart-color'), {
+    type: 'bar',
+    data: {
+      labels: labels.map((l) => COLOR_NAME(l)),
+      datasets: [{ label: 'Karten', data: labels.map((l) => map[l]), backgroundColor: labels.map((l) => PALETTE[l] || '#7b5cff') }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+}
+
+function COLOR_NAME(code) {
+  return { W: 'Weiß', U: 'Blau', B: 'Schwarz', R: 'Rot', G: 'Grün' }[code] || code;
+}
+
+function renderSetsChart(cards) {
+  const map = countBy(cards, (c) => c.setCode);
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  new Chart(document.getElementById('chart-sets'), {
+    type: 'bar',
+    data: { labels: sorted.map((e) => e[0]), datasets: [{ label: 'Karten', data: sorted.map((e) => e[1]), backgroundColor: '#c9a24d' }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
+  });
+}
+
+function renderFoilChart(cards) {
+  const map = countBy(cards, (c) => c.foil);
+  const labels = Object.keys(map);
+  new Chart(document.getElementById('chart-foil'), {
+    type: 'pie',
+    data: { labels, datasets: [{ data: labels.map((l) => map[l]), backgroundColor: ['#9a9cae', '#c9a24d', '#7b5cff'] }] },
+    options: { plugins: { legend: { position: 'bottom' } } },
+  });
+}
+
+function renderValueOverTimeChart(cards) {
+  const withDates = cards.filter((c) => c.added && c.added.length >= 7).slice();
+  withDates.sort((a, b) => a.added.localeCompare(b.added));
+  const monthly = {};
+  withDates.forEach((c) => {
+    const month = c.added.slice(0, 7);
+    monthly[month] = (monthly[month] || 0) + c.purchasePrice * c.quantity;
+  });
+  const months = Object.keys(monthly).sort();
+  let cumulative = 0;
+  const data = months.map((m) => (cumulative += monthly[m]));
+  new Chart(document.getElementById('chart-value-time'), {
+    type: 'line',
+    data: { labels: months, datasets: [{ label: 'Kumulativer Kaufwert (EUR)', data, borderColor: '#7b5cff', backgroundColor: 'rgba(123,92,255,0.15)', fill: true, tension: 0.25 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+}
+
+function renderTopValueChart(cards) {
+  const sorted = cards.slice().sort((a, b) => b.purchasePrice * b.quantity - a.purchasePrice * a.quantity).slice(0, 10);
+  new Chart(document.getElementById('chart-top-value'), {
+    type: 'bar',
+    data: { labels: sorted.map((c) => c.name), datasets: [{ label: 'Kaufwert (EUR)', data: sorted.map((c) => c.purchasePrice * c.quantity), backgroundColor: '#e05656' }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
+  });
+}
+
+async function init() {
+  showLoading('Lade CSV-Datei...');
+  let cards;
+  try {
+    cards = await loadCollection(updateLoadingProgress);
+  } catch (e) {
+    hideLoading();
+    document.querySelector('main').innerHTML = `<p style="color:#e05656">Fehler: ${escapeHTML(e.message)}</p>`;
+    return;
+  }
+  hideLoading();
+  renderStats(cards);
+  renderRarityChart(cards);
+  renderColorChart(cards);
+  renderSetsChart(cards);
+  renderFoilChart(cards);
+  renderValueOverTimeChart(cards);
+  renderTopValueChart(cards);
+}
+
+init();

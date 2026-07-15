@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTG Sammlung – Binder</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="topnav">
+  <span class="brand">🎴 MTG Sammlung</span>
+  <a href="index.html">Grid</a>
+  <a href="binder.html" class="active">Binder</a>
+  <a href="carousel.html">Karussell</a>
+  <a href="dashboard.html">Statistik</a>
+  <a href="deck-checker.html">Deck-Checker</a>
+</nav>
+
+<main>
+  <div class="controls">
+    <input type="text" id="search" placeholder="Kartenname suchen...">
+    <select id="filter-set"><option value="">Alle Sets</option></select>
+    <select id="sort-by">
+      <option value="name">Sortieren: Name</option>
+      <option value="set">Sortieren: Set</option>
+      <option value="price-desc">Sortieren: Preis (hoch-niedrig)</option>
+    </select>
+  </div>
+
+  <div class="binder-page" id="binder-page"></div>
+  <div class="binder-controls">
+    <button id="prev-page">← Vorherige Seite</button>
+    <span class="binder-page-label" id="page-label"></span>
+    <button id="next-page">Nächste Seite →</button>
+  </div>
+</main>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-text">Lade Sammlung...</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<div class="modal-overlay" id="card-modal">
+  <div class="modal-body">
+    <span class="modal-close">&times;</span>
+  </div>
+</div>
+
+<script src="js/shared.js"></script>
+<script src="js/binder.js"></script>
+</body>
+</html>

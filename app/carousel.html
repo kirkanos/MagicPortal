@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTG Sammlung – Karussell</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="topnav">
+  <span class="brand">🎴 MTG Sammlung</span>
+  <a href="index.html">Grid</a>
+  <a href="binder.html">Binder</a>
+  <a href="carousel.html" class="active">Karussell</a>
+  <a href="dashboard.html">Statistik</a>
+  <a href="deck-checker.html">Deck-Checker</a>
+</nav>
+
+<main>
+  <div class="controls">
+    <input type="text" id="search" placeholder="Kartenname suchen...">
+    <select id="filter-set"><option value="">Alle Sets</option></select>
+  </div>
+
+  <div class="carousel-wrap">
+    <div class="carousel-card" id="carousel-card"></div>
+    <div class="carousel-controls">
+      <button id="prev-card">← (←)</button>
+      <span class="carousel-index" id="carousel-index"></span>
+      <button id="next-card">(→) →</button>
+    </div>
+  </div>
+</main>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-text">Lade Sammlung...</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<script src="js/shared.js"></script>
+<script src="js/carousel.js"></script>
+</body>
+</html>

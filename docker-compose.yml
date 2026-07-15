@@ -1,0 +1,10 @@
+services:
+  mtg-portal:
+    build: .
+    container_name: mtg-portal
+    ports:
+      - "8080:80"
+    volumes:
+      # Karte einfach ersetzen ohne das Image neu zu bauen:
+      - ./app/data/ManaBox_Collection.csv:/usr/share/nginx/html/data/ManaBox_Collection.csv:ro
+    restart: unless-stopped
