@@ -141,8 +141,16 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .card-tile .thumb .qty-badge {
   position: absolute; bottom: 6px; right: 6px;
   background: rgba(0,0,0,0.7);
-  color: var(--text); font-size: 0.7rem;
+  color: var(--text); font-size: 0.7rem; font-weight: 600;
   padding: 2px 6px; border-radius: 4px;
+}
+.card-tile .thumb .lang-flags {
+  position: absolute; bottom: 6px; left: 6px;
+  display: flex; gap: 2px; flex-wrap: wrap; max-width: 70%;
+}
+.card-tile .thumb .lang-flag {
+  background: rgba(0,0,0,0.7); border-radius: 4px; padding: 1px 4px;
+  font-size: 0.72rem; line-height: 1.3;
 }
 .card-tile .no-image {
   color: var(--text-dim); font-size: 0.75rem; text-align: center; padding: 10px;
@@ -184,6 +192,22 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .modal-details dl { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; margin: 0; }
 .modal-details dt { color: var(--text-dim); font-size: 0.85rem; }
 .modal-details dd { margin: 0; font-size: 0.9rem; }
+
+/* Per-language detail table in card modal */
+.lang-table-title { font-size: 0.9rem; color: var(--text-dim); margin: 18px 0 8px; }
+.lang-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.lang-table th, .lang-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.lang-table th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; }
+.lang-table th.num, .lang-table td.num { text-align: right; }
+.lang-foil {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  color: #1b1400; background: linear-gradient(135deg, #ffd76a, #b57bff);
+  padding: 1px 5px; border-radius: 4px; margin-left: 4px;
+}
+
+/* Single-card detail overlay (opened from the edition overlay) */
+.eo-card-overlay { z-index: 260; }
+.eo-detail-missing { color: var(--red); font-size: 0.9rem; margin: 16px 0 0; }
 
 /* Binder view */
 .binder-page {
@@ -247,8 +271,117 @@ table.deck-table th { color: var(--text-dim); font-weight: 600; }
 .status-missing { color: var(--red); font-weight: 600; }
 .deck-summary { display: flex; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
 
+/* Editions overview */
+.section-hint {
+  color: var(--text-dim); font-size: 0.85rem; line-height: 1.5; margin: 0 0 16px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: var(--radius); padding: 12px 16px; max-width: 900px;
+}
+.section-hint strong { color: var(--text); }
+
+.edition-table {
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.92rem;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.edition-table th, .edition-table td { padding: 13px 16px; text-align: left; vertical-align: middle; }
+.edition-table thead th {
+  color: var(--text-dim); font-weight: 600; font-size: 0.78rem; letter-spacing: 0.03em; text-transform: uppercase;
+  background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 56px; z-index: 10;
+}
+.edition-table th.num, .edition-table td.num { text-align: right; }
+.edition-table .dim { color: var(--text-dim); font-weight: 400; }
+.edition-table td.money { font-weight: 600; color: var(--accent); white-space: nowrap; }
+
+.edition-row { cursor: pointer; transition: background 0.12s ease; }
+.edition-row td { border-bottom: 1px solid var(--border); }
+.edition-row:nth-of-type(4n+1) td { background: rgba(255,255,255,0.015); }
+.edition-row:hover td { background: var(--bg-card); }
+.edition-row--empty .edition-title { color: var(--text-dim); font-weight: 500; }
+.edition-row--empty .edition-icon { opacity: 0.5; }
+
+.edition-name { display: flex; align-items: center; gap: 10px; }
+.edition-icon { font-size: 1rem; opacity: 0.85; }
+.edition-title { font-weight: 600; font-size: 0.98rem; }
+.edition-code {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--text-dim); background: var(--bg); border: 1px solid var(--border);
+  padding: 2px 7px; border-radius: 4px; white-space: nowrap;
+}
+
+.progress-cell { min-width: 170px; }
+.progress-head { font-size: 0.9rem; white-space: nowrap; margin-bottom: 6px; }
+.progress-head strong { font-size: 1.05rem; }
+.progress-pct { color: var(--accent); font-weight: 700; margin-left: 6px; }
+.progress-sub { font-size: 0.78rem; }
+.progress-track { height: 7px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 4px; }
+
+/* Edition overlay (all cards with images) */
+.edition-overlay { align-items: stretch; justify-content: center; padding: 24px; }
+.eo-panel {
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+  width: 100%; max-width: 1200px; margin: auto; display: flex; flex-direction: column;
+  max-height: calc(100vh - 48px); overflow: hidden;
+}
+.eo-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+}
+.eo-header h2 { margin: 0 0 6px; font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+.eo-sub { color: var(--text-dim); font-size: 0.9rem; }
+.eo-sub strong { color: var(--text); }
+.eo-sub-missing { color: var(--red); }
+.eo-close { position: static; font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+.eo-toolbar { display: flex; gap: 8px; padding: 12px 22px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.eo-radio {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 12px; font-size: 0.85rem; color: var(--text-dim);
+}
+.eo-radio:has(input:checked) { border-color: var(--accent); color: var(--text); }
+.eo-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px;
+  padding: 20px 22px; overflow-y: auto;
+}
+.eo-loading, .eo-empty { grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 40px 0; }
+
+.eo-card { display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
+.eo-thumb {
+  position: relative; aspect-ratio: 63/88; border-radius: 8px; overflow: hidden;
+  background: #0d0e14; border: 1px solid var(--border);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.eo-card:hover .eo-thumb { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.45); border-color: var(--accent); }
+.eo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.eo-thumb .no-image { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-dim); font-size: 0.72rem; }
+.eo-cardname { font-size: 0.74rem; line-height: 1.25; color: var(--text-dim); }
+.eo-num { color: var(--text); font-weight: 600; }
+
+.eo-card.missing .eo-thumb img { filter: grayscale(1) brightness(0.4); }
+.eo-card.missing .eo-thumb { opacity: 0.85; }
+.eo-card.missing .eo-cardname { opacity: 0.6; }
+
+.eo-qty {
+  position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.75);
+  color: var(--text); font-size: 0.72rem; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+}
+.eo-check {
+  position: absolute; top: 6px; left: 6px; background: var(--green); color: #0b1a0e;
+  width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; font-weight: 700;
+}
+.eo-missing-tag {
+  position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.7); color: var(--text-dim);
+  font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+
 @media (max-width: 800px) {
   .deck-checker-layout { grid-template-columns: 1fr; }
-  .carousel-card { flex-direction: column; }
-  .binder-page { grid-template-columns: repeat(2, 1fr); }
+  .edition-table { font-size: 0.82rem; }
+  .edition-table th, .edition-table td { padding: 9px 8px; }
+  .edition-table thead th { top: 0; position: static; }
+  .progress-cell { min-width: 110px; }
+  .edition-overlay { padding: 0; }
+  .eo-panel { max-height: 100vh; border-radius: 0; }
+  .eo-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; padding: 14px; }
 }

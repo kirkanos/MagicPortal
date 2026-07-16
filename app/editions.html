@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTG Sammlung – Editionen</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="topnav">
+  <span class="brand">🎴 MTG Sammlung</span>
+  <a href="index.html">Karten</a>
+  <a href="editions.html" class="active">Editionen</a>
+  <a href="dashboard.html">Statistik</a>
+  <a href="deck-checker.html">Deck-Checker</a>
+</nav>
+
+<main>
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Edition suchen (Name oder Code)...">
+    <select id="filter-owned">
+      <option value="all">Alle Editionen</option>
+      <option value="owned">Nur gesammelte</option>
+      <option value="missing">Nur noch nicht gesammelte</option>
+    </select>
+    <select id="sort-by">
+      <option value="value-desc">Sortieren: Marktwert (hoch → niedrig)</option>
+      <option value="name">Sortieren: Name (A → Z)</option>
+      <option value="owned-desc">Sortieren: meiste verschiedene Karten</option>
+      <option value="missing-desc">Sortieren: meiste fehlende Karten</option>
+      <option value="complete-desc">Sortieren: höchste Vollständigkeit</option>
+      <option value="dupes-desc">Sortieren: meiste mehrfach vorhandene</option>
+    </select>
+  </div>
+
+  <p class="section-hint">
+    „Verschiedene Karten" zählen jede Karte einmal – dieselbe Karte in mehreren Sprachen oder Ausführungen (Foil) wird
+    <strong>nicht</strong> doppelt gezählt. <strong>Klick auf eine Edition</strong> öffnet alle Karten mit Bild –
+    besessene Karten normal, fehlende ausgegraut. <strong>Klick auf eine Karte</strong> zeigt Details und Preise.
+    Es werden auch Editionen angezeigt, aus denen du noch <strong>keine</strong> Karte besitzt (Haupt-Set-Typen wie
+    Core, Erweiterung, Masters, Commander).
+  </p>
+
+  <div class="result-count" id="result-count"></div>
+  <div id="editions-table"></div>
+</main>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-text">Lade Sammlung...</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<div class="modal-overlay edition-overlay" id="edition-overlay">
+  <div class="eo-panel">
+    <div class="eo-header">
+      <div class="eo-header-text">
+        <h2><span id="eo-title"></span> <span class="edition-code" id="eo-code"></span></h2>
+        <div class="eo-sub" id="eo-sub"></div>
+      </div>
+      <span class="modal-close eo-close">&times;</span>
+    </div>
+    <div class="eo-toolbar">
+      <label class="eo-radio"><input type="radio" name="eo-filter" value="all" checked> Alle</label>
+      <label class="eo-radio"><input type="radio" name="eo-filter" value="owned"> Nur besessene</label>
+      <label class="eo-radio"><input type="radio" name="eo-filter" value="missing"> Nur fehlende</label>
+    </div>
+    <div class="eo-grid" id="eo-grid"></div>
+  </div>
+</div>
+
+<div class="modal-overlay eo-card-overlay" id="eo-card-overlay">
+  <div class="modal-body">
+    <span class="modal-close eo-card-close">&times;</span>
+  </div>
+</div>
+
+<script src="js/shared.js"></script>
+<script src="js/editions.js"></script>
+</body>
+</html>

@@ -1,8 +1,53 @@
 let allCards = [];
+let allGroups = [];
 let filteredCards = [];
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic', special: 'Special' };
 const COLOR_LABEL = { W: 'Weiß', U: 'Blau', B: 'Schwarz', R: 'Rot', G: 'Grün' };
+
+/* ---- Group language/finish variants of the same card into one tile ---- */
+function groupKey(c) {
+  return c.setCode + '|' + (c.collectorNumber ? 'n:' + c.collectorNumber : 'name:' + c.name.toLowerCase());
+}
+
+function pickRep(variants) {
+  return (
+    variants.find((v) => v.scryfall && v.scryfall.image && (v.language || '').toLowerCase() === 'en') ||
+    variants.find((v) => v.scryfall && v.scryfall.image) ||
+    variants[0]
+  );
+}
+
+function groupCards(rows) {
+  const map = {};
+  rows.forEach((c) => {
+    const k = groupKey(c);
+    if (!map[k]) {
+      map[k] = { key: k, name: c.name, setCode: c.setCode, setName: c.setName, collectorNumber: c.collectorNumber, variants: [] };
+    }
+    map[k].variants.push(c);
+  });
+
+  return Object.values(map).map((g) => {
+    g.rep = pickRep(g.variants);
+    g.rarity = g.rep.rarity;
+    g.totalQty = g.variants.reduce((a, v) => a + v.quantity, 0);
+    g.anyFoil = g.variants.some((v) => v.foil && v.foil !== 'normal');
+    const seen = new Set();
+    g.langs = [];
+    g.variants.forEach((v) => {
+      const l = (v.language || '').toLowerCase();
+      if (l && !seen.has(l)) {
+        seen.add(l);
+        g.langs.push(l);
+      }
+    });
+    g.marketPrice = g.rep.scryfall && g.rep.scryfall.priceEur ? parseFloat(g.rep.scryfall.priceEur) : 0;
+    g.purchasePrice = g.rep.purchasePrice;
+    g.added = g.variants.reduce((m, v) => ((v.added || '') > m ? v.added || '' : m), '');
+    return g;
+  });
+}
 
 function populateFilters(cards) {
   const setSel = document.getElementById('filter-set');
@@ -44,17 +89,16 @@ function populateFilters(cards) {
   }
 }
 
-function renderStats(cards) {
-  const totalUnique = cards.length;
-  const totalQty = cards.reduce((s, c) => s + c.quantity, 0);
-  const totalValue = cards.reduce((s, c) => s + c.purchasePrice * c.quantity, 0);
-  const marketValue = cards.reduce((s, c) => {
+function renderStats(rows, distinctCount) {
+  const totalQty = rows.reduce((s, c) => s + c.quantity, 0);
+  const totalValue = rows.reduce((s, c) => s + c.purchasePrice * c.quantity, 0);
+  const marketValue = rows.reduce((s, c) => {
     const p = c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0;
     return s + p * c.quantity;
   }, 0);
 
   document.getElementById('stats-bar').innerHTML = `
-    <div class="stat-tile"><div class="stat-value">${totalUnique}</div><div class="stat-label">Einzelkarten</div></div>
+    <div class="stat-tile"><div class="stat-value">${distinctCount}</div><div class="stat-label">Verschiedene Karten</div></div>
     <div class="stat-tile"><div class="stat-value">${totalQty}</div><div class="stat-label">Karten gesamt</div></div>
     <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">Kaufwert</div></div>
     <div class="stat-tile"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">Marktwert (Scryfall)</div></div>
@@ -82,7 +126,8 @@ function applyFilters() {
     return true;
   });
 
-  filteredCards.sort((a, b) => {
+  const groups = groupCards(filteredCards);
+  groups.sort((a, b) => {
     switch (sortBy) {
       case 'set':
         return a.setCode.localeCompare(b.setCode) || a.name.localeCompare(b.name);
@@ -91,7 +136,7 @@ function applyFilters() {
       case 'price-asc':
         return a.purchasePrice - b.purchasePrice;
       case 'rarity':
-        return a.rarity.localeCompare(b.rarity);
+        return (a.rarity || '').localeCompare(b.rarity || '');
       case 'added-desc':
         return (b.added || '').localeCompare(a.added || '');
       default:
@@ -99,32 +144,40 @@ function applyFilters() {
     }
   });
 
-  document.getElementById('result-count').textContent = `${filteredCards.length} von ${allCards.length} Karten`;
-  renderGrid(filteredCards);
+  document.getElementById('result-count').textContent = `${groups.length} von ${allGroups.length} Karten`;
+  renderGrid(groups);
 }
 
-function renderGrid(cards) {
+function renderGrid(groups) {
   const grid = document.getElementById('card-grid');
   grid.innerHTML = '';
   const fragment = document.createDocumentFragment();
-  cards.forEach((card) => {
-    const img = cardImage(card, 'small');
+
+  groups.forEach((g) => {
+    const img = cardImage(g.rep, 'small');
+    const flags = g.langs
+      .map((l) => `<span class="lang-flag" title="${escapeHTML(l.toUpperCase())}">${languageFlag(l) || escapeHTML(l.toUpperCase())}</span>`)
+      .join('');
+
     const tile = document.createElement('div');
     tile.className = 'card-tile';
     tile.innerHTML = `
       <div class="thumb">
-        ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(card.name)}">` : '<div class="no-image">Kein Bild</div>'}
-        ${card.foil !== 'normal' ? `<span class="foil-badge">${escapeHTML(card.foil)}</span>` : ''}
-        ${card.quantity > 1 ? `<span class="qty-badge">×${card.quantity}</span>` : ''}
+        ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(g.name)}">` : '<div class="no-image">Kein Bild</div>'}
+        ${g.anyFoil ? '<span class="foil-badge">Foil</span>' : ''}
+        ${g.totalQty > 1 ? `<span class="qty-badge">×${g.totalQty}</span>` : ''}
+        ${flags ? `<div class="lang-flags">${flags}</div>` : ''}
       </div>
       <div class="info">
-        <div class="name">${escapeHTML(card.name)}</div>
-        <div class="meta"><span>${escapeHTML(card.setCode)}</span><span>${formatCurrency(card.purchasePrice, card.currency)}</span></div>
+        <div class="name">${escapeHTML(g.name)}</div>
+        <div class="meta"><span>${escapeHTML(g.setCode)}</span><span>${g.marketPrice ? formatCurrency(g.marketPrice, 'EUR') : '–'}</span></div>
       </div>
     `;
-    tile.addEventListener('click', () => openCardModal(card));
+
+    tile.addEventListener('click', () => openCardModal(cardGroupModalHTML(g)));
     fragment.appendChild(tile);
   });
+
   grid.appendChild(fragment);
 }
 
@@ -139,8 +192,9 @@ async function init() {
     return;
   }
   hideLoading();
+  allGroups = groupCards(allCards);
   populateFilters(allCards);
-  renderStats(allCards);
+  renderStats(allCards, allGroups.length);
   applyFilters();
 
   document.getElementById('search').addEventListener('input', debounce(applyFilters, 150));

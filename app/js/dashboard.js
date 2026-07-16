@@ -76,6 +76,32 @@ function renderSetsChart(cards) {
   });
 }
 
+function renderSetValueChart(cards) {
+  const map = {};
+  const names = {};
+  cards.forEach((c) => {
+    const price = c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0;
+    map[c.setCode] = (map[c.setCode] || 0) + price * c.quantity;
+    if (!names[c.setCode]) names[c.setCode] = c.setName || c.setCode;
+  });
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  new Chart(document.getElementById('chart-set-value'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map((e) => names[e[0]] || e[0]),
+      datasets: [{ label: 'Marktwert (EUR)', data: sorted.map((e) => Math.round(e[1] * 100) / 100), backgroundColor: '#4dbb6a' }],
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.parsed.x, 'EUR') } },
+      },
+      scales: { x: { beginAtZero: true } },
+    },
+  });
+}
+
 function renderFoilChart(cards) {
   const map = countBy(cards, (c) => c.foil);
   const labels = Object.keys(map);
@@ -128,6 +154,7 @@ async function init() {
   renderRarityChart(cards);
   renderColorChart(cards);
   renderSetsChart(cards);
+  renderSetValueChart(cards);
   renderFoilChart(cards);
   renderValueOverTimeChart(cards);
   renderTopValueChart(cards);
