@@ -200,12 +200,20 @@ function renderTable() {
 let overlayCards = [];
 let overlayEdition = null;
 
+function cardMarketPrice(c) {
+  if (c.priceEur) return parseFloat(c.priceEur);
+  if (c.priceEurFoil) return parseFloat(c.priceEurFoil);
+  return 0;
+}
+
 function overlayCounts() {
   let owned = 0;
+  let missingValue = 0;
   overlayCards.forEach((c) => {
     if (overlayEdition.ownedByNumber[normNumber(c.collectorNumber)]) owned++;
+    else missingValue += cardMarketPrice(c);
   });
-  return { owned, total: overlayCards.length, missing: overlayCards.length - owned };
+  return { owned, total: overlayCards.length, missing: overlayCards.length - owned, missingValue };
 }
 
 function renderOverlayGrid() {
@@ -270,10 +278,11 @@ async function openEditionOverlay(edition) {
     return;
   }
 
-  const { owned, total, missing } = overlayCounts();
+  const { owned, total, missing, missingValue } = overlayCounts();
   const pct = total ? Math.round((owned / total) * 100) : 0;
   document.getElementById('eo-sub').innerHTML =
-    `<strong>${owned}</strong> von <strong>${total}</strong> Karten (${pct}%) · <span class="eo-sub-missing">${missing} fehlen</span>`;
+    `<strong>${owned}</strong> von <strong>${total}</strong> Karten (${pct}%) · ` +
+    `<span class="eo-sub-missing">${missing} fehlen für ${formatCurrency(missingValue, 'EUR')}</span>`;
   renderOverlayGrid();
 }
 

@@ -1,6 +1,7 @@
 /* Shared utilities: CSV loading, Scryfall enrichment/cache, common helpers. */
 
-const CSV_URL = 'data/ManaBox_Collection.csv';
+const CSV_UPLOAD_URL = 'upload/collection.csv';
+const CSV_FALLBACK_URL = 'data/ManaBox_Collection.csv';
 const SCRYFALL_CACHE_KEY = 'mtg_scryfall_cache_v1';
 const SCRYFALL_BATCH_SIZE = 75;
 const SCRYFALL_DELAY_MS = 110;
@@ -35,10 +36,41 @@ function parseCSVLine(line) {
   return values;
 }
 
+/* Prefers an uploaded collection (upload/collection.csv), falling back to the
+   bundled sample CSV when none was uploaded yet. */
+async function loadCSVText() {
+  try {
+    const up = await fetch(CSV_UPLOAD_URL, { cache: 'no-store' });
+    if (up.ok) {
+      const text = await up.text();
+      if (text.trim().length) return text;
+    }
+  } catch (e) {
+    /* upload not reachable (e.g. plain static host) - use fallback */
+  }
+  const res = await fetch(CSV_FALLBACK_URL);
+  if (!res.ok) throw new Error('Sammlung konnte nicht geladen werden (' + CSV_FALLBACK_URL + ')');
+  return res.text();
+}
+
+/* Uploads a CSV file to the server's upload folder via WebDAV PUT. */
+async function uploadCollectionCSV(file) {
+  const res = await fetch(CSV_UPLOAD_URL, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'text/csv' },
+    body: file,
+  });
+  if (!res.ok) throw new Error('Upload fehlgeschlagen (HTTP ' + res.status + ')');
+}
+
+/* Removes the uploaded collection so the bundled sample is used again. */
+async function resetCollectionCSV() {
+  const res = await fetch(CSV_UPLOAD_URL, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) throw new Error('Zurücksetzen fehlgeschlagen (HTTP ' + res.status + ')');
+}
+
 async function loadCSV() {
-  const res = await fetch(CSV_URL);
-  if (!res.ok) throw new Error('Could not load ' + CSV_URL);
-  const text = await res.text();
+  const text = await loadCSVText();
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
   const headers = parseCSVLine(lines[0]).map((h) => h.trim().toLowerCase());
   return lines.slice(1).map((line) => {
@@ -340,4 +372,45 @@ function openCardModal(html) {
   if (!overlay) return;
   overlay.querySelector('.modal-body').innerHTML = '<span class="modal-close">&times;</span>' + html;
   overlay.classList.add('open');
+}
+
+/* Wires the CSV upload/reset buttons in the top navigation (present on every page). */
+function initCollectionUpload() {
+  const uploadInput = document.getElementById('csv-upload');
+  if (uploadInput) {
+    uploadInput.addEventListener('change', async () => {
+      const file = uploadInput.files[0];
+      if (!file) return;
+      showLoading(`Lade „${file.name}" hoch...`);
+      try {
+        await uploadCollectionCSV(file);
+        location.reload();
+      } catch (e) {
+        hideLoading();
+        uploadInput.value = '';
+        alert('CSV-Upload fehlgeschlagen: ' + e.message);
+      }
+    });
+  }
+
+  const resetBtn = document.getElementById('csv-reset');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', async () => {
+      if (!confirm('Hochgeladene Sammlung entfernen und zur mitgelieferten CSV zurückkehren?')) return;
+      showLoading('Setze Sammlung zurück...');
+      try {
+        await resetCollectionCSV();
+        location.reload();
+      } catch (e) {
+        hideLoading();
+        alert('Zurücksetzen fehlgeschlagen: ' + e.message);
+      }
+    });
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initCollectionUpload);
+} else {
+  initCollectionUpload();
 }

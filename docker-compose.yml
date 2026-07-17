@@ -7,4 +7,6 @@ services:
     volumes:
       # Karte einfach ersetzen ohne das Image neu zu bauen:
       - ./app/data/ManaBox_Collection.csv:/usr/share/nginx/html/data/ManaBox_Collection.csv:ro
+      # Hochgeladene CSVs landen hier (per WebDAV PUT aus der Weboberflaeche):
+      - ./upload:/usr/share/nginx/html/upload
     restart: unless-stopped
