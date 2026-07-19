@@ -8,7 +8,7 @@ const API = 'api';
    Shape per card matches what the pages expect (top-level fields + `scryfall`). */
 async function loadCollection() {
   const res = await fetch(API + '/collection', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Sammlung konnte nicht geladen werden (HTTP ' + res.status + ')');
+  if (!res.ok) throw new Error(t('Sammlung konnte nicht geladen werden', 'Could not load collection') + ' (HTTP ' + res.status + ')');
   return res.json();
 }
 
@@ -54,16 +54,16 @@ async function checkUploadAuth(pw) {
 /* Uploads a CSV file; the backend upserts (adds new, updates existing) cards. */
 async function uploadCollectionCSV(file) {
   const res = await fetch(API + '/upload', { method: 'POST', headers: uploadHeaders({ 'Content-Type': 'text/csv' }), body: file });
-  if (res.status === 403) throw new Error('Falsches oder fehlendes Passwort');
-  if (!res.ok) throw new Error('Upload fehlgeschlagen (HTTP ' + res.status + ')');
+  if (res.status === 403) throw new Error(t('Falsches oder fehlendes Passwort', 'Wrong or missing password'));
+  if (!res.ok) throw new Error(t('Upload fehlgeschlagen', 'Upload failed') + ' (HTTP ' + res.status + ')');
   return res.json();
 }
 
 /* Clears the collection and re-imports the bundled sample. */
 async function resetCollectionCSV() {
   const res = await fetch(API + '/reset', { method: 'POST', headers: uploadHeaders() });
-  if (res.status === 403) throw new Error('Falsches oder fehlendes Passwort');
-  if (!res.ok) throw new Error('Zurücksetzen fehlgeschlagen (HTTP ' + res.status + ')');
+  if (res.status === 403) throw new Error(t('Falsches oder fehlendes Passwort', 'Wrong or missing password'));
+  if (!res.ok) throw new Error(t('Leeren fehlgeschlagen', 'Clearing failed') + ' (HTTP ' + res.status + ')');
 }
 
 function cardImage(card, size) {
@@ -153,13 +153,13 @@ function cardGroupModalHTML(group) {
         <p class="modal-type">${escapeHTML((rep.scryfall && rep.scryfall.typeLine) || '')}</p>
         <dl>
           <dt>Set</dt><dd>${escapeHTML(group.setName)} (${escapeHTML(group.setCode)} #${escapeHTML(group.collectorNumber)})</dd>
-          <dt>Rarität</dt><dd>${escapeHTML(rep.rarity)}</dd>
-          <dt>Exemplare gesamt</dt><dd>${group.totalQty}</dd>
-          <dt>Marktwert gesamt</dt><dd>${formatCurrency(totalMarket, 'EUR')}</dd>
+          <dt>${t('Rarität', 'Rarity')}</dt><dd>${escapeHTML(rep.rarity)}</dd>
+          <dt>${t('Exemplare gesamt', 'Copies total')}</dt><dd>${group.totalQty}</dd>
+          <dt>${t('Marktwert gesamt', 'Total market value')}</dt><dd>${formatCurrency(totalMarket, 'EUR')}</dd>
         </dl>
-        <h3 class="lang-table-title">Sprachen in deiner Sammlung</h3>
+        <h3 class="lang-table-title">${t('Sprachen in deiner Sammlung', 'Languages in your collection')}</h3>
         <table class="lang-table">
-          <thead><tr><th>Sprache</th><th class="num">Preis (Scryfall)</th><th class="num">Anzahl</th><th>Hinzugefügt</th></tr></thead>
+          <thead><tr><th>${t('Sprache', 'Language')}</th><th class="num">${t('Preis (Scryfall)', 'Price (Scryfall)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -194,24 +194,24 @@ function openCardModal(html) {
 /* ---- Sync status + manual refresh ---- */
 
 function relTime(iso) {
-  if (!iso) return 'noch nie';
-  const t = new Date(iso).getTime();
-  if (isNaN(t)) return 'unbekannt';
-  const s = Math.max(0, (Date.now() - t) / 1000);
-  if (s < 60) return 'gerade eben';
+  if (!iso) return t('noch nie', 'never');
+  const ms = new Date(iso).getTime();
+  if (isNaN(ms)) return t('unbekannt', 'unknown');
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  if (s < 60) return t('gerade eben', 'just now');
   const m = Math.floor(s / 60);
-  if (m < 60) return `vor ${m} Min.`;
+  if (m < 60) return t(`vor ${m} Min.`, `${m} min ago`);
   const h = Math.floor(m / 60);
-  if (h < 24) return `vor ${h} Std.`;
+  if (h < 24) return t(`vor ${h} Std.`, `${h} h ago`);
   const d = Math.floor(h / 24);
-  return `vor ${d} Tag${d > 1 ? 'en' : ''}`;
+  return t(`vor ${d} Tag${d > 1 ? 'en' : ''}`, `${d} day${d > 1 ? 's' : ''} ago`);
 }
 
 let syncStatusTimer = null;
 
 async function fetchSyncStatus() {
   const res = await fetch(API + '/status', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Status nicht verfügbar');
+  if (!res.ok) throw new Error(t('Status nicht verfügbar', 'Status unavailable'));
   return res.json();
 }
 
@@ -227,17 +227,18 @@ async function refreshSyncStatus() {
     return;
   }
   if (st.running) {
-    el.innerHTML = '<span class="sync-spin">⟳</span> Aktualisiere Kartendaten…';
+    el.innerHTML = '<span class="sync-spin">⟳</span> ' + t('Aktualisiere Kartendaten…', 'Updating card data…');
     el.classList.add('busy');
     clearTimeout(syncStatusTimer);
     syncStatusTimer = setTimeout(refreshSyncStatus, 3000);
   } else {
     el.classList.remove('busy');
-    const label = 'Kartendaten: ' + relTime(st.cardsSyncedAt);
-    el.textContent = st.lastError ? label + ' (Fehler)' : label;
+    const label = t('Kartendaten: ', 'Card data: ') + relTime(st.cardsSyncedAt);
+    el.textContent = st.lastError ? label + t(' (Fehler)', ' (error)') : label;
     el.title = st.lastError
-      ? 'Letzter Sync-Fehler: ' + st.lastError
-      : `Sammlung: ${st.collectionCount} · Karten-DB: ${st.cardCount} · Sets: ${st.setCount}`;
+      ? t('Letzter Sync-Fehler: ', 'Last sync error: ') + st.lastError
+      : t(`Sammlung: ${st.collectionCount} · Karten-DB: ${st.cardCount} · Sets: ${st.setCount}`,
+          `Collection: ${st.collectionCount} · Card DB: ${st.cardCount} · Sets: ${st.setCount}`);
   }
   return st;
 }
@@ -270,7 +271,7 @@ function initCollectionUpload() {
       try {
         const res = await fetch(API + '/sync', { method: 'POST', headers: uploadHeaders() });
         if (res.status === 403) {
-          alert('Falsches oder fehlendes Passwort');
+          alert(t('Falsches oder fehlendes Passwort', 'Wrong or missing password'));
           return;
         }
         // Poll until the sync finishes, then reload to show fresh data.
@@ -285,7 +286,7 @@ function initCollectionUpload() {
         };
         setTimeout(wait, 3000);
       } catch (e) {
-        alert('Aktualisierung fehlgeschlagen: ' + e.message);
+        alert(t('Aktualisierung fehlgeschlagen: ', 'Refresh failed: ') + e.message);
       } finally {
         syncBtn.disabled = false;
       }
@@ -295,31 +296,31 @@ function initCollectionUpload() {
   uploadInput.addEventListener('change', async () => {
     const file = uploadInput.files[0];
     if (!file) return;
-    showLoading(`Lade „${file.name}" hoch...`);
+    showLoading(t(`Lade „${file.name}" hoch...`, `Uploading “${file.name}”...`));
     try {
       await uploadCollectionCSV(file);
       location.reload();
     } catch (e) {
       hideLoading();
       uploadInput.value = '';
-      alert('CSV-Upload fehlgeschlagen: ' + e.message);
+      alert(t('CSV-Upload fehlgeschlagen: ', 'CSV upload failed: ') + e.message);
     }
   });
 
   resetBtn.addEventListener('click', async () => {
-    if (!confirm('Gesamte Sammlung leeren? Danach kannst du eine neue CSV hochladen.')) return;
-    showLoading('Setze Sammlung zurück...');
+    if (!confirm(t('Gesamte Sammlung leeren? Danach kannst du eine neue CSV hochladen.', 'Clear the entire collection? You can upload a new CSV afterwards.'))) return;
+    showLoading(t('Leere Sammlung...', 'Clearing collection...'));
     try {
       await resetCollectionCSV();
       location.reload();
     } catch (e) {
       hideLoading();
-      alert('Zurücksetzen fehlgeschlagen: ' + e.message);
+      alert(t('Leeren fehlgeschlagen: ', 'Clearing failed: ') + e.message);
     }
   });
 
   unlockBtn.addEventListener('click', async () => {
-    const pw = prompt('Passwort für den CSV-Upload:');
+    const pw = prompt(t('Passwort für den CSV-Upload:', 'Password for CSV upload:'));
     if (pw == null || pw === '') return;
     try {
       if (await checkUploadAuth(pw)) {
@@ -327,10 +328,10 @@ function initCollectionUpload() {
         sessionStorage.setItem(UPLOAD_PW_KEY, pw);
         setUnlocked(true);
       } else {
-        alert('Falsches Passwort.');
+        alert(t('Falsches Passwort.', 'Wrong password.'));
       }
     } catch (e) {
-      alert('Passwortprüfung fehlgeschlagen: ' + e.message);
+      alert(t('Passwortprüfung fehlgeschlagen: ', 'Password check failed: ') + e.message);
     }
   });
 

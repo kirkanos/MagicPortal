@@ -3,7 +3,9 @@ let allGroups = [];
 let filteredCards = [];
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic', special: 'Special' };
-const COLOR_LABEL = { W: 'Weiß', U: 'Blau', B: 'Schwarz', R: 'Rot', G: 'Grün' };
+const COLOR_LABEL = {
+  W: t('Weiß', 'White'), U: t('Blau', 'Blue'), B: t('Schwarz', 'Black'), R: t('Rot', 'Red'), G: t('Grün', 'Green'),
+};
 
 /* ---- Group language/finish variants of the same card into one tile ---- */
 function groupKey(c) {
@@ -84,7 +86,7 @@ function populateFilters(cards) {
   if (cards.some((c) => c.scryfall && (!c.scryfall.colors || c.scryfall.colors.length === 0))) {
     const opt = document.createElement('option');
     opt.value = 'C';
-    opt.textContent = 'Farblos';
+    opt.textContent = t('Farblos', 'Colorless');
     colorSel.appendChild(opt);
   }
 }
@@ -98,10 +100,10 @@ function renderStats(rows, distinctCount) {
   }, 0);
 
   document.getElementById('stats-bar').innerHTML = `
-    <div class="stat-tile"><div class="stat-value">${distinctCount}</div><div class="stat-label">Verschiedene Karten</div></div>
-    <div class="stat-tile"><div class="stat-value">${totalQty}</div><div class="stat-label">Karten gesamt</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">Kaufwert</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">Marktwert (Scryfall)</div></div>
+    <div class="stat-tile"><div class="stat-value">${distinctCount}</div><div class="stat-label">${t('Verschiedene Karten', 'Distinct cards')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${totalQty}</div><div class="stat-label">${t('Karten gesamt', 'Cards total')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">${t('Kaufwert', 'Purchase value')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">${t('Marktwert (Scryfall)', 'Market value (Scryfall)')}</div></div>
   `;
 }
 
@@ -144,7 +146,7 @@ function applyFilters() {
     }
   });
 
-  document.getElementById('result-count').textContent = `${groups.length} von ${allGroups.length} Karten`;
+  document.getElementById('result-count').textContent = `${groups.length} ${t('von', 'of')} ${allGroups.length} ${t('Karten', 'cards')}`;
   renderGrid(groups);
 }
 
@@ -183,12 +185,12 @@ function renderGrid(groups) {
 
 async function init() {
   initModal();
-  showLoading('Lade Sammlung...');
+  showLoading(t('Lade Sammlung...', 'Loading collection...'));
   try {
     allCards = await loadCollection(updateLoadingProgress);
   } catch (e) {
     hideLoading();
-    document.getElementById('card-grid').innerHTML = `<p style="color:#e05656">Fehler beim Laden der Sammlung: ${escapeHTML(e.message)}</p>`;
+    document.getElementById('card-grid').innerHTML = `<p style="color:#e05656">${t('Fehler beim Laden der Sammlung', 'Error loading collection')}: ${escapeHTML(e.message)}</p>`;
     return;
   }
   hideLoading();
@@ -217,9 +219,11 @@ function renderEmptyState() {
   document.getElementById('card-grid').innerHTML = `
     <div class="empty-state">
       <img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="empty-logo">
-      <h2>Deine Sammlung ist noch leer</h2>
-      <p>Lade oben rechts über <strong>„🔒 Upload freischalten"</strong> → <strong>„⬆ CSV hochladen"</strong>
-         deinen ManaBox-CSV-Export hoch, um deine Karten hier zu sehen.</p>
+      <h2>${t('Deine Sammlung ist noch leer', 'Your collection is empty')}</h2>
+      <p>${t(
+        'Lade oben rechts über <strong>„🔒 Upload freischalten"</strong> → <strong>„⬆ CSV hochladen"</strong> deinen ManaBox-CSV-Export hoch, um deine Karten hier zu sehen.',
+        'Upload your ManaBox CSV export via <strong>“🔒 Unlock upload”</strong> → <strong>“⬆ Upload CSV”</strong> in the top right to see your cards here.'
+      )}</p>
     </div>`;
 }
 

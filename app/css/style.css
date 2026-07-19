@@ -125,6 +125,12 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .controls select { flex: 1; min-width: 130px; }
 
 .nav-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.lang-toggle {
+  cursor: pointer; font-family: inherit; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;
+  border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim);
+  border-radius: 6px; padding: 6px 10px; min-width: 38px;
+}
+.lang-toggle:hover { border-color: var(--accent); color: var(--text); }
 .sync-status { font-size: 0.78rem; color: var(--text-dim); white-space: nowrap; }
 .sync-status.busy { color: var(--accent); }
 .sync-spin { display: inline-block; animation: sync-rot 1s linear infinite; }

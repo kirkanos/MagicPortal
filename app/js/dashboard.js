@@ -15,11 +15,11 @@ function renderStats(cards) {
   const avgValue = totalQty ? totalValue / totalQty : 0;
 
   document.getElementById('stats-bar').innerHTML = `
-    <div class="stat-tile"><div class="stat-value">${totalUnique}</div><div class="stat-label">Einzelkarten</div></div>
-    <div class="stat-tile"><div class="stat-value">${totalQty}</div><div class="stat-label">Karten gesamt</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">Kaufwert</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">Marktwert</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(avgValue, 'EUR')}</div><div class="stat-label">Ø Wert / Karte</div></div>
+    <div class="stat-tile"><div class="stat-value">${totalUnique}</div><div class="stat-label">${t('Einzelkarten', 'Card entries')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${totalQty}</div><div class="stat-label">${t('Karten gesamt', 'Cards total')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">${t('Kaufwert', 'Purchase value')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">${t('Marktwert', 'Market value')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(avgValue, 'EUR')}</div><div class="stat-label">${t('Ø Wert / Karte', 'Avg. value / card')}</div></div>
   `;
 }
 
@@ -34,7 +34,7 @@ function countBy(cards, fn) {
 }
 
 function renderRarityChart(cards) {
-  const map = countBy(cards, (c) => c.rarity || 'unbekannt');
+  const map = countBy(cards, (c) => c.rarity || t('unbekannt', 'unknown'));
   const labels = Object.keys(map);
   new Chart(document.getElementById('chart-rarity'), {
     type: 'doughnut',
@@ -56,14 +56,17 @@ function renderColorChart(cards) {
     type: 'bar',
     data: {
       labels: labels.map((l) => COLOR_NAME(l)),
-      datasets: [{ label: 'Karten', data: labels.map((l) => map[l]), backgroundColor: labels.map((l) => PALETTE[l] || '#7b5cff') }],
+      datasets: [{ label: t('Karten', 'Cards'), data: labels.map((l) => map[l]), backgroundColor: labels.map((l) => PALETTE[l] || '#7b5cff') }],
     },
     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
 }
 
 function COLOR_NAME(code) {
-  return { W: 'Weiß', U: 'Blau', B: 'Schwarz', R: 'Rot', G: 'Grün' }[code] || code;
+  return {
+    W: t('Weiß', 'White'), U: t('Blau', 'Blue'), B: t('Schwarz', 'Black'), R: t('Rot', 'Red'), G: t('Grün', 'Green'),
+    Mehrfarbig: t('Mehrfarbig', 'Multicolor'), Farblos: t('Farblos', 'Colorless'),
+  }[code] || code;
 }
 
 function renderSetsChart(cards) {
@@ -71,7 +74,7 @@ function renderSetsChart(cards) {
   const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10);
   new Chart(document.getElementById('chart-sets'), {
     type: 'bar',
-    data: { labels: sorted.map((e) => e[0]), datasets: [{ label: 'Karten', data: sorted.map((e) => e[1]), backgroundColor: '#c9a24d' }] },
+    data: { labels: sorted.map((e) => e[0]), datasets: [{ label: t('Karten', 'Cards'), data: sorted.map((e) => e[1]), backgroundColor: '#c9a24d' }] },
     options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
   });
 }
@@ -89,7 +92,7 @@ function renderSetValueChart(cards) {
     type: 'bar',
     data: {
       labels: sorted.map((e) => names[e[0]] || e[0]),
-      datasets: [{ label: 'Marktwert (EUR)', data: sorted.map((e) => Math.round(e[1] * 100) / 100), backgroundColor: '#4dbb6a' }],
+      datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: sorted.map((e) => Math.round(e[1] * 100) / 100), backgroundColor: '#4dbb6a' }],
     },
     options: {
       indexAxis: 'y',
@@ -125,7 +128,7 @@ function renderValueOverTimeChart(cards) {
   const data = months.map((m) => (cumulative += monthly[m]));
   new Chart(document.getElementById('chart-value-time'), {
     type: 'line',
-    data: { labels: months, datasets: [{ label: 'Kumulativer Kaufwert (EUR)', data, borderColor: '#7b5cff', backgroundColor: 'rgba(123,92,255,0.15)', fill: true, tension: 0.25 }] },
+    data: { labels: months, datasets: [{ label: t('Kumulativer Kaufwert (EUR)', 'Cumulative purchase value (EUR)'), data, borderColor: '#7b5cff', backgroundColor: 'rgba(123,92,255,0.15)', fill: true, tension: 0.25 }] },
     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
 }
@@ -134,19 +137,19 @@ function renderTopValueChart(cards) {
   const sorted = cards.slice().sort((a, b) => b.purchasePrice * b.quantity - a.purchasePrice * a.quantity).slice(0, 10);
   new Chart(document.getElementById('chart-top-value'), {
     type: 'bar',
-    data: { labels: sorted.map((c) => c.name), datasets: [{ label: 'Kaufwert (EUR)', data: sorted.map((c) => c.purchasePrice * c.quantity), backgroundColor: '#e05656' }] },
+    data: { labels: sorted.map((c) => c.name), datasets: [{ label: t('Kaufwert (EUR)', 'Purchase value (EUR)'), data: sorted.map((c) => c.purchasePrice * c.quantity), backgroundColor: '#e05656' }] },
     options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
   });
 }
 
 async function init() {
-  showLoading('Lade Sammlung...');
+  showLoading(t('Lade Sammlung...', 'Loading collection...'));
   let cards;
   try {
     cards = await loadCollection(updateLoadingProgress);
   } catch (e) {
     hideLoading();
-    document.querySelector('main').innerHTML = `<p style="color:#e05656">Fehler: ${escapeHTML(e.message)}</p>`;
+    document.querySelector('main').innerHTML = `<p style="color:#e05656">${t('Fehler', 'Error')}: ${escapeHTML(e.message)}</p>`;
     return;
   }
   hideLoading();

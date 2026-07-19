@@ -41,9 +41,9 @@ function checkDeck() {
   entries.forEach((entry) => {
     const owned = ownedByName.get(entry.name.toLowerCase()) || 0;
     let status, statusClass;
-    if (owned >= entry.qty) { status = 'Vollständig'; statusClass = 'status-owned'; ownedCount++; }
-    else if (owned > 0) { status = 'Teilweise'; statusClass = 'status-partial'; partialCount++; }
-    else { status = 'Fehlt'; statusClass = 'status-missing'; missingCount++; }
+    if (owned >= entry.qty) { status = t('Vollständig', 'Complete'); statusClass = 'status-owned'; ownedCount++; }
+    else if (owned > 0) { status = t('Teilweise', 'Partial'); statusClass = 'status-partial'; partialCount++; }
+    else { status = t('Fehlt', 'Missing'); statusClass = 'status-missing'; missingCount++; }
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -55,21 +55,21 @@ function checkDeck() {
     tbody.appendChild(tr);
   });
 
-  document.getElementById('deck-summary').innerHTML = entries.length === 0 ? '<p style="color:#9a9cae">Keine gültigen Zeilen erkannt.</p>' : `
-    <div class="stat-tile"><div class="stat-value">${entries.length}</div><div class="stat-label">Kartenzeilen</div></div>
-    <div class="stat-tile"><div class="stat-value" style="color:#4dbb6a">${ownedCount}</div><div class="stat-label">Vollständig</div></div>
-    <div class="stat-tile"><div class="stat-value" style="color:#c9a24d">${partialCount}</div><div class="stat-label">Teilweise</div></div>
-    <div class="stat-tile"><div class="stat-value" style="color:#e05656">${missingCount}</div><div class="stat-label">Fehlt</div></div>
+  document.getElementById('deck-summary').innerHTML = entries.length === 0 ? `<p style="color:#9a9cae">${t('Keine gültigen Zeilen erkannt.', 'No valid lines detected.')}</p>` : `
+    <div class="stat-tile"><div class="stat-value">${entries.length}</div><div class="stat-label">${t('Kartenzeilen', 'Card lines')}</div></div>
+    <div class="stat-tile"><div class="stat-value" style="color:#4dbb6a">${ownedCount}</div><div class="stat-label">${t('Vollständig', 'Complete')}</div></div>
+    <div class="stat-tile"><div class="stat-value" style="color:#c9a24d">${partialCount}</div><div class="stat-label">${t('Teilweise', 'Partial')}</div></div>
+    <div class="stat-tile"><div class="stat-value" style="color:#e05656">${missingCount}</div><div class="stat-label">${t('Fehlt', 'Missing')}</div></div>
   `;
 }
 
 async function init() {
-  showLoading('Lade Sammlung...');
+  showLoading(t('Lade Sammlung...', 'Loading collection...'));
   try {
     collectionCards = await loadCollection(updateLoadingProgress);
   } catch (e) {
     hideLoading();
-    document.querySelector('main').innerHTML = `<p style="color:#e05656">Fehler: ${escapeHTML(e.message)}</p>`;
+    document.querySelector('main').innerHTML = `<p style="color:#e05656">${t('Fehler', 'Error')}: ${escapeHTML(e.message)}</p>`;
     return;
   }
   hideLoading();

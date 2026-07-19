@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MTG Sammlung – Editionen</title>
+<title data-en="MTG Collection – Editions">MTG Sammlung – Editionen</title>
 <link rel="icon" type="image/svg+xml" href="images/magic-portal-icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
@@ -13,18 +13,19 @@
 <body>
 <nav class="topnav">
   <a href="index.html" class="brand"><img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="brand-logo"></a>
-  <a href="index.html">Karten</a>
-  <a href="editions.html" class="active">Editionen</a>
-  <a href="dashboard.html">Statistik</a>
-  <a href="deck-checker.html">Deck-Checker</a>
+  <a href="index.html" data-en="Cards">Karten</a>
+  <a href="editions.html" class="active" data-en="Editions">Editionen</a>
+  <a href="dashboard.html" data-en="Statistics">Statistik</a>
+  <a href="deck-checker.html" data-en="Deck Checker">Deck-Checker</a>
   <span class="nav-actions">
-    <span class="sync-status" id="sync-status" title="Letzte Aktualisierung der Kartendaten/Preise"></span>
-    <button type="button" id="csv-sync" class="reset-btn" title="Kartendaten & Preise jetzt von Scryfall aktualisieren" style="display:none">🔄 Aktualisieren</button>
-    <button type="button" id="csv-unlock" class="reset-btn" title="Upload mit Passwort freischalten" style="display:none">🔒 Upload freischalten</button>
-    <label class="upload-btn" id="csv-upload-label" title="Eigene ManaBox-CSV hochladen" style="display:none">⬆ CSV hochladen
+    <button type="button" id="lang-toggle" class="lang-toggle" aria-label="Sprache" data-en-aria="Language"></button>
+    <span class="sync-status" id="sync-status" title="Letzte Aktualisierung der Kartendaten/Preise" data-en-title="Last update of card data / prices"></span>
+    <button type="button" id="csv-sync" class="reset-btn" title="Kartendaten & Preise jetzt von Scryfall aktualisieren" data-en-title="Refresh card data & prices from Scryfall now" data-en="🔄 Refresh" style="display:none">🔄 Aktualisieren</button>
+    <button type="button" id="csv-unlock" class="reset-btn" title="Upload mit Passwort freischalten" data-en-title="Unlock upload with password" data-en="🔒 Unlock upload" style="display:none">🔒 Upload freischalten</button>
+    <label class="upload-btn" id="csv-upload-label" title="Eigene ManaBox-CSV hochladen" data-en-title="Upload your own ManaBox CSV" style="display:none"><span data-en="⬆ Upload CSV">⬆ CSV hochladen</span>
       <input type="file" id="csv-upload" accept=".csv,text/csv" hidden>
     </label>
-    <button type="button" id="csv-reset" class="reset-btn" title="Gesamte Sammlung leeren" style="display:none">Leeren</button>
+    <button type="button" id="csv-reset" class="reset-btn" title="Gesamte Sammlung leeren" data-en-title="Clear the entire collection" data-en="Clear" style="display:none">Leeren</button>
   </span>
 </nav>
 
@@ -32,23 +33,23 @@
   <div class="stats-bar" id="stats-bar"></div>
 
   <div class="controls">
-    <input type="text" id="search" placeholder="Edition suchen (Name oder Code)...">
+    <input type="text" id="search" placeholder="Edition suchen (Name oder Code)..." data-en-placeholder="Search edition (name or code)...">
     <select id="filter-owned">
-      <option value="all">Alle Editionen</option>
-      <option value="owned">Nur gesammelte</option>
-      <option value="missing">Nur noch nicht gesammelte</option>
+      <option value="all" data-en="All editions">Alle Editionen</option>
+      <option value="owned" data-en="Only collected">Nur gesammelte</option>
+      <option value="missing" data-en="Only not yet collected">Nur noch nicht gesammelte</option>
     </select>
     <select id="sort-by">
-      <option value="value-desc">Sortieren: Marktwert (hoch → niedrig)</option>
-      <option value="name">Sortieren: Name (A → Z)</option>
-      <option value="owned-desc">Sortieren: meiste verschiedene Karten</option>
-      <option value="missing-desc">Sortieren: meiste fehlende Karten</option>
-      <option value="complete-desc">Sortieren: höchste Vollständigkeit</option>
-      <option value="dupes-desc">Sortieren: meiste mehrfach vorhandene</option>
+      <option value="value-desc" data-en="Sort: Market value (high → low)">Sortieren: Marktwert (hoch → niedrig)</option>
+      <option value="name" data-en="Sort: Name (A → Z)">Sortieren: Name (A → Z)</option>
+      <option value="owned-desc" data-en="Sort: most distinct cards">Sortieren: meiste verschiedene Karten</option>
+      <option value="missing-desc" data-en="Sort: most missing cards">Sortieren: meiste fehlende Karten</option>
+      <option value="complete-desc" data-en="Sort: highest completion">Sortieren: höchste Vollständigkeit</option>
+      <option value="dupes-desc" data-en="Sort: most duplicates">Sortieren: meiste mehrfach vorhandene</option>
     </select>
   </div>
 
-  <p class="section-hint">
+  <p class="section-hint" data-en-html="&ldquo;Distinct cards&rdquo; count each card once – the same card in multiple languages or finishes (foil) is <strong>not</strong> counted twice. <strong>Click an edition</strong> to open all its cards with images – owned cards normal, missing ones greyed out. <strong>Click a card</strong> for details and prices. Editions you own <strong>no</strong> card from yet are shown too (main set types like Core, Expansion, Masters, Commander).">
     „Verschiedene Karten" zählen jede Karte einmal – dieselbe Karte in mehreren Sprachen oder Ausführungen (Foil) wird
     <strong>nicht</strong> doppelt gezählt. <strong>Klick auf eine Edition</strong> öffnet alle Karten mit Bild –
     besessene Karten normal, fehlende ausgegraut. <strong>Klick auf eine Karte</strong> zeigt Details und Preise.
@@ -62,13 +63,13 @@
 
 <footer class="site-footer">
   <span>&copy; 2026 <a href="https://www.kirkanos.net" target="_blank" rel="noopener">kirkanos</a></span>
-  <a class="footer-gh" href="https://github.com/kirkanos/mtg-portal" target="_blank" rel="noopener" aria-label="GitHub Repository" title="Auf GitHub ansehen">
+  <a class="footer-gh" href="https://github.com/kirkanos/mtg-portal" target="_blank" rel="noopener" aria-label="GitHub Repository" title="Auf GitHub ansehen" data-en-title="View on GitHub">
     <svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.03.08-2.13 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.93.08 2.13.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
   </a>
 </footer>
 
 <div class="loading-overlay" id="loading-overlay">
-  <div class="loading-text">Lade Sammlung...</div>
+  <div class="loading-text" data-en="Loading collection...">Lade Sammlung...</div>
   <div class="loading-bar"><div class="loading-bar-fill"></div></div>
 </div>
 
@@ -82,9 +83,9 @@
       <span class="modal-close eo-close">&times;</span>
     </div>
     <div class="eo-toolbar">
-      <label class="eo-radio"><input type="radio" name="eo-filter" value="all" checked> Alle</label>
-      <label class="eo-radio"><input type="radio" name="eo-filter" value="owned"> Nur besessene</label>
-      <label class="eo-radio"><input type="radio" name="eo-filter" value="missing"> Nur fehlende</label>
+      <label class="eo-radio"><input type="radio" name="eo-filter" value="all" checked> <span data-en="All">Alle</span></label>
+      <label class="eo-radio"><input type="radio" name="eo-filter" value="owned"> <span data-en="Only owned">Nur besessene</span></label>
+      <label class="eo-radio"><input type="radio" name="eo-filter" value="missing"> <span data-en="Only missing">Nur fehlende</span></label>
     </div>
     <div class="eo-grid" id="eo-grid"></div>
   </div>
@@ -96,6 +97,7 @@
   </div>
 </div>
 
+<script src="js/i18n.js"></script>
 <script src="js/shared.js"></script>
 <script src="js/editions.js"></script>
 </body>

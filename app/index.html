@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MTG Sammlung – Karten</title>
+<title data-en="MTG Collection – Cards">MTG Sammlung – Karten</title>
 <link rel="icon" type="image/svg+xml" href="images/magic-portal-icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
@@ -13,18 +13,19 @@
 <body>
 <nav class="topnav">
   <a href="index.html" class="brand"><img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="brand-logo"></a>
-  <a href="index.html" class="active">Karten</a>
-  <a href="editions.html">Editionen</a>
-  <a href="dashboard.html">Statistik</a>
-  <a href="deck-checker.html">Deck-Checker</a>
+  <a href="index.html" class="active" data-en="Cards">Karten</a>
+  <a href="editions.html" data-en="Editions">Editionen</a>
+  <a href="dashboard.html" data-en="Statistics">Statistik</a>
+  <a href="deck-checker.html" data-en="Deck Checker">Deck-Checker</a>
   <span class="nav-actions">
-    <span class="sync-status" id="sync-status" title="Letzte Aktualisierung der Kartendaten/Preise"></span>
-    <button type="button" id="csv-sync" class="reset-btn" title="Kartendaten & Preise jetzt von Scryfall aktualisieren" style="display:none">🔄 Aktualisieren</button>
-    <button type="button" id="csv-unlock" class="reset-btn" title="Upload mit Passwort freischalten" style="display:none">🔒 Upload freischalten</button>
-    <label class="upload-btn" id="csv-upload-label" title="Eigene ManaBox-CSV hochladen" style="display:none">⬆ CSV hochladen
+    <button type="button" id="lang-toggle" class="lang-toggle" aria-label="Sprache" data-en-aria="Language"></button>
+    <span class="sync-status" id="sync-status" title="Letzte Aktualisierung der Kartendaten/Preise" data-en-title="Last update of card data / prices"></span>
+    <button type="button" id="csv-sync" class="reset-btn" title="Kartendaten & Preise jetzt von Scryfall aktualisieren" data-en-title="Refresh card data & prices from Scryfall now" data-en="🔄 Refresh" style="display:none">🔄 Aktualisieren</button>
+    <button type="button" id="csv-unlock" class="reset-btn" title="Upload mit Passwort freischalten" data-en-title="Unlock upload with password" data-en="🔒 Unlock upload" style="display:none">🔒 Upload freischalten</button>
+    <label class="upload-btn" id="csv-upload-label" title="Eigene ManaBox-CSV hochladen" data-en-title="Upload your own ManaBox CSV" style="display:none"><span data-en="⬆ Upload CSV">⬆ CSV hochladen</span>
       <input type="file" id="csv-upload" accept=".csv,text/csv" hidden>
     </label>
-    <button type="button" id="csv-reset" class="reset-btn" title="Gesamte Sammlung leeren" style="display:none">Leeren</button>
+    <button type="button" id="csv-reset" class="reset-btn" title="Gesamte Sammlung leeren" data-en-title="Clear the entire collection" data-en="Clear" style="display:none">Leeren</button>
   </span>
 </nav>
 
@@ -32,23 +33,23 @@
   <div class="stats-bar" id="stats-bar"></div>
 
   <div class="controls">
-    <input type="text" id="search" placeholder="Kartenname suchen...">
-    <select id="filter-set"><option value="">Alle Sets</option></select>
-    <select id="filter-rarity"><option value="">Alle Raritäten</option></select>
-    <select id="filter-color"><option value="">Alle Farben</option></select>
+    <input type="text" id="search" placeholder="Kartenname suchen..." data-en-placeholder="Search card name...">
+    <select id="filter-set"><option value="" data-en="All sets">Alle Sets</option></select>
+    <select id="filter-rarity"><option value="" data-en="All rarities">Alle Raritäten</option></select>
+    <select id="filter-color"><option value="" data-en="All colors">Alle Farben</option></select>
     <select id="filter-foil">
-      <option value="">Normal &amp; Foil</option>
+      <option value="" data-en="Normal &amp; Foil">Normal &amp; Foil</option>
       <option value="normal">Normal</option>
       <option value="foil">Foil</option>
       <option value="etched">Etched</option>
     </select>
     <select id="sort-by">
-      <option value="name">Sortieren: Name</option>
-      <option value="set">Sortieren: Set</option>
-      <option value="price-desc">Sortieren: Preis (hoch-niedrig)</option>
-      <option value="price-asc">Sortieren: Preis (niedrig-hoch)</option>
-      <option value="rarity">Sortieren: Rarität</option>
-      <option value="added-desc">Sortieren: zuletzt hinzugefügt</option>
+      <option value="name" data-en="Sort: Name">Sortieren: Name</option>
+      <option value="set" data-en="Sort: Set">Sortieren: Set</option>
+      <option value="price-desc" data-en="Sort: Price (high → low)">Sortieren: Preis (hoch-niedrig)</option>
+      <option value="price-asc" data-en="Sort: Price (low → high)">Sortieren: Preis (niedrig-hoch)</option>
+      <option value="rarity" data-en="Sort: Rarity">Sortieren: Rarität</option>
+      <option value="added-desc" data-en="Sort: Recently added">Sortieren: zuletzt hinzugefügt</option>
     </select>
   </div>
 
@@ -58,13 +59,13 @@
 
 <footer class="site-footer">
   <span>&copy; 2026 <a href="https://www.kirkanos.net" target="_blank" rel="noopener">kirkanos</a></span>
-  <a class="footer-gh" href="https://github.com/kirkanos/mtg-portal" target="_blank" rel="noopener" aria-label="GitHub Repository" title="Auf GitHub ansehen">
+  <a class="footer-gh" href="https://github.com/kirkanos/mtg-portal" target="_blank" rel="noopener" aria-label="GitHub Repository" title="Auf GitHub ansehen" data-en-title="View on GitHub">
     <svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.03.08-2.13 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.93.08 2.13.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
   </a>
 </footer>
 
 <div class="loading-overlay" id="loading-overlay">
-  <div class="loading-text">Lade Sammlung...</div>
+  <div class="loading-text" data-en="Loading collection...">Lade Sammlung...</div>
   <div class="loading-bar"><div class="loading-bar-fill"></div></div>
 </div>
 
@@ -74,6 +75,7 @@
   </div>
 </div>
 
+<script src="js/i18n.js"></script>
 <script src="js/shared.js"></script>
 <script src="js/grid.js"></script>
 </body>
