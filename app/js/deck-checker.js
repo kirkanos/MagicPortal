@@ -64,7 +64,7 @@ function checkDeck() {
 }
 
 async function init() {
-  showLoading('Lade CSV-Datei...');
+  showLoading('Lade Sammlung...');
   try {
     collectionCards = await loadCollection(updateLoadingProgress);
   } catch (e) {

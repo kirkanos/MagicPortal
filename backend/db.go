@@ -1,0 +1,126 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"time"
+
+	_ "modernc.org/sqlite"
+)
+
+const schema = `
+CREATE TABLE IF NOT EXISTS sets (
+  code         TEXT PRIMARY KEY,
+  name         TEXT,
+  card_count   INTEGER,
+  set_type     TEXT,
+  digital      INTEGER,
+  released_at  TEXT,
+  icon_svg_uri TEXT,
+  updated_at   TEXT
+);
+
+CREATE TABLE IF NOT EXISTS scryfall_cards (
+  set_code         TEXT,
+  collector_number TEXT,
+  scryfall_id      TEXT,
+  name             TEXT,
+  rarity           TEXT,
+  type_line        TEXT,
+  colors           TEXT,
+  image_normal     TEXT,
+  image_small      TEXT,
+  price_eur        REAL,
+  price_eur_foil   REAL,
+  updated_at       TEXT,
+  PRIMARY KEY (set_code, collector_number)
+);
+
+CREATE TABLE IF NOT EXISTS collection (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  scryfall_id      TEXT,
+  set_code         TEXT,
+  set_name         TEXT,
+  collector_number TEXT,
+  name             TEXT,
+  foil             TEXT,
+  rarity           TEXT,
+  language         TEXT,
+  quantity         INTEGER,
+  purchase_price   REAL,
+  currency         TEXT,
+  condition        TEXT,
+  added            TEXT,
+  updated_at       TEXT,
+  UNIQUE (set_code, collector_number, foil, language, condition)
+);
+
+CREATE INDEX IF NOT EXISTS idx_collection_set ON collection(set_code);
+
+CREATE TABLE IF NOT EXISTS meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT
+);
+`
+
+func openDB(path string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", path+"?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)")
+	if err != nil {
+		return nil, err
+	}
+	// Serialize access: simplest way to avoid write-lock contention between the
+	// HTTP handlers and the background sync jobs.
+	db.SetMaxOpenConns(1)
+	if _, err := db.Exec(schema); err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+func metaGet(db *sql.DB, key string) string {
+	var v string
+	_ = db.QueryRow(`SELECT value FROM meta WHERE key = ?`, key).Scan(&v)
+	return v
+}
+
+func metaSet(db *sql.DB, key, value string) {
+	_, _ = db.Exec(`INSERT INTO meta(key, value) VALUES(?, ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value)
+}
+
+func metaTime(db *sql.DB, key string) (time.Time, bool) {
+	v := metaGet(db, key)
+	if v == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, v)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
+func countRows(db *sql.DB, table string) int {
+	var n int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM ` + table).Scan(&n)
+	return n
+}
+
+func colorsToJSON(colors []string) string {
+	if len(colors) == 0 {
+		return "[]"
+	}
+	b, _ := json.Marshal(colors)
+	return string(b)
+}
+
+func colorsFromJSON(s string) []string {
+	if s == "" {
+		return []string{}
+	}
+	var out []string
+	if err := json.Unmarshal([]byte(s), &out); err != nil {
+		return []string{}
+	}
+	return out
+}

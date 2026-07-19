@@ -1,12 +1,69 @@
+networks:
+  traefik-network:
+    external: true
+
 services:
-  mtg-portal:
-    build: .
-    container_name: mtg-portal
-    ports:
-      - "8080:80"
+  backend:
+    build: ./backend
+    container_name: ${SERVICE}-backend
+    environment:
+      # Passwort fuer Upload/Reset/Sync (aus .env; leer = kein Passwortschutz).
+      - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:-}
+      - DB_PATH=/data/mtg.db
     volumes:
-      # Karte einfach ersetzen ohne das Image neu zu bauen:
-      - ./app/data/ManaBox_Collection.csv:/usr/share/nginx/html/data/ManaBox_Collection.csv:ro
-      # Hochgeladene CSVs landen hier (per WebDAV PUT aus der Weboberflaeche):
-      - ./upload:/usr/share/nginx/html/upload
+      - mtg-db:/data
+    # --- Hardening ---
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    pids_limit: 256
     restart: unless-stopped
+
+  web:
+    build:
+      context: .
+    container_name: ${SERVICE}
+    depends_on:
+      - backend
+    # --- Hardening ---
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - NET_BIND_SERVICE
+    mem_limit: 128m
+    pids_limit: 128
+    restart: unless-stopped
+    networks:
+      - default
+      - traefik-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE}.entrypoints=http"
+      - "traefik.http.routers.${SERVICE}.rule=Host(`${HOST}`)"
+      - "traefik.http.middlewares.${SERVICE}-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.${SERVICE}.middlewares=${SERVICE}-https-redirect"
+      - "traefik.http.routers.${SERVICE}-secure.entrypoints=https"
+      - "traefik.http.routers.${SERVICE}-secure.rule=Host(`${HOST}`)"
+      - "traefik.http.routers.${SERVICE}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE}-secure.tls.certresolver=default"
+      - "traefik.http.routers.${SERVICE}-secure.service=${SERVICE}"
+      - "traefik.http.services.${SERVICE}.loadbalancer.server.port=${PORT}"
+      - "traefik.docker.network=traefik-network"
+
+volumes:
+  mtg-db:

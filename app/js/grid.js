@@ -183,7 +183,7 @@ function renderGrid(groups) {
 
 async function init() {
   initModal();
-  showLoading('Lade CSV-Datei...');
+  showLoading('Lade Sammlung...');
   try {
     allCards = await loadCollection(updateLoadingProgress);
   } catch (e) {
@@ -193,6 +193,12 @@ async function init() {
   }
   hideLoading();
   allGroups = groupCards(allCards);
+
+  if (allGroups.length === 0) {
+    renderEmptyState();
+    return;
+  }
+
   populateFilters(allCards);
   renderStats(allCards, allGroups.length);
   applyFilters();
@@ -201,6 +207,20 @@ async function init() {
   ['filter-set', 'filter-rarity', 'filter-color', 'filter-foil', 'sort-by'].forEach((id) => {
     document.getElementById(id).addEventListener('change', applyFilters);
   });
+}
+
+function renderEmptyState() {
+  document.getElementById('stats-bar').innerHTML = '';
+  document.getElementById('result-count').textContent = '';
+  const controls = document.querySelector('.controls');
+  if (controls) controls.style.display = 'none';
+  document.getElementById('card-grid').innerHTML = `
+    <div class="empty-state">
+      <img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="empty-logo">
+      <h2>Deine Sammlung ist noch leer</h2>
+      <p>Lade oben rechts über <strong>„🔒 Upload freischalten"</strong> → <strong>„⬆ CSV hochladen"</strong>
+         deinen ManaBox-CSV-Export hoch, um deine Karten hier zu sehen.</p>
+    </div>`;
 }
 
 init();

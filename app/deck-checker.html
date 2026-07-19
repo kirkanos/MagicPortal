@@ -4,20 +4,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MTG Sammlung – Deck-Checker</title>
+<link rel="icon" type="image/svg+xml" href="images/magic-portal-icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
+<link rel="apple-touch-icon" href="images/favicon-192.png">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <nav class="topnav">
-  <span class="brand">🎴 MTG Sammlung</span>
+  <a href="index.html" class="brand"><img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="brand-logo"></a>
   <a href="index.html">Karten</a>
   <a href="editions.html">Editionen</a>
   <a href="dashboard.html">Statistik</a>
   <a href="deck-checker.html" class="active">Deck-Checker</a>
   <span class="nav-actions">
-    <label class="upload-btn" title="Eigene ManaBox-CSV hochladen">⬆ CSV hochladen
+    <span class="sync-status" id="sync-status" title="Letzte Aktualisierung der Kartendaten/Preise"></span>
+    <button type="button" id="csv-sync" class="reset-btn" title="Kartendaten & Preise jetzt von Scryfall aktualisieren" style="display:none">🔄 Aktualisieren</button>
+    <button type="button" id="csv-unlock" class="reset-btn" title="Upload mit Passwort freischalten" style="display:none">🔒 Upload freischalten</button>
+    <label class="upload-btn" id="csv-upload-label" title="Eigene ManaBox-CSV hochladen" style="display:none">⬆ CSV hochladen
       <input type="file" id="csv-upload" accept=".csv,text/csv" hidden>
     </label>
-    <button type="button" id="csv-reset" class="reset-btn" title="Zur mitgelieferten Sammlung zurückkehren">Zurücksetzen</button>
+    <button type="button" id="csv-reset" class="reset-btn" title="Gesamte Sammlung leeren" style="display:none">Leeren</button>
   </span>
 </nav>
 

@@ -69,6 +69,7 @@ function buildEditions(cards) {
     result.push({
       code: o ? o.code : lc.toUpperCase(),
       name: (info && info.name) || (o && o.name) || lc.toUpperCase(),
+      icon: (info && info.iconSvgUri) || '',
       owned: ownedCount,
       total,
       missing,
@@ -165,7 +166,9 @@ function renderTable() {
         <tr class="edition-row${e.inCollection ? '' : ' edition-row--empty'}" data-code="${escapeHTML(e.code)}" title="Alle Karten der Edition anzeigen">
           <td>
             <div class="edition-name">
-              <span class="edition-icon">${e.inCollection ? '🗂️' : '⬚'}</span>
+              ${e.icon
+                ? `<img class="set-icon" src="${escapeHTML(e.icon)}" alt="" loading="lazy">`
+                : `<span class="edition-icon">${e.inCollection ? '🗂️' : '⬚'}</span>`}
               <span class="edition-title">${escapeHTML(e.name)}</span>
               <span class="edition-code">${escapeHTML(e.code)}</span>
             </div>
@@ -254,6 +257,13 @@ async function openEditionOverlay(edition) {
   overlayEdition = edition;
   overlayCards = [];
   const overlay = document.getElementById('edition-overlay');
+  const iconEl = document.getElementById('eo-icon');
+  if (edition.icon) {
+    iconEl.src = edition.icon;
+    iconEl.style.display = '';
+  } else {
+    iconEl.style.display = 'none';
+  }
   document.getElementById('eo-title').textContent = edition.name;
   document.getElementById('eo-code').textContent = edition.code;
   document.getElementById('eo-sub').textContent = 'Lade Karten von Scryfall…';
@@ -344,7 +354,7 @@ function closeEditionCardOverlay() {
 }
 
 async function init() {
-  showLoading('Lade CSV-Datei...');
+  showLoading('Lade Sammlung...');
   try {
     allCards = await loadCollection(updateLoadingProgress);
     setIndex = await loadSetIndex();

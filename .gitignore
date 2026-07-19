@@ -1,2 +1,2 @@
-upload/*
-!upload/.gitkeep
+.env
+.env.dec

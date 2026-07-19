@@ -140,7 +140,7 @@ function renderTopValueChart(cards) {
 }
 
 async function init() {
-  showLoading('Lade CSV-Datei...');
+  showLoading('Lade Sammlung...');
   let cards;
   try {
     cards = await loadCollection(updateLoadingProgress);
