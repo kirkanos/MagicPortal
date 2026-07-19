@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/magic-portal-logo.png" alt="Magic Portal – A ManaBox Interface" width="520">
+  <img src="images/magic-portal-logo-solid.png" alt="Magic Portal – A ManaBox Interface" width="520">
 </p>
 
 <p align="center">
