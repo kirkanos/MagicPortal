@@ -14,6 +14,10 @@
   <img src="https://img.shields.io/badge/data%20by-Scryfall-6f42c1" alt="Scryfall">
 </p>
 
+<p align="center">
+  🔗 <strong>Live-Demo:</strong> <a href="https://mtg.kirkanos.net">mtg.kirkanos.net</a>
+</p>
+
 ---
 
 Läuft als kleiner Docker-Stack (nginx-Frontend + Go-Backend + SQLite). Kartenbilder,
