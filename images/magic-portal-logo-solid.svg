@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="240" viewBox="0 0 1000 240">
+  <defs>
+    <radialGradient id="mpTop" cx="50%" cy="40%" r="75%">
+      <stop offset="0%" stop-color="#d9c6ff"></stop>
+      <stop offset="55%" stop-color="#9a6cf0"></stop>
+      <stop offset="100%" stop-color="#5c33b8"></stop>
+    </radialGradient>
+    
+  </defs>
+  <rect x="0" y="0" width="1000" height="240" fill="#101014"></rect>
+  <g transform="translate(10,20) scale(1)">
+    <rect x="0" y="0" width="200" height="200" rx="52" fill="#16161a"></rect>
+    <g transform="translate(122.5,61) rotate(30)"><rect x="-22" y="-7.5" width="44" height="15" rx="7.5" fill="#f2c144"></rect></g>
+    <g transform="translate(163,100) rotate(90)"><rect x="-22" y="-7.5" width="44" height="15" rx="7.5" fill="#2f6fd0"></rect></g>
+    <g transform="translate(122.5,139) rotate(-30)"><rect x="-22" y="-7.5" width="44" height="15" rx="7.5" fill="#3a3a40"></rect></g>
+    <g transform="translate(77.5,139) rotate(30)"><rect x="-22" y="-7.5" width="44" height="15" rx="7.5" fill="#df4038"></rect></g>
+    <g transform="translate(37,100) rotate(90)"><rect x="-22" y="-7.5" width="44" height="15" rx="7.5" fill="#57ad4e"></rect></g>
+    <g transform="translate(77.5,61) rotate(-30)"><rect x="-22" y="-7.5" width="44" height="15" rx="7.5" fill="#ececec"></rect></g>
+    <path d="M100 48 L145 74 L100 100 L55 74 Z" fill="url(#mpTop)" stroke="#111114" stroke-width="4" stroke-linejoin="round"></path>
+    <path d="M55 74 L100 100 L100 152 L55 126 Z" fill="#4a4a52" stroke="#111114" stroke-width="4" stroke-linejoin="round"></path>
+    <path d="M145 74 L100 100 L100 152 L145 126 Z" fill="#2e2e34" stroke="#111114" stroke-width="4" stroke-linejoin="round"></path>
+  </g>
+  <text x="254" y="128" font-family="Nunito, &#39;Segoe UI&#39;, sans-serif" font-weight="900" font-size="84" letter-spacing="-1" fill="#ffffff">Magic Portal</text>
+  <text x="258" y="180" font-family="Nunito, &#39;Segoe UI&#39;, sans-serif" font-weight="700" font-size="24" letter-spacing="5" fill="#8f8f9c">A MANABOX INTERFACE</text>
+</svg>
