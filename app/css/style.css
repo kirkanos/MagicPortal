@@ -65,6 +65,23 @@ nav.topnav a.active { background: var(--accent); color: #1b1400; font-weight: 60
 
 main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
+.site-footer {
+  max-width: 1400px;
+  margin: 32px auto 0;
+  padding: 18px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+.site-footer a { color: var(--text-dim); }
+.site-footer a:hover { color: var(--text); }
+.site-footer .footer-gh { display: inline-flex; align-items: center; }
+.site-footer .footer-gh:hover { color: var(--accent); }
+
 .stats-bar {
   display: flex;
   gap: 14px;

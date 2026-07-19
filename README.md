@@ -1,87 +1,153 @@
-# MTG Portal
+<p align="center">
+  <img src="images/magic-portal-logo.png" alt="Magic Portal – A ManaBox Interface" width="520">
+</p>
 
-Ein Webportal zur Anzeige deiner Magic: The Gathering Sammlung aus einem ManaBox-CSV-Export.
-Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection-viewer), lauffähig als Docker-Stack mit eigenem Backend und Datenbank.
+<p align="center">
+  <strong>Ein selbstgehostetes Webportal für deine Magic: The Gathering Sammlung – aus einem ManaBox-CSV-Export.</strong>
+</p>
 
-## Features
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-informational" alt="License: MIT">
+  <img src="https://img.shields.io/badge/backend-Go-00ADD8" alt="Go">
+  <img src="https://img.shields.io/badge/data-SQLite-003B57" alt="SQLite">
+  <img src="https://img.shields.io/badge/deploy-Docker%20Compose-2496ED" alt="Docker Compose">
+  <img src="https://img.shields.io/badge/data%20by-Scryfall-6f42c1" alt="Scryfall">
+</p>
 
-- **Karten-Ansicht** – alle Karten als durchsuchbares, filterbares Raster (Set, Rarität, Farbe, Foil, Sortierung). Gleiche Karten in verschiedenen Sprachen werden zu einer Kachel zusammengefasst (Gesamtanzahl + Sprachflaggen).
-- **Editionen** – Überblick pro Set: besessen / fehlt / mehrfach, inkl. Editionen, aus denen du noch keine Karte hast. Klick öffnet ein Overlay mit allen Karten (fehlende ausgegraut) und dem Wert der fehlenden Karten.
-- **Statistik-Dashboard** – Charts zu Rarität, Farbverteilung, Sets, Foil-Anteil, Kaufwert über Zeit, wertvollste Karten und Editionen nach Marktwert.
-- **Deck-Checker** – Deckliste einfügen und sehen, welche Karten du schon besitzt.
-- **CSV-Upload** – neue ManaBox-Exporte direkt im Menü hochladen (passwortgeschützt); neue Karten werden angelegt, bestehende aktualisiert (Upsert).
+---
 
-## Architektur
+Läuft als kleiner Docker-Stack (nginx-Frontend + Go-Backend + SQLite). Kartenbilder,
+Typzeilen und **Preise** kommen aus [Scryfall](https://scryfall.com) und werden im
+Hintergrund gepflegt – die Oberfläche lädt alles fertig angereichert und schnell aus der API.
+Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection-viewer).
+
+## ✨ Features
+
+- **🗃️ Karten-Ansicht** – durchsuchbares, filterbares Raster (Set, Rarität, Farbe, Foil, Sortierung). Gleiche Karten in verschiedenen Sprachen werden zu **einer** Kachel zusammengefasst (Gesamtanzahl + Sprachflaggen). Klick öffnet Details mit einer Sprachtabelle (Preis / Anzahl / hinzugefügt am).
+- **📚 Editionen** – Überblick pro Set: besessen / fehlt / mehrfach, inklusive Editionen, aus denen du noch **keine** Karte hast. Klick öffnet ein Overlay mit **allen** Karten der Edition (fehlende ausgegraut), dem offiziellen Set-Symbol und dem Wert der fehlenden Karten.
+- **📊 Statistik** – Charts zu Rarität, Farbverteilung, Sets, Foil-Anteil, Kaufwert über Zeit, wertvollste Karten und Editionen nach Marktwert.
+- **✅ Deck-Checker** – Deckliste einfügen und sehen, welche Karten du schon besitzt.
+- **⬆️ CSV-Upload** – neue ManaBox-Exporte direkt im Menü hochladen (passwortgeschützt); neue Karten werden angelegt, bestehende aktualisiert (Upsert).
+- **🔄 Auto-Sync** – Kartendaten & Preise werden alle 5 Minuten im Hintergrund aktualisiert (Download nur, wenn Scryfall wirklich einen neuen Datensatz veröffentlicht hat).
+
+## 🏗️ Architektur
 
 ```text
-┌── web (nginx) ───────┐   statische Oberfläche + Reverse-Proxy /api → backend
-└─────────┬────────────┘
-          │ /api
-┌─────────▼────────────┐   Go-Backend: REST-API + Background-Jobs
-│  backend (Go)        │   (SQLite-Datei unter ./data-db)
-└──────────────────────┘
+        ┌── web (nginx) ───────┐   statische Oberfläche + Reverse-Proxy /api → backend
+Traefik │                      │
+  ──────▶  mtg.example.net     │
+        └──────────┬───────────┘
+                   │ /api
+        ┌──────────▼───────────┐   Go-Backend: REST-API + Background-Sync
+        │  backend (Go)        │   (SQLite im Volume "mtg-db")
+        └──────────────────────┘
 ```
 
-- Kartenmetadaten, Bilder und **Preise** kommen aus **Scryfall Bulk Data** – ein täglich aktualisierter Komplettdump, den das Backend im Hintergrund herunterlädt und in SQLite ablegt (statt tausender Einzel-API-Calls im Browser).
-- Background-Jobs beim Start und danach: Set-Index (wöchentlich) und Karten/Preise (täglich) werden automatisch aktualisiert.
-- Die Oberfläche lädt alles fertig angereichert aus der API – schnelle, für alle geteilte Ladezeiten.
+- Metadaten, Bilder und **Preise** stammen aus **Scryfall Bulk Data** – einem täglich aktualisierten Komplettdump, den das Backend im Hintergrund lädt und in SQLite ablegt (statt tausender Einzel-API-Calls im Browser).
+- Der Hintergrundjob läuft **alle 5 Minuten**: er prüft günstig, ob ein neuer Dump vorliegt, und lädt die ~140 MB nur dann. Der Set-Index wird wöchentlich aktualisiert.
 
-## Starten
+## 🚀 Schnellstart
 
 ```bash
+cp .env.sample .env      # SERVICE / HOST / PORT / UPLOAD_PASSWORD anpassen
 docker compose up -d --build
 ```
 
-Portal danach unter [http://localhost:8080](http://localhost:8080). Der Stack startet mit **leerem Datenbestand** – lade deine ManaBox-CSV über das Menü hoch (siehe unten). Die Scryfall-Kartendaten/Preise werden beim Start im Hintergrund geladen.
+Der Stack ist für den Betrieb hinter [Traefik](https://traefik.io) gedacht und wird unter
+`https://$HOST` veröffentlicht. Er startet mit **leerem Datenbestand** – lade deine ManaBox-CSV
+über das Menü hoch (siehe unten). Die Scryfall-Daten werden beim Start im Hintergrund geladen.
 
-## Sammlung befüllen & aktualisieren
+> **Lokaler Test:** Die `docker-compose.yml` erwartet das externe Traefik-Netzwerk. Ohne Traefik
+> vorweg einmalig `docker network create traefik-network` anlegen (bzw. für eine schnelle Vorschau
+> ein Port-Mapping auf den `web`-Dienst ergänzen).
 
-Der Stack startet mit **leerem Datenbestand**. Sammlung über die Oberfläche befüllen: oben rechts „🔒 Upload freischalten" → Passwort → „⬆ CSV hochladen". Neue Karten werden hinzugefügt, bestehende aktualisiert (Upsert). „Leeren" entfernt die gesamte Sammlung wieder.
+## 📥 Sammlung befüllen & aktualisieren
 
-Erwartete Spalten (Standard-ManaBox-Export): `Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, Scryfall ID, Purchase price, Purchase price currency, Condition, Language, Added`.
+Oben rechts im Menü: **„🔒 Upload freischalten"** → Passwort → **„⬆ CSV hochladen"**.
+Neue Karten werden hinzugefügt, bestehende aktualisiert (Upsert). **„Leeren"** entfernt die
+gesamte Sammlung wieder.
 
-## Konfiguration
+Erwartete Spalten (Standard-ManaBox-Export):
+`Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, Scryfall ID, Purchase price, Purchase price currency, Condition, Language, Added`.
 
-- **Passwort:** in `.env` setzen (`UPLOAD_PASSWORD=…`); wird von `docker-compose.yml` eingelesen. Leer = kein Passwortschutz. Schützt Upload/Reset/Sync. Übertragung via `X-Upload-Password`-Header (kein Browser-Login-Dialog). Vorlage: `.env.example`.
-- **Datenbank:** benanntes Docker-Volume `mtg-db` (persistent, schreibbar für den Non-Root-Backend-User).
+Der **Datenstand** (letzte Aktualisierung von Kartendaten/Preisen) steht oben rechts im Menü;
+**„🔄 Aktualisieren"** stößt einen sofortigen Scryfall-Sync an.
 
-## Aktualisieren & Status
+## ⚙️ Konfiguration (`.env`)
 
-- Der **Datenstand** (letzte Aktualisierung der Kartendaten/Preise) wird oben rechts im Menü angezeigt.
-- Button **„🔄 Aktualisieren"** (nach Passwort-Freischaltung) stößt einen sofortigen Scryfall-Sync an; während des Laufs zeigt die Statusanzeige einen Spinner, danach lädt die Seite mit frischen Preisen neu.
-- Automatisch: Set-Index wöchentlich, Karten/Preise täglich (im Hintergrund).
+| Variable | Zweck |
+|---|---|
+| `SERVICE` | Dienstname (Container-Namen, Traefik-Router, systemd-Unit, `/services/$SERVICE`) |
+| `HOST` | Öffentliche Domain (Traefik-Routing + TLS) |
+| `PORT` | Interner Port des `web`-Containers (nginx, 80) |
+| `UPLOAD_PASSWORD` | Passwort für Upload/Reset/Sync (leer = kein Schutz) |
 
-## Hardening
+Optional: `SYNC_INTERVAL_MINUTES` (Standard 5) steuert das Hintergrund-Intervall.
+Die Datenbank liegt im benannten Volume `mtg-db`. Das Passwort wird via `X-Upload-Password`-Header
+übertragen (kein Browser-Login-Dialog).
 
-Beide Container laufen mit `read_only`-Rootfs, `cap_drop: ALL` (web nur mit den nötigen nginx-Caps), `no-new-privileges` und Speicher-/PID-Limits. Das Backend läuft als Non-Root-User (uid 10001). Der Backend-Port ist nicht nach außen gemappt (nur über den nginx-Proxy erreichbar).
+## 🔐 Deployment (Woodpecker CI + SOPS)
 
-## API-Endpunkte
+Push auf `main` löst die [Woodpecker](https://woodpecker-ci.org)-Pipeline aus
+([`.woodpecker/pipeline.yaml`](.woodpecker/pipeline.yaml)):
+
+1. **Decrypt** – `.env.enc` wird per [SOPS](https://github.com/getsops/sops) (age) zu `.env` entschlüsselt.
+2. **Deploy** – Quellen werden nach `/services/$SERVICE` kopiert, die systemd-Unit installiert.
+3. **Restart** – der Dienst startet neu und baut per `docker compose up --build` auf dem Host.
+
+Secrets (Woodpecker): `sops_age_key`, `ssh_host_local`.
+Die Zugangsdaten liegen **verschlüsselt** in [`.env.enc`](.env.enc); Klartext-`.env` ist gitignored.
+
+```bash
+# .env bearbeiten und neu verschlüsseln:
+sops --encrypt --age <age-recipient> --input-type dotenv --output-type dotenv .env > .env.enc
+```
+
+## 🛡️ Hardening
+
+Beide Container laufen mit `read_only`-Rootfs, `cap_drop: ALL` (web nur mit den nötigen
+nginx-Caps), `no-new-privileges` sowie Speicher-/PID-Limits. Das Backend läuft als
+Non-Root-User (uid 10001); sein Port ist nicht nach außen gemappt – erreichbar nur über den
+nginx-Proxy.
+
+## 🔌 API
 
 | Methode | Pfad | Zweck |
-|--------|------|-------|
-| GET | `/api/collection` | Sammlung, angereichert mit Scryfall-Daten |
-| GET | `/api/sets` | Set-Index |
-| GET | `/api/sets/{code}/cards` | Alle Karten eines Sets |
-| GET | `/api/status` | Sync-Status & Datenstand |
-| GET | `/api/auth-check` | Passwortprüfung (204/403) |
-| POST | `/api/upload` | CSV hochladen (Upsert) |
-| POST | `/api/reset` | Sammlung zurücksetzen |
-| POST | `/api/sync` | Scryfall-Sync jetzt anstoßen |
+|---|---|---|
+| `GET` | `/api/collection` | Sammlung, angereichert mit Scryfall-Daten |
+| `GET` | `/api/sets` | Set-Index |
+| `GET` | `/api/sets/{code}/cards` | Alle Karten eines Sets |
+| `GET` | `/api/status` | Sync-Status & Datenstand |
+| `GET` | `/api/auth-check` | Passwortprüfung (204/403) |
+| `POST` | `/api/upload` | CSV hochladen (Upsert) |
+| `POST` | `/api/reset` | Sammlung leeren |
+| `POST` | `/api/sync` | Scryfall-Sync jetzt anstoßen |
 
-## Projektstruktur
+## 🗂️ Projektstruktur
 
 ```text
 mtg-portal/
-├── app/                  # nginx-Docroot (statische Oberfläche)
-│   ├── index.html        # Karten-Ansicht
-│   ├── editions.html · dashboard.html · deck-checker.html
+├── app/                     # nginx-Docroot (statische Oberfläche)
+│   ├── index.html · editions.html · dashboard.html · deck-checker.html
 │   ├── css/style.css
-│   └── js/shared.js · grid.js · editions.js · dashboard.js · deck-checker.js
-├── backend/              # Go-Backend (API + Sync-Jobs)
+│   ├── js/shared.js · grid.js · editions.js · dashboard.js · deck-checker.js
+│   └── images/              # Logo & Favicons
+├── backend/                 # Go-Backend (API + Sync-Jobs)
 │   ├── main.go · db.go · csvimport.go · scryfall.go
 │   └── Dockerfile
-├── nginx/default.conf    # statisch + Proxy /api → backend
-├── Dockerfile            # web-Image
-├── .env                  # UPLOAD_PASSWORD (nicht eingecheckt)
-└── docker-compose.yml    # Volume "mtg-db" = SQLite-Datenbank
+├── nginx/default.conf       # statisch + Proxy /api → backend
+├── .woodpecker/pipeline.yaml
+├── template.service         # systemd-Unit (Vorlage, %SERVICE%)
+├── Dockerfile               # web-Image
+├── docker-compose.yml
+├── .env.enc                 # SOPS-verschlüsselte Secrets (.env ist gitignored)
+└── LICENSE
 ```
+
+## 📄 Lizenz
+
+[MIT](LICENSE) – frei nutzbar, anpassbar und weiterverteilbar.
+
+Kartendaten und -bilder stammen von [Scryfall](https://scryfall.com); *Magic: The Gathering*
+ist ein Markenzeichen von Wizards of the Coast. Dieses Projekt steht in keiner Verbindung zu
+Wizards of the Coast oder ManaBox.
