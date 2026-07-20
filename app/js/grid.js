@@ -192,7 +192,10 @@ function renderGrid(groups) {
       </div>
     `;
 
-    tile.addEventListener('click', () => openCardModal(cardGroupModalHTML(g)));
+    tile.addEventListener('click', () => {
+      openCardModal(cardGroupModalHTML(g));
+      loadCardVariants(g);
+    });
     fragment.appendChild(tile);
   });
 

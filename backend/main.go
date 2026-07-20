@@ -32,6 +32,7 @@ func main() {
 	mux.HandleFunc("GET /api/collection", handleCollection)
 	mux.HandleFunc("GET /api/sets", handleSets)
 	mux.HandleFunc("GET /api/sets/{code}/cards", handleSetCards)
+	mux.HandleFunc("GET /api/prints", handlePrints)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/auth-check", handleAuthCheck)
 	mux.HandleFunc("POST /api/upload", handleUpload)
@@ -217,6 +218,61 @@ func handleSetCards(w http.ResponseWriter, r *http.Request) {
 			c.PriceEurFoil = &p
 		}
 		out = append(out, c)
+	}
+	writeJSON(w, out)
+}
+
+type printOut struct {
+	SetCode         string   `json:"setCode"`
+	SetName         string   `json:"setName"`
+	IconSvgURI      string   `json:"iconSvgUri"`
+	CollectorNumber string   `json:"collectorNumber"`
+	Rarity          string   `json:"rarity"`
+	Image           string   `json:"image"`
+	ImageSmall      string   `json:"imageSmall"`
+	PriceEur        *float64 `json:"priceEur"`
+	PriceEurFoil    *float64 `json:"priceEurFoil"`
+}
+
+// handlePrints returns every printing of a card (by exact Scryfall name) across
+// all editions, for the "other printings" section in the card detail view.
+func handlePrints(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	out := []printOut{}
+	if name != "" {
+		rows, err := db.Query(`
+			SELECT sc.set_code, COALESCE(s.name, ''), COALESCE(s.icon_svg_uri, ''),
+			       sc.collector_number, sc.rarity, sc.image_normal, sc.image_small,
+			       sc.price_eur, sc.price_eur_foil
+			FROM scryfall_cards sc
+			LEFT JOIN sets s ON s.code = sc.set_code
+			WHERE sc.name = ?
+			ORDER BY COALESCE(s.released_at, '') DESC, sc.set_code, CAST(sc.collector_number AS INTEGER)`, name)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var p printOut
+			var setCode string
+			var price, priceFoil sql.NullFloat64
+			if err := rows.Scan(&setCode, &p.SetName, &p.IconSvgURI, &p.CollectorNumber, &p.Rarity,
+				&p.Image, &p.ImageSmall, &price, &priceFoil); err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			p.SetCode = strings.ToUpper(setCode)
+			if price.Valid {
+				v := price.Float64
+				p.PriceEur = &v
+			}
+			if priceFoil.Valid {
+				v := priceFoil.Float64
+				p.PriceEurFoil = &v
+			}
+			out = append(out, p)
+		}
 	}
 	writeJSON(w, out)
 }

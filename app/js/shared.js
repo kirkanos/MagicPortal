@@ -162,9 +162,52 @@ function cardGroupModalHTML(group) {
           <thead><tr><th>${t('Sprache', 'Language')}</th><th class="num">${t('Preis (Scryfall)', 'Price (Scryfall)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
+        <h3 class="lang-table-title">${t('Weitere Editionen dieser Karte', 'Other printings of this card')}</h3>
+        <div class="modal-variants" id="modal-variants">${t('Lade Varianten…', 'Loading printings…')}</div>
       </div>
     </div>
   `;
+}
+
+/* Loads all printings of the card (across editions) and fills #modal-variants. */
+async function loadCardVariants(group) {
+  const el = document.getElementById('modal-variants');
+  if (!el) return;
+  const name = (group.rep.scryfall && group.rep.scryfall.name) || group.name;
+  let prints = [];
+  try {
+    const res = await fetch(API + '/prints?name=' + encodeURIComponent(name), { cache: 'no-store' });
+    if (res.ok) prints = await res.json();
+  } catch (e) {
+    /* ignore */
+  }
+  if (!prints.length) {
+    el.textContent = t('Keine weiteren Editionen gefunden.', 'No other printings found.');
+    return;
+  }
+  el.innerHTML = prints
+    .map((p) => {
+      const isCur =
+        (p.setCode || '').toLowerCase() === (group.setCode || '').toLowerCase() &&
+        String(p.collectorNumber) === String(group.collectorNumber);
+      const price =
+        p.priceEur != null
+          ? formatCurrency(p.priceEur, 'EUR')
+          : p.priceEurFoil != null
+          ? formatCurrency(p.priceEurFoil, 'EUR') + ' (Foil)'
+          : '–';
+      const img = p.imageSmall || p.image;
+      const icon = p.iconSvgUri
+        ? `<img class="variant-icon" src="${escapeHTML(p.iconSvgUri)}" alt="" loading="lazy">`
+        : '';
+      return `
+        <div class="variant${isCur ? ' current' : ''}" title="${escapeHTML(p.setName || p.setCode)} #${escapeHTML(p.collectorNumber)}">
+          <div class="variant-thumb">${img ? `<img loading="lazy" src="${img}" alt="">` : ''}</div>
+          <div class="variant-set">${icon}<span>${escapeHTML(p.setName || p.setCode)}</span></div>
+          <div class="variant-price">${price}</div>
+        </div>`;
+    })
+    .join('');
 }
 
 function escapeHTML(str) {

@@ -287,6 +287,31 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
   padding: 1px 5px; border-radius: 4px; margin-left: 4px;
 }
 
+/* Other printings in the card detail modal */
+.modal-variants {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+.modal-variants .variant {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.modal-variants .variant.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.modal-variants .variant-thumb { aspect-ratio: 63/88; border-radius: 6px; overflow: hidden; background: #0d0e14; }
+.modal-variants .variant-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.modal-variants .variant-set { display: flex; align-items: center; gap: 5px; font-size: 0.74rem; color: var(--text); line-height: 1.2; }
+.modal-variants .variant-set span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.modal-variants .variant-icon { width: 14px; height: 14px; object-fit: contain; filter: brightness(0) invert(0.85); flex-shrink: 0; }
+.modal-variants .variant-price { font-weight: 600; color: var(--accent); font-size: 0.78rem; }
+
 /* Single-card detail overlay (opened from the edition overlay) */
 .eo-card-overlay { z-index: 260; }
 .eo-detail-missing { color: var(--red); font-size: 0.9rem; margin: 16px 0 0; }
