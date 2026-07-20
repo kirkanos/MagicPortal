@@ -27,10 +27,12 @@ Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection
 
 ## ✨ Features
 
-- **🗃️ Karten-Ansicht** – durchsuchbares, filterbares Raster (Set, Rarität, Farbe, Foil, Sortierung). Gleiche Karten in verschiedenen Sprachen werden zu **einer** Kachel zusammengefasst (Gesamtanzahl + Sprachflaggen). Klick öffnet Details mit einer Sprachtabelle (Preis / Anzahl / hinzugefügt am).
-- **📚 Editionen** – Überblick pro Set: besessen / fehlt / mehrfach, inklusive Editionen, aus denen du noch **keine** Karte hast. Klick öffnet ein Overlay mit **allen** Karten der Edition (fehlende ausgegraut), dem offiziellen Set-Symbol und dem Wert der fehlenden Karten.
+- **🗃️ Karten-Ansicht** – durchsuchbares, filterbares Raster (Set, Rarität, Farbe, Foil, Sortierung). Gleiche Karten in verschiedenen Sprachen werden zu **einer** Kachel zusammengefasst (Gesamtanzahl + Sprachflaggen); jede Kachel zeigt Editionssymbol, ausgeschriebenen Set-Namen und die nach Rarität eingefärbte Rarität. Die **Suche** erfasst auch Kartentext und Manakosten (z. B. `2rr`, `wu`, `fliegend`).
+- **🔍 Kartendetails** – Manakosten als Symbole, Kartentext (Oracle), pro Sprache/Ausführung/Zustand eine Zeile (Preis / Anzahl / Zustand / hinzugefügt am) sowie eine Galerie **aller weiteren Editionen** der Karte mit Bild, Edition und Preis.
+- **📚 Editionen** – Überblick pro Set: besessen / fehlt / mehrfach, inklusive Editionen, aus denen du noch **keine** Karte hast. Set-Typ-Filter (Standard: sammelbare Typen, bis „alle"), aufklappbare Erklärung, Sortierung u. a. nach fehlenden Karten. Klick öffnet ein Overlay mit **allen** Karten der Edition (fehlende ausgegraut), Set-Symbol und dem Wert der fehlenden Karten.
 - **📊 Statistik** – Charts zu Rarität, Farbverteilung, Sets, Foil-Anteil, Kaufwert über Zeit, wertvollste Karten und Editionen nach Marktwert.
 - **✅ Deck-Checker** – Deckliste einfügen und sehen, welche Karten du schon besitzt.
+- **🌐 Zweisprachig** – Oberfläche in Deutsch und Englisch, umschaltbar im Menü; die Auswahl wird gespeichert (Standard: Deutsch).
 - **⬆️ CSV-Upload** – neue ManaBox-Exporte direkt im Menü hochladen (passwortgeschützt); neue Karten werden angelegt, bestehende aktualisiert (Upsert).
 - **🔄 Auto-Sync** – Kartendaten & Preise werden alle 5 Minuten im Hintergrund aktualisiert (Download nur, wenn Scryfall wirklich einen neuen Datensatz veröffentlicht hat).
 
@@ -121,6 +123,7 @@ nginx-Proxy.
 | `GET` | `/api/collection` | Sammlung, angereichert mit Scryfall-Daten |
 | `GET` | `/api/sets` | Set-Index |
 | `GET` | `/api/sets/{code}/cards` | Alle Karten eines Sets |
+| `GET` | `/api/prints?name=…` | Alle Drucke einer Karte (Editionen) |
 | `GET` | `/api/status` | Sync-Status & Datenstand |
 | `GET` | `/api/auth-check` | Passwortprüfung (204/403) |
 | `POST` | `/api/upload` | CSV hochladen (Upsert) |
@@ -134,7 +137,7 @@ mtg-portal/
 ├── app/                     # nginx-Docroot (statische Oberfläche)
 │   ├── index.html · editions.html · dashboard.html · deck-checker.html
 │   ├── css/style.css
-│   ├── js/shared.js · grid.js · editions.js · dashboard.js · deck-checker.js
+│   ├── js/i18n.js · shared.js · grid.js · editions.js · dashboard.js · deck-checker.js
 │   └── images/              # Logo & Favicons
 ├── backend/                 # Go-Backend (API + Sync-Jobs)
 │   ├── main.go · db.go · csvimport.go · scryfall.go
