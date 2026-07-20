@@ -181,15 +181,20 @@ async function loadCardVariants(group) {
   } catch (e) {
     /* ignore */
   }
-  if (!prints.length) {
+  // Drop the printing that is currently open – only OTHER editions are listed.
+  const others = prints.filter(
+    (p) =>
+      !(
+        (p.setCode || '').toLowerCase() === (group.setCode || '').toLowerCase() &&
+        String(p.collectorNumber) === String(group.collectorNumber)
+      )
+  );
+  if (!others.length) {
     el.textContent = t('Keine weiteren Editionen gefunden.', 'No other printings found.');
     return;
   }
-  el.innerHTML = prints
+  el.innerHTML = others
     .map((p) => {
-      const isCur =
-        (p.setCode || '').toLowerCase() === (group.setCode || '').toLowerCase() &&
-        String(p.collectorNumber) === String(group.collectorNumber);
       const price =
         p.priceEur != null
           ? formatCurrency(p.priceEur, 'EUR')
@@ -201,7 +206,7 @@ async function loadCardVariants(group) {
         ? `<img class="variant-icon" src="${escapeHTML(p.iconSvgUri)}" alt="" loading="lazy">`
         : '';
       return `
-        <div class="variant${isCur ? ' current' : ''}" title="${escapeHTML(p.setName || p.setCode)} #${escapeHTML(p.collectorNumber)}">
+        <div class="variant" title="${escapeHTML(p.setName || p.setCode)} #${escapeHTML(p.collectorNumber)}">
           <div class="variant-thumb">${img ? `<img loading="lazy" src="${img}" alt="">` : ''}</div>
           <div class="variant-set">${icon}<span>${escapeHTML(p.setName || p.setCode)}</span></div>
           <div class="variant-price">${price}</div>
