@@ -17,11 +17,42 @@ function distinctKey(c) {
   return c.collectorNumber ? 'n:' + normNumber(c.collectorNumber) : 'name:' + c.name.toLowerCase();
 }
 
-// Set types that are meaningful "editions" to collect. Not-owned sets are only
-// listed for these types (owned sets are always listed, whatever their type).
+// Set types considered "collectable" editions – the default view. Other types
+// (promo, token, …) are available via the set-type filter.
 const COLLECTABLE_SET_TYPES = new Set([
   'core', 'expansion', 'masters', 'draft_innovation', 'commander', 'remastered',
 ]);
+
+const SET_TYPE_LABEL = {
+  core: t('Core', 'Core'),
+  expansion: t('Erweiterung', 'Expansion'),
+  masters: 'Masters',
+  draft_innovation: t('Draft-Innovation', 'Draft innovation'),
+  commander: 'Commander',
+  remastered: 'Remastered',
+  promo: 'Promo',
+  token: 'Token',
+  memorabilia: 'Memorabilia',
+  duel_deck: 'Duel Deck',
+  box: t('Box-Set', 'Box set'),
+  funny: t('Spaß-Set', 'Funny'),
+  masterpiece: 'Masterpiece',
+  minigame: 'Minigame',
+  starter: 'Starter',
+  from_the_vault: 'From the Vault',
+  planechase: 'Planechase',
+  eternal: 'Eternal',
+  archenemy: 'Archenemy',
+  arsenal: 'Arsenal',
+  premium_deck: 'Premium Deck',
+  spellbook: 'Spellbook',
+  vanguard: 'Vanguard',
+  alchemy: 'Alchemy',
+};
+
+function setTypeLabel(type) {
+  return SET_TYPE_LABEL[type] || type || '–';
+}
 
 function buildEditions(cards) {
   // Group owned rows by set code (lowercased, to match the Scryfall index).
@@ -32,11 +63,12 @@ function buildEditions(cards) {
     owned[lc].rows.push(c);
   });
 
-  // Union: every owned set + all collectable, non-digital sets from the index.
+  // Union: every owned set + all non-digital sets from the index. The set-type
+  // filter (default: collectable types) decides what is actually shown.
   const codes = new Set(Object.keys(owned));
   Object.keys(setIndex).forEach((lc) => {
     const info = setIndex[lc];
-    if (owned[lc] || (!info.digital && COLLECTABLE_SET_TYPES.has(info.setType))) codes.add(lc);
+    if (owned[lc] || !info.digital) codes.add(lc);
   });
 
   const result = [];
@@ -70,6 +102,7 @@ function buildEditions(cards) {
       code: o ? o.code : lc.toUpperCase(),
       name: (info && info.name) || (o && o.name) || lc.toUpperCase(),
       icon: (info && info.iconSvgUri) || '',
+      setType: (info && info.setType) || '',
       owned: ownedCount,
       total,
       missing,
@@ -140,12 +173,27 @@ function progressCell(e) {
     </div>`;
 }
 
+/* Fills the set-type dropdown: "collectable" (default) + "all" + every type present. */
+function populateTypeFilter() {
+  const sel = document.getElementById('filter-type');
+  const types = [...new Set(editions.map((e) => e.setType).filter(Boolean))]
+    .sort((a, b) => setTypeLabel(a).localeCompare(setTypeLabel(b)));
+  sel.innerHTML =
+    `<option value="collectable">${t('Sammelbare Typen', 'Collectable types')}</option>` +
+    `<option value="all">${t('Alle Typen', 'All types')}</option>` +
+    types.map((ty) => `<option value="${escapeHTML(ty)}">${escapeHTML(setTypeLabel(ty))}</option>`).join('');
+  sel.value = 'collectable';
+}
+
 function renderTable() {
   const q = document.getElementById('search').value.trim().toLowerCase();
   const sortBy = document.getElementById('sort-by').value;
   const ownedFilter = document.getElementById('filter-owned').value;
+  const typeFilter = document.getElementById('filter-type').value;
 
   let list = editions;
+  if (typeFilter === 'collectable') list = list.filter((e) => COLLECTABLE_SET_TYPES.has(e.setType) || e.inCollection);
+  else if (typeFilter !== 'all') list = list.filter((e) => e.setType === typeFilter);
   if (ownedFilter === 'owned') list = list.filter((e) => e.inCollection);
   else if (ownedFilter === 'missing') list = list.filter((e) => !e.inCollection);
   if (q) list = list.filter((e) => e.name.toLowerCase().includes(q) || e.code.toLowerCase().includes(q));
@@ -371,12 +419,14 @@ async function init() {
   editionByCode = {};
   editions.forEach((e) => (editionByCode[e.code] = e));
 
+  populateTypeFilter();
   renderStats();
   renderTable();
 
   document.getElementById('search').addEventListener('input', debounce(renderTable, 150));
   document.getElementById('sort-by').addEventListener('change', renderTable);
   document.getElementById('filter-owned').addEventListener('change', renderTable);
+  document.getElementById('filter-type').addEventListener('change', renderTable);
 
   const hintBtn = document.getElementById('hint-toggle');
   const hint = document.getElementById('section-hint');
