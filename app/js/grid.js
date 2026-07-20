@@ -1,6 +1,7 @@
 let allCards = [];
 let allGroups = [];
 let filteredCards = [];
+let setIndex = {};
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic', special: 'Special' };
 const COLOR_LABEL = {
@@ -161,18 +162,33 @@ function renderGrid(groups) {
       .map((l) => `<span class="lang-flag" title="${escapeHTML(l.toUpperCase())}">${languageFlag(l) || escapeHTML(l.toUpperCase())}</span>`)
       .join('');
 
+    const info = setIndex[g.setCode.toLowerCase()] || null;
+    const setName = (info && info.name) || g.setName || g.setCode;
+    const icon = info && info.iconSvgUri;
+    const rarity = (g.rarity || '').toLowerCase();
+    const rarityCls = rarity ? ' rarity-' + rarity : '';
+    const rarityLabel = RARITY_LABEL[rarity] || g.rarity || '';
+    // Set symbol tinted by rarity colour (like on a real card) via CSS mask.
+    const sym = icon
+      ? `<span class="set-sym${rarityCls}" style="-webkit-mask-image:url('${escapeHTML(icon)}');mask-image:url('${escapeHTML(icon)}')"></span>`
+      : '';
+
     const tile = document.createElement('div');
     tile.className = 'card-tile';
     tile.innerHTML = `
       <div class="thumb">
-        ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(g.name)}">` : '<div class="no-image">Kein Bild</div>'}
+        ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(g.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
         ${g.anyFoil ? '<span class="foil-badge">Foil</span>' : ''}
         ${g.totalQty > 1 ? `<span class="qty-badge">×${g.totalQty}</span>` : ''}
         ${flags ? `<div class="lang-flags">${flags}</div>` : ''}
       </div>
       <div class="info">
         <div class="name">${escapeHTML(g.name)}</div>
-        <div class="meta"><span>${escapeHTML(g.setCode)}</span><span>${g.marketPrice ? formatCurrency(g.marketPrice, 'EUR') : '–'}</span></div>
+        <div class="meta-set">${sym}<span class="set-name" title="${escapeHTML(setName)} (${escapeHTML(g.setCode)})">${escapeHTML(setName)}</span></div>
+        <div class="meta">
+          ${rarityLabel ? `<span class="rarity-tag${rarityCls}">${escapeHTML(rarityLabel)}</span>` : '<span></span>'}
+          <span>${g.marketPrice ? formatCurrency(g.marketPrice, 'EUR') : '–'}</span>
+        </div>
       </div>
     `;
 
@@ -188,6 +204,7 @@ async function init() {
   showLoading(t('Lade Sammlung...', 'Loading collection...'));
   try {
     allCards = await loadCollection(updateLoadingProgress);
+    setIndex = await loadSetIndex();
   } catch (e) {
     hideLoading();
     document.getElementById('card-grid').innerHTML = `<p style="color:#e05656">${t('Fehler beim Laden der Sammlung', 'Error loading collection')}: ${escapeHTML(e.message)}</p>`;
