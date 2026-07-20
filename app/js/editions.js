@@ -108,6 +108,8 @@ function sortEditions(list, sortBy) {
         return b.owned - a.owned || a.name.localeCompare(b.name);
       case 'missing-desc':
         return (b.missing ?? -1) - (a.missing ?? -1) || a.name.localeCompare(b.name);
+      case 'missing-asc':
+        return (a.missing ?? Infinity) - (b.missing ?? Infinity) || a.name.localeCompare(b.name);
       case 'complete-desc': {
         const pa = a.total ? a.owned / a.total : -1;
         const pb = b.total ? b.owned / b.total : -1;
@@ -375,6 +377,18 @@ async function init() {
   document.getElementById('search').addEventListener('input', debounce(renderTable, 150));
   document.getElementById('sort-by').addEventListener('change', renderTable);
   document.getElementById('filter-owned').addEventListener('change', renderTable);
+
+  const hintBtn = document.getElementById('hint-toggle');
+  const hint = document.getElementById('section-hint');
+  if (hintBtn && hint) {
+    const setHint = (open) => {
+      hint.hidden = !open;
+      hintBtn.textContent = open ? t('Erklärung ausblenden', 'Hide explanation') : t('Erklärung anzeigen', 'Show explanation');
+      hintBtn.classList.toggle('open', open);
+    };
+    setHint(false);
+    hintBtn.addEventListener('click', () => setHint(hint.hidden));
+  }
 
   document.getElementById('editions-table').addEventListener('click', (e) => {
     const row = e.target.closest('.edition-row');

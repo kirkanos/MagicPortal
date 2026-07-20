@@ -44,12 +44,14 @@
       <option value="name" data-en="Sort: Name (A → Z)">Sortieren: Name (A → Z)</option>
       <option value="owned-desc" data-en="Sort: most distinct cards">Sortieren: meiste verschiedene Karten</option>
       <option value="missing-desc" data-en="Sort: most missing cards">Sortieren: meiste fehlende Karten</option>
+      <option value="missing-asc" data-en="Sort: fewest missing cards">Sortieren: wenigste fehlende Karten</option>
       <option value="complete-desc" data-en="Sort: highest completion">Sortieren: höchste Vollständigkeit</option>
       <option value="dupes-desc" data-en="Sort: most duplicates">Sortieren: meiste mehrfach vorhandene</option>
     </select>
   </div>
 
-  <p class="section-hint" data-en-html="&ldquo;Distinct cards&rdquo; count each card once – the same card in multiple languages or finishes (foil) is <strong>not</strong> counted twice. <strong>Click an edition</strong> to open all its cards with images – owned cards normal, missing ones greyed out. <strong>Click a card</strong> for details and prices. Editions you own <strong>no</strong> card from yet are shown too (main set types like Core, Expansion, Masters, Commander).">
+  <button type="button" id="hint-toggle" class="hint-toggle"></button>
+  <p class="section-hint" id="section-hint" hidden data-en-html="&ldquo;Distinct cards&rdquo; count each card once – the same card in multiple languages or finishes (foil) is <strong>not</strong> counted twice. <strong>Click an edition</strong> to open all its cards with images – owned cards normal, missing ones greyed out. <strong>Click a card</strong> for details and prices. Editions you own <strong>no</strong> card from yet are shown too (main set types like Core, Expansion, Masters, Commander).">
     „Verschiedene Karten" zählen jede Karte einmal – dieselbe Karte in mehreren Sprachen oder Ausführungen (Foil) wird
     <strong>nicht</strong> doppelt gezählt. <strong>Klick auf eine Edition</strong> öffnet alle Karten mit Bild –
     besessene Karten normal, fehlende ausgegraut. <strong>Klick auf eine Karte</strong> zeigt Details und Preise.
