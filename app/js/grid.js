@@ -110,6 +110,8 @@ function renderStats(rows, distinctCount) {
 
 function applyFilters() {
   const q = document.getElementById('search').value.trim().toLowerCase();
+  // Stichwortsuche (UND): jedes Wort muss irgendwo vorkommen, Reihenfolge egal.
+  const terms = q ? q.split(/\s+/).filter(Boolean) : [];
   const set = document.getElementById('filter-set').value;
   const rarity = document.getElementById('filter-rarity').value;
   const color = document.getElementById('filter-color').value;
@@ -117,13 +119,13 @@ function applyFilters() {
   const sortBy = document.getElementById('sort-by').value;
 
   filteredCards = allCards.filter((c) => {
-    if (q) {
+    if (terms.length) {
       const sc = c.scryfall || {};
-      // Name + Kartentext + Manakosten (Buchstaben/Zahlen, ohne Klammern/Schrägstriche) durchsuchbar.
+      // Durchsucht Name + Kartentext + Manakosten (ohne Klammern/Schrägstriche).
       const hay = (
         c.name + ' ' + (sc.oracleText || '') + ' ' + String(sc.manaCost || '').replace(/[{}\/]/g, '')
       ).toLowerCase();
-      if (!hay.includes(q)) return false;
+      if (!terms.every((term) => hay.includes(term))) return false;
     }
     if (set && c.setCode !== set) return false;
     if (rarity && c.rarity !== rarity) return false;
