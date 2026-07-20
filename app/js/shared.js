@@ -117,8 +117,28 @@ function hideLoading() {
   if (el) el.style.display = 'none';
 }
 
-/* Detail modal for a grouped card: one row per language/finish variant with
-   its price, quantity and date added. */
+const CONDITION_LABEL = {
+  mint: 'Mint',
+  near_mint: 'Near Mint',
+  excellent: 'Excellent',
+  good: 'Good',
+  light_played: 'Lightly Played',
+  lightly_played: 'Lightly Played',
+  played: 'Played',
+  moderately_played: 'Moderately Played',
+  heavily_played: 'Heavily Played',
+  poor: 'Poor',
+  damaged: 'Damaged',
+};
+
+function conditionLabel(c) {
+  if (!c) return '–';
+  const k = String(c).toLowerCase();
+  return CONDITION_LABEL[k] || String(c).replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+/* Detail modal for a grouped card: one row per language/finish/condition variant
+   with its condition, price, quantity and date added. */
 function cardGroupModalHTML(group) {
   const rep = group.rep;
   const img = cardImage(rep, 'normal');
@@ -133,6 +153,7 @@ function cardGroupModalHTML(group) {
       return `
         <tr>
           <td>${languageFlag(v.language)} ${escapeHTML((v.language || '?').toUpperCase())}${foilTag}</td>
+          <td>${escapeHTML(conditionLabel(v.condition))}</td>
           <td class="num">${price}</td>
           <td class="num">${v.quantity}</td>
           <td>${escapeHTML((v.added || '').slice(0, 10)) || '–'}</td>
@@ -159,7 +180,7 @@ function cardGroupModalHTML(group) {
         </dl>
         <h3 class="lang-table-title">${t('Sprachen in deiner Sammlung', 'Languages in your collection')}</h3>
         <table class="lang-table">
-          <thead><tr><th>${t('Sprache', 'Language')}</th><th class="num">${t('Preis (Scryfall)', 'Price (Scryfall)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
+          <thead><tr><th>${t('Sprache', 'Language')}</th><th>${t('Zustand', 'Condition')}</th><th class="num">${t('Preis (Scryfall)', 'Price (Scryfall)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <h3 class="lang-table-title">${t('Weitere Editionen dieser Karte', 'Other printings of this card')}</h3>
