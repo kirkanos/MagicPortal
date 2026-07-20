@@ -137,6 +137,30 @@ function conditionLabel(c) {
   return CONDITION_LABEL[k] || String(c).replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
+/* Renders a single mana/text symbol token (without braces) as a Scryfall SVG. */
+function manaSymbolImg(token) {
+  const code = token.toUpperCase().replace(/\//g, '');
+  return `<img class="mana-symbol" src="https://svgs.scryfall.io/card-symbols/${encodeURIComponent(code)}.svg" alt="{${escapeHTML(token)}}" title="{${escapeHTML(token)}}" loading="lazy">`;
+}
+
+/* A mana cost string like "{2}{R}{R}" → row of symbol images. */
+function renderManaCost(mana) {
+  if (!mana) return '';
+  return (String(mana).match(/\{[^}]+\}/g) || []).map((tok) => manaSymbolImg(tok.slice(1, -1))).join('');
+}
+
+/* Oracle text with inline {…} symbols rendered and line breaks preserved. */
+function renderOracleText(text) {
+  if (!text) return '';
+  return String(text)
+    .split(/(\{[^}]+\})/g)
+    .map((part) => {
+      const m = part.match(/^\{([^}]+)\}$/);
+      return m ? manaSymbolImg(m[1]) : escapeHTML(part).replace(/\n/g, '<br>');
+    })
+    .join('');
+}
+
 /* Detail modal for a grouped card: one row per language/finish/condition variant
    with its condition, price, quantity and date added. */
 function cardGroupModalHTML(group) {
@@ -171,7 +195,9 @@ function cardGroupModalHTML(group) {
       <div class="modal-image">${img ? `<img src="${img}" alt="${escapeHTML(group.name)}">` : '<div class="no-image">Kein Bild</div>'}</div>
       <div class="modal-details">
         <h2>${escapeHTML(group.name)}</h2>
+        ${rep.scryfall && rep.scryfall.manaCost ? `<div class="mana-cost">${renderManaCost(rep.scryfall.manaCost)}</div>` : ''}
         <p class="modal-type">${escapeHTML((rep.scryfall && rep.scryfall.typeLine) || '')}</p>
+        ${rep.scryfall && rep.scryfall.oracleText ? `<div class="oracle-text">${renderOracleText(rep.scryfall.oracleText)}</div>` : ''}
         <dl>
           <dt>Set</dt><dd>${escapeHTML(group.setName)} (${escapeHTML(group.setCode)} #${escapeHTML(group.collectorNumber)})</dd>
           <dt>${t('Rarität', 'Rarity')}</dt><dd>${escapeHTML(rep.rarity)}</dd>

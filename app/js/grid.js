@@ -117,7 +117,14 @@ function applyFilters() {
   const sortBy = document.getElementById('sort-by').value;
 
   filteredCards = allCards.filter((c) => {
-    if (q && !c.name.toLowerCase().includes(q)) return false;
+    if (q) {
+      const sc = c.scryfall || {};
+      // Name + Kartentext + Manakosten (Buchstaben/Zahlen, ohne Klammern/Schrägstriche) durchsuchbar.
+      const hay = (
+        c.name + ' ' + (sc.oracleText || '') + ' ' + String(sc.manaCost || '').replace(/[{}\/]/g, '')
+      ).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     if (set && c.setCode !== set) return false;
     if (rarity && c.rarity !== rarity) return false;
     if (foil && c.foil !== foil) return false;

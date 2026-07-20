@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -123,12 +124,16 @@ type bulkCard struct {
 	Rarity          string            `json:"rarity"`
 	TypeLine        string            `json:"type_line"`
 	Colors          []string          `json:"colors"`
+	ManaCost        string            `json:"mana_cost"`
+	OracleText      string            `json:"oracle_text"`
 	Digital         bool              `json:"digital"`
 	ImageUris       map[string]string `json:"image_uris"`
 	CardFaces       []struct {
-		ImageUris map[string]string `json:"image_uris"`
-		TypeLine  string            `json:"type_line"`
-		Colors    []string          `json:"colors"`
+		ImageUris  map[string]string `json:"image_uris"`
+		TypeLine   string            `json:"type_line"`
+		Colors     []string          `json:"colors"`
+		ManaCost   string            `json:"mana_cost"`
+		OracleText string            `json:"oracle_text"`
 	} `json:"card_faces"`
 	Prices struct {
 		Eur     string `json:"eur"`
@@ -198,11 +203,12 @@ func syncBulk(db *sql.DB, force bool) error {
 	upsert := `
 		INSERT INTO scryfall_cards
 			(set_code, collector_number, scryfall_id, name, rarity, type_line, colors,
-			 image_normal, image_small, price_eur, price_eur_foil, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 mana_cost, oracle_text, image_normal, image_small, price_eur, price_eur_foil, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(set_code, collector_number) DO UPDATE SET
 			scryfall_id=excluded.scryfall_id, name=excluded.name, rarity=excluded.rarity,
 			type_line=excluded.type_line, colors=excluded.colors,
+			mana_cost=excluded.mana_cost, oracle_text=excluded.oracle_text,
 			image_normal=excluded.image_normal, image_small=excluded.image_small,
 			price_eur=excluded.price_eur, price_eur_foil=excluded.price_eur_foil,
 			updated_at=excluded.updated_at`
@@ -258,8 +264,24 @@ func syncBulk(db *sql.DB, force bool) error {
 			imgS = imgN
 		}
 
+		manaCost, oracleText := c.ManaCost, c.OracleText
+		if len(c.CardFaces) > 0 {
+			if manaCost == "" {
+				manaCost = c.CardFaces[0].ManaCost
+			}
+			if oracleText == "" {
+				parts := make([]string, 0, len(c.CardFaces))
+				for _, f := range c.CardFaces {
+					if f.OracleText != "" {
+						parts = append(parts, f.OracleText)
+					}
+				}
+				oracleText = strings.Join(parts, "\n//\n")
+			}
+		}
+
 		if _, err := stmt.Exec(c.Set, c.CollectorNumber, c.ID, c.Name, c.Rarity, typeLine,
-			colorsToJSON(colors), imgN, imgS, parsePrice(c.Prices.Eur), parsePrice(c.Prices.EurFoil), now); err != nil {
+			colorsToJSON(colors), manaCost, oracleText, imgN, imgS, parsePrice(c.Prices.Eur), parsePrice(c.Prices.EurFoil), now); err != nil {
 			stmt.Close()
 			tx.Rollback()
 			return err

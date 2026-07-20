@@ -74,6 +74,8 @@ type scryfallOut struct {
 	ImageSmall string   `json:"imageSmall"`
 	TypeLine   string   `json:"typeLine"`
 	Colors     []string `json:"colors"`
+	ManaCost   string   `json:"manaCost"`
+	OracleText string   `json:"oracleText"`
 	PriceEur   *float64 `json:"priceEur"`
 	SetName    string   `json:"setName"`
 }
@@ -100,7 +102,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
 		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added,
-		       s.name, s.type_line, s.colors, s.image_normal, s.image_small, s.price_eur
+		       s.name, s.type_line, s.colors, s.mana_cost, s.oracle_text, s.image_normal, s.image_small, s.price_eur
 		FROM collection c
 		LEFT JOIN scryfall_cards s
 		       ON s.set_code = c.set_code AND s.collector_number = c.collector_number
@@ -114,14 +116,14 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	out := []cardOut{}
 	for rows.Next() {
 		var (
-			c                                       cardOut
-			setCode                                 string
-			sName, sType, sColors, sImgN, sImgS     sql.NullString
-			sPrice                                  sql.NullFloat64
+			c                                                    cardOut
+			setCode                                              string
+			sName, sType, sColors, sMana, sOracle, sImgN, sImgS  sql.NullString
+			sPrice                                               sql.NullFloat64
 		)
 		if err := rows.Scan(&c.Key, &c.ScryfallID, &setCode, &c.SetName, &c.CollectorNumber, &c.Name,
 			&c.Foil, &c.Rarity, &c.Language, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Condition, &c.Added,
-			&sName, &sType, &sColors, &sImgN, &sImgS, &sPrice); err != nil {
+			&sName, &sType, &sColors, &sMana, &sOracle, &sImgN, &sImgS, &sPrice); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -133,6 +135,8 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 				ImageSmall: sImgS.String,
 				TypeLine:   sType.String,
 				Colors:     colorsFromJSON(sColors.String),
+				ManaCost:   sMana.String,
+				OracleText: sOracle.String,
 				SetName:    c.SetName,
 			}
 			if sPrice.Valid {

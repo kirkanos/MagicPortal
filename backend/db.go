@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS scryfall_cards (
   rarity           TEXT,
   type_line        TEXT,
   colors           TEXT,
+  mana_cost        TEXT,
+  oracle_text      TEXT,
   image_normal     TEXT,
   image_small      TEXT,
   price_eur        REAL,
@@ -74,7 +76,22 @@ func openDB(path string) (*sql.DB, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, err
 	}
+	migrate(db)
 	return db, nil
+}
+
+// migrate adds columns introduced after the initial schema to existing DBs.
+// When a column is actually added (i.e. the DB predates it), the bulk-data
+// marker is cleared so the next sync re-downloads and fills the new fields.
+func migrate(db *sql.DB) {
+	for _, stmt := range []string{
+		`ALTER TABLE scryfall_cards ADD COLUMN mana_cost TEXT`,
+		`ALTER TABLE scryfall_cards ADD COLUMN oracle_text TEXT`,
+	} {
+		if _, err := db.Exec(stmt); err == nil {
+			_, _ = db.Exec(`DELETE FROM meta WHERE key = 'bulk_remote_updated_at'`)
+		}
+	}
 }
 
 func metaGet(db *sql.DB, key string) string {
