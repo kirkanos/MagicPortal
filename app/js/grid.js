@@ -8,6 +8,20 @@ const COLOR_LABEL = {
   W: t('Weiß', 'White'), U: t('Blau', 'Blue'), B: t('Schwarz', 'Black'), R: t('Rot', 'Red'), G: t('Grün', 'Green'),
 };
 
+// Scryfall type_line: "{supertypes} {types} — {subtypes}" (em dash).
+const SUPERTYPES = new Set(['Legendary', 'Basic', 'Snow', 'World', 'Ongoing', 'Host', 'Elite']);
+
+function cardTypes(typeLine) {
+  const left = String(typeLine || '').split('—')[0].trim();
+  return left.split(/\s+/).filter((w) => w && !SUPERTYPES.has(w));
+}
+
+function cardSubtypes(typeLine) {
+  const parts = String(typeLine || '').split('—');
+  if (parts.length < 2) return [];
+  return parts[1].trim().split(/\s+/).filter(Boolean);
+}
+
 /* ---- Group language/finish variants of the same card into one tile ---- */
 function groupKey(c) {
   return c.setCode + '|' + (c.collectorNumber ? 'n:' + c.collectorNumber : 'name:' + c.name.toLowerCase());
@@ -101,6 +115,38 @@ function populateFilters(cards) {
       binderSel.appendChild(opt);
     });
   }
+
+  const typeSel = document.getElementById('filter-type');
+  if (typeSel) {
+    const typeSet = new Set();
+    cards.forEach((c) => cardTypes((c.scryfall && c.scryfall.typeLine) || '').forEach((tp) => typeSet.add(tp)));
+    [...typeSet].sort((a, b) => a.localeCompare(b)).forEach((tp) => {
+      const opt = document.createElement('option');
+      opt.value = tp;
+      opt.textContent = tp;
+      typeSel.appendChild(opt);
+    });
+  }
+}
+
+// Subtypes depend on the selected type (e.g. Creature → Dragon, Goblin …).
+// Disabled when the chosen type has no subtypes / no type is selected.
+function populateSubtypes(type) {
+  const sel = document.getElementById('filter-subtype');
+  if (!sel) return;
+  let subs = [];
+  if (type) {
+    const set = new Set();
+    allCards.forEach((c) => {
+      const tl = (c.scryfall && c.scryfall.typeLine) || '';
+      if (cardTypes(tl).includes(type)) cardSubtypes(tl).forEach((s) => set.add(s));
+    });
+    subs = [...set].sort((a, b) => a.localeCompare(b));
+  }
+  sel.innerHTML =
+    `<option value="">${t('Alle Untertypen', 'All subtypes')}</option>` +
+    subs.map((s) => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join('');
+  sel.disabled = subs.length === 0;
 }
 
 function renderStats(rows, distinctCount) {
@@ -128,6 +174,8 @@ function applyFilters() {
   const color = document.getElementById('filter-color').value;
   const foil = document.getElementById('filter-foil').value;
   const binder = document.getElementById('filter-binder').value;
+  const cardType = document.getElementById('filter-type').value;
+  const subtype = document.getElementById('filter-subtype').value;
   const sortBy = document.getElementById('sort-by').value;
 
   filteredCards = allCards.filter((c) => {
@@ -143,6 +191,11 @@ function applyFilters() {
     if (rarity && c.rarity !== rarity) return false;
     if (foil && c.foil !== foil) return false;
     if (binder && c.binderName !== binder) return false;
+    if (cardType || subtype) {
+      const tl = (c.scryfall && c.scryfall.typeLine) || '';
+      if (cardType && !cardTypes(tl).includes(cardType)) return false;
+      if (subtype && !cardSubtypes(tl).includes(subtype)) return false;
+    }
     if (color) {
       const colors = (c.scryfall && c.scryfall.colors) || [];
       if (color === 'C' && colors.length !== 0) return false;
@@ -248,6 +301,7 @@ async function init() {
   }
 
   populateFilters(allCards);
+  populateSubtypes('');
 
   // Optional deep-link from the Ordner/Listen pages: index.html?binder=<name>
   const binderParam = new URLSearchParams(location.search).get('binder');
@@ -260,8 +314,12 @@ async function init() {
   applyFilters();
 
   document.getElementById('search').addEventListener('input', debounce(applyFilters, 150));
-  ['filter-set', 'filter-rarity', 'filter-color', 'filter-foil', 'filter-binder', 'sort-by'].forEach((id) => {
+  ['filter-set', 'filter-rarity', 'filter-color', 'filter-foil', 'filter-binder', 'filter-subtype', 'sort-by'].forEach((id) => {
     document.getElementById(id).addEventListener('change', applyFilters);
+  });
+  document.getElementById('filter-type').addEventListener('change', (e) => {
+    populateSubtypes(e.target.value);
+    applyFilters();
   });
 }
 
