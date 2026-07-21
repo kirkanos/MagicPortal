@@ -105,6 +105,46 @@ func syncSets(db *sql.DB) error {
 	return nil
 }
 
+// ---- Subtype catalogs (official subtypes per Scryfall) ----
+
+var subtypeCatalogs = []string{
+	"creature-types", "planeswalker-types", "land-types",
+	"artifact-types", "enchantment-types", "spell-types", "battle-types",
+}
+
+// syncSubtypes fetches Scryfall's official subtype catalogs and stores their
+// union (JSON array) in meta, so the UI can filter out joke/Un-set subtypes.
+func syncSubtypes(db *sql.DB) error {
+	union := map[string]bool{}
+	for _, cat := range subtypeCatalogs {
+		resp, err := scryfallGet("https://api.scryfall.com/catalog/" + cat)
+		if err != nil {
+			return err
+		}
+		var c struct {
+			Data []string `json:"data"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&c)
+		resp.Body.Close()
+		if err != nil {
+			return err
+		}
+		for _, s := range c.Data {
+			union[s] = true
+		}
+		time.Sleep(120 * time.Millisecond)
+	}
+	arr := make([]string, 0, len(union))
+	for s := range union {
+		arr = append(arr, s)
+	}
+	b, _ := json.Marshal(arr)
+	metaSet(db, "subtypes", string(b))
+	metaSet(db, "subtypes_synced_at", time.Now().UTC().Format(time.RFC3339))
+	log.Printf("[sync] subtypes: %d offizielle Untertypen", len(arr))
+	return nil
+}
+
 // ---- Bulk cards ----
 
 type bulkEntry struct {
@@ -371,6 +411,15 @@ func doSync(force bool) error {
 		if err := syncSets(db); err != nil {
 			log.Printf("[sync] sets fehlgeschlagen: %v", err)
 			firstErr = err
+		}
+	}
+	// Official subtype catalogs; change rarely (monthly, or if never fetched).
+	if force || metaStale("subtypes_synced_at", 30*24*time.Hour) || metaGet(db, "subtypes") == "" {
+		if err := syncSubtypes(db); err != nil {
+			log.Printf("[sync] subtypes fehlgeschlagen: %v", err)
+			if firstErr == nil {
+				firstErr = err
+			}
 		}
 	}
 	// Cards + prices: syncBulk does a cheap remote check and only downloads the

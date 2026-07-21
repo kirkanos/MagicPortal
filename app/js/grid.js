@@ -2,24 +2,46 @@ let allCards = [];
 let allGroups = [];
 let filteredCards = [];
 let setIndex = {};
+let officialSubtypes = null;
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic', special: 'Special' };
 const COLOR_LABEL = {
   W: t('Weiß', 'White'), U: t('Blau', 'Blue'), B: t('Schwarz', 'Black'), R: t('Rot', 'Red'), G: t('Grün', 'Green'),
 };
 
-// Scryfall type_line: "{supertypes} {types} — {subtypes}" (em dash).
-const SUPERTYPES = new Set(['Legendary', 'Basic', 'Snow', 'World', 'Ongoing', 'Host', 'Elite']);
+// Only official, standard card types appear in the filter (keeps joke/Un-set
+// oddities like "Big Furry Monster" out). type_line format per face:
+// "{supertypes} {types} — {subtypes}" (em dash). Split (Instant // Sorcery) and
+// double-faced cards ("A // B") are handled by evaluating every face.
+const OFFICIAL_TYPES = new Set([
+  'Creature', 'Instant', 'Sorcery', 'Enchantment', 'Artifact', 'Planeswalker', 'Land', 'Battle',
+]);
 
 function cardTypes(typeLine) {
-  const left = String(typeLine || '').split('—')[0].trim();
-  return left.split(/\s+/).filter((w) => w && !SUPERTYPES.has(w));
+  const set = new Set();
+  String(typeLine || '')
+    .split('//')
+    .forEach((face) => {
+      face.split('—')[0].trim().split(/\s+/).forEach((w) => {
+        if (OFFICIAL_TYPES.has(w)) set.add(w);
+      });
+    });
+  return [...set];
 }
 
 function cardSubtypes(typeLine) {
-  const parts = String(typeLine || '').split('—');
-  if (parts.length < 2) return [];
-  return parts[1].trim().split(/\s+/).filter(Boolean);
+  const set = new Set();
+  String(typeLine || '')
+    .split('//')
+    .forEach((face) => {
+      const parts = face.split('—');
+      if (parts.length >= 2) {
+        parts.slice(1).join('—').trim().split(/\s+/).forEach((s) => {
+          if (s) set.add(s);
+        });
+      }
+    });
+  return [...set];
 }
 
 /* ---- Group language/finish variants of the same card into one tile ---- */
@@ -142,6 +164,8 @@ function populateSubtypes(type) {
       if (cardTypes(tl).includes(type)) cardSubtypes(tl).forEach((s) => set.add(s));
     });
     subs = [...set].sort((a, b) => a.localeCompare(b));
+    // Only keep officially recognised subtypes (filters out joke/Un-set noise).
+    if (officialSubtypes && officialSubtypes.size) subs = subs.filter((s) => officialSubtypes.has(s));
   }
   sel.innerHTML =
     `<option value="">${t('Alle Untertypen', 'All subtypes')}</option>` +
@@ -287,6 +311,7 @@ async function init() {
   try {
     allCards = await loadCollection(updateLoadingProgress);
     setIndex = await loadSetIndex();
+    officialSubtypes = new Set(await loadSubtypes().catch(() => []));
   } catch (e) {
     hideLoading();
     document.getElementById('card-grid').innerHTML = `<p style="color:#e05656">${t('Fehler beim Laden der Sammlung', 'Error loading collection')}: ${escapeHTML(e.message)}</p>`;

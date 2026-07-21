@@ -34,6 +34,7 @@ func main() {
 	mux.HandleFunc("GET /api/sets/{code}/cards", handleSetCards)
 	mux.HandleFunc("GET /api/prints", handlePrints)
 	mux.HandleFunc("GET /api/binders", handleBinders)
+	mux.HandleFunc("GET /api/subtypes", handleSubtypes)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/auth-check", handleAuthCheck)
 	mux.HandleFunc("POST /api/upload", handleUpload)
@@ -319,6 +320,18 @@ func handleBinders(w http.ResponseWriter, r *http.Request) {
 		out = append(out, b)
 	}
 	writeJSON(w, out)
+}
+
+// handleSubtypes returns the union of Scryfall's official subtype catalogs
+// (stored as a JSON array in meta) so the UI can filter subtypes.
+func handleSubtypes(w http.ResponseWriter, r *http.Request) {
+	v := metaGet(db, "subtypes")
+	if v == "" {
+		v = "[]"
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write([]byte(v))
 }
 
 func handleAuthCheck(w http.ResponseWriter, r *http.Request) {

@@ -19,6 +19,13 @@ async function loadSetIndex() {
   return res.json();
 }
 
+/* Official subtypes (union of Scryfall's catalogs) for filtering out joke subtypes. */
+async function loadSubtypes() {
+  const res = await fetch(API + '/subtypes', { cache: 'no-store' });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 const setCardsCache = {};
 
 /* All cards of a set (owned or not), for the editions overlay. */
