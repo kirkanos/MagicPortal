@@ -325,6 +325,29 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 /* Single-card detail overlay (opened from the edition overlay) */
 .eo-card-overlay { z-index: 260; }
 .eo-detail-missing { color: var(--red); font-size: 0.9rem; margin: 16px 0 0; }
+.eo-binders { font-size: 0.85rem; color: var(--text-dim); margin: 10px 0 0; }
+.eo-binders strong { color: var(--text); }
+
+/* Folders / Lists overview + Decks placeholder */
+.page-title { font-size: 1.5rem; margin: 0 0 4px; }
+.binder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+.binder-card {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; color: var(--text);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.binder-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+.binder-card .binder-name { font-weight: 600; }
+.binder-card .binder-meta { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-dim); }
+.binder-card .binder-meta .money { color: var(--accent); font-weight: 600; }
+
+.coming-soon { text-align: center; padding: 60px 20px; color: var(--text-dim); max-width: 560px; margin: 0 auto; }
+.coming-soon-icon { font-size: 3rem; margin: 0 0 8px; }
+.coming-soon h2 { color: var(--text); margin: 0 0 10px; }
+.coming-soon p { line-height: 1.6; }
+.coming-soon-actions { display: flex; gap: 10px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
+.coming-soon-actions button[disabled] { opacity: 0.5; cursor: not-allowed; }
 
 /* Binder view */
 .binder-page {

@@ -83,12 +83,13 @@ function buildEditions(cards) {
     rows.forEach((c) => {
       const id = distinctKey(c);
       if (!distinctMap[id]) {
-        distinctMap[id] = { id, name: c.name, collectorNumber: c.collectorNumber, copies: 0, byLang: {}, rep: c };
+        distinctMap[id] = { id, name: c.name, collectorNumber: c.collectorNumber, copies: 0, byLang: {}, byBinder: {}, rep: c };
       }
       const d = distinctMap[id];
       d.copies += c.quantity;
       const lang = (c.language || '?').toLowerCase();
       d.byLang[lang] = (d.byLang[lang] || 0) + c.quantity;
+      if (c.binderName) d.byBinder[c.binderName] = (d.byBinder[c.binderName] || 0) + c.quantity;
       if (c.collectorNumber) ownedByNumber[normNumber(c.collectorNumber)] = d;
     });
     const distinct = Object.values(distinctMap);
@@ -370,12 +371,17 @@ function editionCardDetailHTML(card, ownedInfo) {
       .sort((a, b) => b[1] - a[1])
       .map(([l, n]) => `<tr><td>${languageFlag(l) || escapeHTML(l.toUpperCase())} ${escapeHTML(l.toUpperCase())}</td><td class="num">${n}</td></tr>`)
       .join('');
+    const binders = Object.entries(ownedInfo.byBinder || {})
+      .sort((a, b) => b[1] - a[1])
+      .map(([n, q]) => `${escapeHTML(n)} (${q})`)
+      .join(', ');
     ownership = `
       <h3 class="lang-table-title">${t('In deiner Sammlung', 'In your collection')} (${ownedInfo.copies}×)</h3>
       <table class="lang-table">
         <thead><tr><th>${t('Sprache', 'Language')}</th><th class="num">${t('Anzahl', 'Quantity')}</th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>`;
+      </table>
+      ${binders ? `<p class="eo-binders"><strong>${t('Ordner', 'Folder')}:</strong> ${binders}</p>` : ''}`;
   } else {
     ownership = `<p class="eo-detail-missing">${t('Diese Karte fehlt dir noch.', 'You don’t own this card yet.')}</p>`;
   }

@@ -47,9 +47,9 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 
 	updateStmt, err := tx.Prepare(`
 		UPDATE collection SET
-			scryfall_id = ?, set_name = ?, name = ?, rarity = ?,
+			binder_type = ?, scryfall_id = ?, set_name = ?, name = ?, rarity = ?,
 			quantity = ?, purchase_price = ?, currency = ?, added = ?, updated_at = ?
-		WHERE set_code = ? AND collector_number = ? AND foil = ? AND language = ? AND condition = ?`)
+		WHERE binder_name = ? AND set_code = ? AND collector_number = ? AND foil = ? AND language = ? AND condition = ?`)
 	if err != nil {
 		return res, err
 	}
@@ -57,9 +57,9 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 
 	insertStmt, err := tx.Prepare(`
 		INSERT INTO collection
-			(scryfall_id, set_code, set_name, collector_number, name, foil, rarity,
+			(binder_name, binder_type, scryfall_id, set_code, set_name, collector_number, name, foil, rarity,
 			 language, quantity, purchase_price, currency, condition, added, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return res, err
 	}
@@ -80,6 +80,8 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 		if name == "" {
 			continue
 		}
+		binderName := get(rec, "binder name")
+		binderType := strings.ToLower(get(rec, "binder type"))
 		setCode := strings.ToLower(get(rec, "set code"))
 		setName := get(rec, "set name")
 		collector := get(rec, "collector number")
@@ -102,15 +104,15 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 		price, _ := strconv.ParseFloat(get(rec, "purchase price"), 64)
 		added := get(rec, "added")
 
-		up, err := updateStmt.Exec(scryfallID, setName, name, rarity, qty, price, currency, added, now,
-			setCode, collector, foil, language, condition)
+		up, err := updateStmt.Exec(binderType, scryfallID, setName, name, rarity, qty, price, currency, added, now,
+			binderName, setCode, collector, foil, language, condition)
 		if err != nil {
 			return res, err
 		}
 		if n, _ := up.RowsAffected(); n > 0 {
 			res.Updated++
 		} else {
-			if _, err := insertStmt.Exec(scryfallID, setCode, setName, collector, name, foil, rarity,
+			if _, err := insertStmt.Exec(binderName, binderType, scryfallID, setCode, setName, collector, name, foil, rarity,
 				language, qty, price, currency, condition, added, now); err != nil {
 				return res, err
 			}

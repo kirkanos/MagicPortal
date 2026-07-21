@@ -38,8 +38,21 @@ CREATE TABLE IF NOT EXISTS scryfall_cards (
   PRIMARY KEY (set_code, collector_number)
 );
 
+CREATE TABLE IF NOT EXISTS meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT
+);
+`
+
+// collectionSchema is kept separate (not part of `schema`) so it is only ever
+// run against a fresh collection table – its binder index references a column
+// that an old (pre-binder) table doesn't have. Creation/migration happens in
+// migrate() after tableExists/columnExists checks.
+const collectionSchema = `
 CREATE TABLE IF NOT EXISTS collection (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  binder_name      TEXT,
+  binder_type      TEXT,
   scryfall_id      TEXT,
   set_code         TEXT,
   set_name         TEXT,
@@ -54,15 +67,10 @@ CREATE TABLE IF NOT EXISTS collection (
   condition        TEXT,
   added            TEXT,
   updated_at       TEXT,
-  UNIQUE (set_code, collector_number, foil, language, condition)
+  UNIQUE (binder_name, set_code, collector_number, foil, language, condition)
 );
-
 CREATE INDEX IF NOT EXISTS idx_collection_set ON collection(set_code);
-
-CREATE TABLE IF NOT EXISTS meta (
-  key   TEXT PRIMARY KEY,
-  value TEXT
-);
+CREATE INDEX IF NOT EXISTS idx_collection_binder ON collection(binder_name);
 `
 
 func openDB(path string) (*sql.DB, error) {
@@ -92,6 +100,39 @@ func migrate(db *sql.DB) {
 			_, _ = db.Exec(`DELETE FROM meta WHERE key = 'bulk_remote_updated_at'`)
 		}
 	}
+
+	// Collection table: create fresh, or migrate an old one. The UNIQUE key
+	// gained binder_name; SQLite can't ALTER a constraint, so we recreate the
+	// table (preserving existing rows) when the column is missing.
+	if !tableExists(db, "collection") {
+		_, _ = db.Exec(collectionSchema)
+	} else if !columnExists(db, "collection", "binder_name") {
+		_, _ = db.Exec(`ALTER TABLE collection RENAME TO collection_old`)
+		if _, err := db.Exec(collectionSchema); err == nil {
+			_, _ = db.Exec(`INSERT INTO collection
+				(binder_name, binder_type, scryfall_id, set_code, set_name, collector_number, name,
+				 foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at)
+				SELECT '', '', scryfall_id, set_code, set_name, collector_number, name,
+				 foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at
+				FROM collection_old`)
+		}
+		_, _ = db.Exec(`DROP TABLE IF EXISTS collection_old`)
+	}
+}
+
+func tableExists(db *sql.DB, name string) bool {
+	var n int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, name).Scan(&n)
+	return n > 0
+}
+
+func columnExists(db *sql.DB, table, col string) bool {
+	rows, err := db.Query(`SELECT 1 FROM pragma_table_info(?) WHERE name = ?`, table, col)
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+	return rows.Next()
 }
 
 func metaGet(db *sql.DB, key string) string {

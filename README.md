@@ -27,9 +27,11 @@ Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection
 
 ## ✨ Features
 
-- **🗃️ Karten-Ansicht** – durchsuchbares, filterbares Raster (Set, Rarität, Farbe, Foil, Sortierung). Gleiche Karten in verschiedenen Sprachen werden zu **einer** Kachel zusammengefasst (Gesamtanzahl + Sprachflaggen); jede Kachel zeigt Editionssymbol, ausgeschriebenen Set-Namen und die nach Rarität eingefärbte Rarität. Die **Suche** erfasst auch Kartentext und Manakosten (z. B. `2rr`, `wu`, `fliegend`).
-- **🔍 Kartendetails** – Manakosten als Symbole, Kartentext (Oracle), pro Sprache/Ausführung/Zustand eine Zeile (Preis / Anzahl / Zustand / hinzugefügt am) sowie eine Galerie **aller weiteren Editionen** der Karte mit Bild, Edition und Preis.
-- **📚 Editionen** – Überblick pro Set: besessen / fehlt / mehrfach, inklusive Editionen, aus denen du noch **keine** Karte hast. Set-Typ-Filter (Standard: sammelbare Typen, bis „alle"), aufklappbare Erklärung, Sortierung u. a. nach fehlenden Karten. Klick öffnet ein Overlay mit **allen** Karten der Edition (fehlende ausgegraut), Set-Symbol und dem Wert der fehlenden Karten.
+- **🗃️ Karten-Ansicht** – durchsuchbares, filterbares Raster (Set, Rarität, Farbe, Foil, **Ordner/Liste**, Sortierung inkl. Erscheinungsdatum). Gleiche Karten in verschiedenen Sprachen werden zu **einer** Kachel zusammengefasst (Gesamtanzahl + Sprachflaggen); jede Kachel zeigt Editionssymbol, ausgeschriebenen Set-Namen und die nach Rarität eingefärbte Rarität. Die **Stichwort-Suche** (UND) erfasst auch Kartentext und Manakosten (z. B. `create token soldier`, `2rr`, `wu`).
+- **🔍 Kartendetails** – Manakosten als Symbole, Kartentext (Oracle), pro Sprache/Ausführung/Zustand eine Zeile (Ordner / Preis / Anzahl / Zustand / hinzugefügt am) sowie eine Galerie **aller weiteren Editionen** der Karte mit Bild, Edition und Preis.
+- **📚 Editionen** – Überblick pro Set: besessen / fehlt / mehrfach, inklusive Editionen, aus denen du noch **keine** Karte hast. Set-Typ-Filter (Standard: sammelbare Typen, bis „alle"), aufklappbare Erklärung, Sortierung u. a. nach fehlenden Karten und Erscheinungsdatum. Klick öffnet ein Overlay mit **allen** Karten der Edition (fehlende ausgegraut), Set-Symbol, dem Wert der fehlenden Karten und – bei besessenen Karten – dem Ordner.
+- **📁 Ordner & Listen** – eigene Übersichtsseiten für ManaBox-Ordner (Binder) und -Listen mit Kartenanzahl und Wert; Klick springt in die gefilterte Karten-Ansicht.
+- **🧩 Decks** – Menüpunkt für künftigen Deck-Import/-Export (derzeit Platzhalter, noch ohne Funktion).
 - **📊 Statistik** – Charts zu Rarität, Farbverteilung, Sets, Foil-Anteil, Kaufwert über Zeit, wertvollste Karten und Editionen nach Marktwert.
 - **✅ Deck-Checker** – Deckliste einfügen und sehen, welche Karten du schon besitzt.
 - **🌐 Zweisprachig** – Oberfläche in Deutsch und Englisch, umschaltbar im Menü; die Auswahl wird gespeichert (Standard: Deutsch).
@@ -124,6 +126,7 @@ nginx-Proxy.
 | `GET` | `/api/sets` | Set-Index |
 | `GET` | `/api/sets/{code}/cards` | Alle Karten eines Sets |
 | `GET` | `/api/prints?name=…` | Alle Drucke einer Karte (Editionen) |
+| `GET` | `/api/binders` | Ordner/Listen mit Kartenanzahl & Wert |
 | `GET` | `/api/status` | Sync-Status & Datenstand |
 | `GET` | `/api/auth-check` | Passwortprüfung (204/403) |
 | `POST` | `/api/upload` | CSV hochladen (Upsert) |
@@ -135,9 +138,9 @@ nginx-Proxy.
 ```text
 mtg-portal/
 ├── app/                     # nginx-Docroot (statische Oberfläche)
-│   ├── index.html · editions.html · dashboard.html · deck-checker.html
+│   ├── index.html · editions.html · binders.html · lists.html · decks.html · dashboard.html · deck-checker.html
 │   ├── css/style.css
-│   ├── js/i18n.js · shared.js · grid.js · editions.js · dashboard.js · deck-checker.js
+│   ├── js/i18n.js · shared.js · grid.js · editions.js · binders.js · dashboard.js · deck-checker.js
 │   └── images/              # Logo & Favicons
 ├── backend/                 # Go-Backend (API + Sync-Jobs)
 │   ├── main.go · db.go · csvimport.go · scryfall.go

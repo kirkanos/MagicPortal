@@ -178,6 +178,7 @@ function cardGroupModalHTML(group) {
         <tr>
           <td>${languageFlag(v.language)} ${escapeHTML((v.language || '?').toUpperCase())}${foilTag}</td>
           <td>${escapeHTML(conditionLabel(v.condition))}</td>
+          <td>${escapeHTML(v.binderName || '–')}</td>
           <td class="num">${price}</td>
           <td class="num">${v.quantity}</td>
           <td>${escapeHTML((v.added || '').slice(0, 10)) || '–'}</td>
@@ -206,7 +207,7 @@ function cardGroupModalHTML(group) {
         </dl>
         <h3 class="lang-table-title">${t('Sprachen in deiner Sammlung', 'Languages in your collection')}</h3>
         <table class="lang-table">
-          <thead><tr><th>${t('Sprache', 'Language')}</th><th>${t('Zustand', 'Condition')}</th><th class="num">${t('Preis (Scryfall)', 'Price (Scryfall)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
+          <thead><tr><th>${t('Sprache', 'Language')}</th><th>${t('Zustand', 'Condition')}</th><th>${t('Ordner', 'Folder')}</th><th class="num">${t('Preis (Scryfall)', 'Price (Scryfall)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <h3 class="lang-table-title">${t('Weitere Editionen dieser Karte', 'Other printings of this card')}</h3>

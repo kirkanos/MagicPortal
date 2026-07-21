@@ -3,23 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title data-en="MTG Collection – Deck Checker">MTG Sammlung – Deck-Checker</title>
+<title data-en="MTG Collection – Folders">MTG Sammlung – Ordner</title>
 <link rel="icon" type="image/svg+xml" href="images/magic-portal-icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
 <link rel="apple-touch-icon" href="images/favicon-192.png">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body data-binder-type="binder">
 <nav class="topnav">
   <a href="index.html" class="brand"><img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="brand-logo"></a>
   <a href="index.html" data-en="Cards">Karten</a>
   <a href="editions.html" data-en="Editions">Editionen</a>
-  <a href="binders.html" data-en="Folders">Ordner</a>
+  <a href="binders.html" class="active" data-en="Folders">Ordner</a>
   <a href="lists.html" data-en="Lists">Listen</a>
   <a href="decks.html" data-en="Decks">Decks</a>
   <a href="dashboard.html" data-en="Statistics">Statistik</a>
-  <a href="deck-checker.html" class="active" data-en="Deck Checker">Deck-Checker</a>
+  <a href="deck-checker.html" data-en="Deck Checker">Deck-Checker</a>
   <span class="nav-actions">
     <button type="button" id="lang-toggle" class="lang-toggle" aria-label="Sprache" data-en-aria="Language"></button>
     <span class="sync-status" id="sync-status" title="Letzte Aktualisierung der Kartendaten/Preise" data-en-title="Last update of card data / prices"></span>
@@ -33,24 +33,9 @@
 </nav>
 
 <main>
-  <div class="deck-checker-layout">
-    <div>
-      <label for="decklist-input" style="color:#9a9cae;font-size:0.9rem;" data-en-html="Paste a decklist (format: <code>1 Lightning Bolt</code> or <code>4x Brainstorm</code>, one card per line)">Deckliste einfügen (Format: <code>1 Lightning Bolt</code> oder <code>4x Brainstorm</code>, eine Karte pro Zeile)</label>
-      <textarea id="decklist-input" placeholder="1 Lightning Bolt
-4 Brainstorm
-1 Black Lotus"></textarea>
-      <button id="check-btn" data-en="Check deck">Deck prüfen</button>
-    </div>
-    <div>
-      <div class="deck-summary" id="deck-summary"></div>
-      <div style="overflow-x:auto;">
-        <table class="deck-table" id="deck-table">
-          <thead><tr><th data-en="Card">Karte</th><th data-en="Needed">Benötigt</th><th data-en="Owned">Im Besitz</th><th data-en="Status">Status</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+  <h1 class="page-title" data-en="Folders">Ordner</h1>
+  <div class="result-count" id="binder-count"></div>
+  <div class="binder-grid" id="binder-list"></div>
 </main>
 
 <footer class="site-footer">
@@ -67,6 +52,6 @@
 
 <script src="js/i18n.js"></script>
 <script src="js/shared.js"></script>
-<script src="js/deck-checker.js"></script>
+<script src="js/binders.js"></script>
 </body>
 </html>

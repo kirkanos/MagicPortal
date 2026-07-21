@@ -91,6 +91,16 @@ function populateFilters(cards) {
     opt.textContent = t('Farblos', 'Colorless');
     colorSel.appendChild(opt);
   }
+
+  const binderSel = document.getElementById('filter-binder');
+  if (binderSel) {
+    uniqueSorted(cards.map((c) => c.binderName)).forEach((b) => {
+      const opt = document.createElement('option');
+      opt.value = b;
+      opt.textContent = b;
+      binderSel.appendChild(opt);
+    });
+  }
 }
 
 function renderStats(rows, distinctCount) {
@@ -117,6 +127,7 @@ function applyFilters() {
   const rarity = document.getElementById('filter-rarity').value;
   const color = document.getElementById('filter-color').value;
   const foil = document.getElementById('filter-foil').value;
+  const binder = document.getElementById('filter-binder').value;
   const sortBy = document.getElementById('sort-by').value;
 
   filteredCards = allCards.filter((c) => {
@@ -131,6 +142,7 @@ function applyFilters() {
     if (set && c.setCode !== set) return false;
     if (rarity && c.rarity !== rarity) return false;
     if (foil && c.foil !== foil) return false;
+    if (binder && c.binderName !== binder) return false;
     if (color) {
       const colors = (c.scryfall && c.scryfall.colors) || [];
       if (color === 'C' && colors.length !== 0) return false;
@@ -236,11 +248,19 @@ async function init() {
   }
 
   populateFilters(allCards);
+
+  // Optional deep-link from the Ordner/Listen pages: index.html?binder=<name>
+  const binderParam = new URLSearchParams(location.search).get('binder');
+  if (binderParam) {
+    const binderSel = document.getElementById('filter-binder');
+    if ([...binderSel.options].some((o) => o.value === binderParam)) binderSel.value = binderParam;
+  }
+
   renderStats(allCards, allGroups.length);
   applyFilters();
 
   document.getElementById('search').addEventListener('input', debounce(applyFilters, 150));
-  ['filter-set', 'filter-rarity', 'filter-color', 'filter-foil', 'sort-by'].forEach((id) => {
+  ['filter-set', 'filter-rarity', 'filter-color', 'filter-foil', 'filter-binder', 'sort-by'].forEach((id) => {
     document.getElementById(id).addEventListener('change', applyFilters);
   });
 }

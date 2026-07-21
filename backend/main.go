@@ -33,6 +33,7 @@ func main() {
 	mux.HandleFunc("GET /api/sets", handleSets)
 	mux.HandleFunc("GET /api/sets/{code}/cards", handleSetCards)
 	mux.HandleFunc("GET /api/prints", handlePrints)
+	mux.HandleFunc("GET /api/binders", handleBinders)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/auth-check", handleAuthCheck)
 	mux.HandleFunc("POST /api/upload", handleUpload)
@@ -95,13 +96,15 @@ type cardOut struct {
 	Condition       string       `json:"condition"`
 	Language        string       `json:"language"`
 	Added           string       `json:"added"`
+	BinderName      string       `json:"binderName"`
+	BinderType      string       `json:"binderType"`
 	Scryfall        *scryfallOut `json:"scryfall"`
 }
 
 func handleCollection(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
-		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added,
+		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type,
 		       s.name, s.type_line, s.colors, s.mana_cost, s.oracle_text, s.image_normal, s.image_small, s.price_eur
 		FROM collection c
 		LEFT JOIN scryfall_cards s
@@ -123,6 +126,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 		)
 		if err := rows.Scan(&c.Key, &c.ScryfallID, &setCode, &c.SetName, &c.CollectorNumber, &c.Name,
 			&c.Foil, &c.Rarity, &c.Language, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Condition, &c.Added,
+			&c.BinderName, &c.BinderType,
 			&sName, &sType, &sColors, &sMana, &sOracle, &sImgN, &sImgS, &sPrice); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -277,6 +281,42 @@ func handlePrints(w http.ResponseWriter, r *http.Request) {
 			}
 			out = append(out, p)
 		}
+	}
+	writeJSON(w, out)
+}
+
+type binderOut struct {
+	Name        string  `json:"name"`
+	Type        string  `json:"type"`
+	Cards       int     `json:"cards"`
+	Total       int     `json:"total"`
+	MarketValue float64 `json:"marketValue"`
+}
+
+// handleBinders returns per-binder aggregates (folders and lists) for the
+// Ordner/Listen overview pages.
+func handleBinders(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.Query(`
+		SELECT c.binder_name, c.binder_type, COUNT(*),
+		       COALESCE(SUM(c.quantity), 0),
+		       COALESCE(SUM(c.quantity * COALESCE(sc.price_eur, 0)), 0)
+		FROM collection c
+		LEFT JOIN scryfall_cards sc ON sc.set_code = c.set_code AND sc.collector_number = c.collector_number
+		GROUP BY c.binder_name, c.binder_type
+		ORDER BY c.binder_type, c.binder_name`)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+	out := []binderOut{}
+	for rows.Next() {
+		var b binderOut
+		if err := rows.Scan(&b.Name, &b.Type, &b.Cards, &b.Total, &b.MarketValue); err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		out = append(out, b)
 	}
 	writeJSON(w, out)
 }
