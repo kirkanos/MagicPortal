@@ -103,6 +103,7 @@ function buildEditions(cards) {
       name: (info && info.name) || (o && o.name) || lc.toUpperCase(),
       icon: (info && info.iconSvgUri) || '',
       setType: (info && info.setType) || '',
+      released: (info && info.releasedAt) || '',
       owned: ownedCount,
       total,
       missing,
@@ -150,6 +151,10 @@ function sortEditions(list, sortBy) {
       }
       case 'dupes-desc':
         return b.dupeCount - a.dupeCount || a.name.localeCompare(b.name);
+      case 'released-desc':
+        return (b.released || '').localeCompare(a.released || '') || a.name.localeCompare(b.name);
+      case 'released-asc':
+        return (a.released || '9999').localeCompare(b.released || '9999') || a.name.localeCompare(b.name);
       default: // value-desc
         return b.marketValue - a.marketValue || a.name.localeCompare(b.name);
     }

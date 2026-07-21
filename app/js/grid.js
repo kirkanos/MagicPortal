@@ -48,6 +48,7 @@ function groupCards(rows) {
     g.marketPrice = g.rep.scryfall && g.rep.scryfall.priceEur ? parseFloat(g.rep.scryfall.priceEur) : 0;
     g.purchasePrice = g.rep.purchasePrice;
     g.added = g.variants.reduce((m, v) => ((v.added || '') > m ? v.added || '' : m), '');
+    g.released = (setIndex[g.setCode.toLowerCase()] || {}).releasedAt || '';
     return g;
   });
 }
@@ -151,6 +152,10 @@ function applyFilters() {
         return (a.rarity || '').localeCompare(b.rarity || '');
       case 'added-desc':
         return (b.added || '').localeCompare(a.added || '');
+      case 'released-desc':
+        return (b.released || '').localeCompare(a.released || '') || a.name.localeCompare(b.name);
+      case 'released-asc':
+        return (a.released || '9999').localeCompare(b.released || '9999') || a.name.localeCompare(b.name);
       default:
         return a.name.localeCompare(b.name);
     }
