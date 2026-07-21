@@ -35,7 +35,7 @@ Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection
 - **📊 Statistik** – Charts zu Rarität, Farbverteilung, Sets, Foil-Anteil, Kaufwert über Zeit, wertvollste Karten und Editionen nach Marktwert.
 - **✅ Deck-Checker** – Deckliste einfügen und sehen, welche Karten du schon besitzt.
 - **🌐 Zweisprachig** – Oberfläche in Deutsch und Englisch, umschaltbar im Menü; die Auswahl wird gespeichert (Standard: Deutsch).
-- **⬆️ CSV-Upload** – neue ManaBox-Exporte direkt im Menü hochladen (passwortgeschützt); neue Karten werden angelegt, bestehende aktualisiert (Upsert).
+- **⬆️ CSV-Upload** – neue ManaBox-Exporte direkt im Menü hochladen (passwortgeschützt); der Import **ersetzt** die Sammlung vollständig, sodass sie exakt der CSV entspricht (nicht mehr enthaltene Karten verschwinden).
 - **🔄 Auto-Sync** – Kartendaten & Preise werden alle 5 Minuten im Hintergrund aktualisiert (Download nur, wenn Scryfall wirklich einen neuen Datensatz veröffentlicht hat).
 
 ## 🏗️ Architektur
@@ -72,8 +72,9 @@ Der Stack ist für den Betrieb hinter [Traefik](https://traefik.io) gedacht und 
 ## 📥 Sammlung befüllen & aktualisieren
 
 Oben rechts im Menü: **„🔒 Upload freischalten"** → Passwort → **„⬆ CSV hochladen"**.
-Neue Karten werden hinzugefügt, bestehende aktualisiert (Upsert). **„Leeren"** entfernt die
-gesamte Sammlung wieder.
+Der Import **ersetzt** die Sammlung vollständig: Der Datenbestand entspricht danach exakt der
+hochgeladenen CSV – Karten, die nicht mehr enthalten sind, werden entfernt (atomar; bei einem
+Fehler bleibt die bisherige Sammlung erhalten). **„Leeren"** entfernt die gesamte Sammlung.
 
 Erwartete Spalten (Standard-ManaBox-Export):
 `Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, Scryfall ID, Purchase price, Purchase price currency, Condition, Language, Added`.

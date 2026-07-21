@@ -45,6 +45,13 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 	}
 	defer tx.Rollback()
 
+	// Full replace: an import mirrors the CSV exactly, so cards no longer in the
+	// file are removed. Done inside the transaction → on any error the previous
+	// collection stays intact (rollback).
+	if _, err := tx.Exec(`DELETE FROM collection`); err != nil {
+		return res, err
+	}
+
 	updateStmt, err := tx.Prepare(`
 		UPDATE collection SET
 			binder_type = ?, scryfall_id = ?, set_name = ?, name = ?, rarity = ?,
