@@ -237,6 +237,10 @@ function applyFilters() {
         return b.purchasePrice - a.purchasePrice;
       case 'price-asc':
         return a.purchasePrice - b.purchasePrice;
+      case 'value-desc':
+        return b.marketPrice - a.marketPrice || a.name.localeCompare(b.name);
+      case 'value-asc':
+        return a.marketPrice - b.marketPrice || a.name.localeCompare(b.name);
       case 'rarity':
         return (a.rarity || '').localeCompare(b.rarity || '');
       case 'added-desc':
