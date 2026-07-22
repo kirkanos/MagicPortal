@@ -32,7 +32,7 @@ Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection
 - **📚 Editionen** – Überblick pro Set: besessen / fehlt / mehrfach, inklusive Editionen, aus denen du noch **keine** Karte hast. Set-Typ-Filter (Standard: sammelbare Typen, bis „alle"), aufklappbare Erklärung, Sortierung u. a. nach fehlenden Karten und Erscheinungsdatum. Klick öffnet ein Overlay mit **allen** Karten der Edition (fehlende ausgegraut), Set-Symbol, dem Wert der fehlenden Karten und – bei besessenen Karten – dem Ordner.
 - **📁 Ordner & Listen** – eigene Übersichtsseiten für ManaBox-Ordner (Binder) und -Listen mit Kartenanzahl und Wert; Klick springt in die gefilterte Karten-Ansicht.
 - **🧩 Decks** – Menüpunkt für künftigen Deck-Import/-Export (derzeit Platzhalter, noch ohne Funktion).
-- **📊 Statistik** – Charts zu Rarität, Farbverteilung, Sets, Foil-Anteil, Kaufwert über Zeit, wertvollste Karten und Editionen nach Marktwert.
+- **📊 Statistik** – Kennzahlen (inkl. Wertzuwachs Markt − Kauf) und Charts: Rarität, Farben, Kartentypen, Sprachen, Zustand, Manawert-Verteilung, Foil-Anteil, Sets, Kaufwert über Zeit, Editionen nach Marktwert sowie wertvollste Karten nach Kauf- und Marktwert.
 - **✅ Deck-Checker** – Deckliste einfügen und sehen, welche Karten du schon besitzt.
 - **🌐 Zweisprachig** – Oberfläche in Deutsch und Englisch, umschaltbar im Menü; die Auswahl wird gespeichert (Standard: Deutsch).
 - **⬆️ CSV-Upload** – neue ManaBox-Exporte direkt im Menü hochladen (passwortgeschützt); der Import **ersetzt** die Sammlung vollständig, sodass sie exakt der CSV entspricht (nicht mehr enthaltene Karten verschwinden).

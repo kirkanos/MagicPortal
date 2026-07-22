@@ -89,6 +89,52 @@ function languageFlag(lang) {
   return LANGUAGE_FLAG[String(lang || '').toLowerCase()] || '';
 }
 
+// Official, standard card types (keeps joke/Un-set oddities out). type_line per
+// face: "{supertypes} {types} — {subtypes}"; split (//) and DFC handled per face.
+const OFFICIAL_TYPES = new Set([
+  'Creature', 'Instant', 'Sorcery', 'Enchantment', 'Artifact', 'Planeswalker', 'Land', 'Battle',
+]);
+
+function cardTypes(typeLine) {
+  const set = new Set();
+  String(typeLine || '')
+    .split('//')
+    .forEach((face) => {
+      face.split('—')[0].trim().split(/\s+/).forEach((w) => {
+        if (OFFICIAL_TYPES.has(w)) set.add(w);
+      });
+    });
+  return [...set];
+}
+
+function cardSubtypes(typeLine) {
+  const set = new Set();
+  String(typeLine || '')
+    .split('//')
+    .forEach((face) => {
+      const parts = face.split('—');
+      if (parts.length >= 2) {
+        parts.slice(1).join('—').trim().split(/\s+/).forEach((s) => {
+          if (s) set.add(s);
+        });
+      }
+    });
+  return [...set];
+}
+
+/* Converted mana cost (mana value) from a "{2}{R}{R}" string; null if none. */
+function manaValue(manaCost) {
+  if (!manaCost) return null;
+  let total = 0;
+  (String(manaCost).match(/\{([^}]+)\}/g) || []).forEach((tok) => {
+    const s = tok.slice(1, -1);
+    if (/^\d+$/.test(s)) total += parseInt(s, 10);
+    else if (/^[XYZ]$/.test(s)) total += 0;
+    else total += 1; // colored, hybrid, phyrexian, colorless, snow…
+  });
+  return total;
+}
+
 function formatCurrency(value, currency) {
   if (value === null || value === undefined || isNaN(value)) return '-';
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: currency || 'EUR' }).format(value);

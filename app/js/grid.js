@@ -9,42 +9,8 @@ const COLOR_LABEL = {
   W: t('Weiß', 'White'), U: t('Blau', 'Blue'), B: t('Schwarz', 'Black'), R: t('Rot', 'Red'), G: t('Grün', 'Green'),
 };
 
-// Only official, standard card types appear in the filter (keeps joke/Un-set
-// oddities like "Big Furry Monster" out). type_line format per face:
-// "{supertypes} {types} — {subtypes}" (em dash). Split (Instant // Sorcery) and
-// double-faced cards ("A // B") are handled by evaluating every face.
-const OFFICIAL_TYPES = new Set([
-  'Creature', 'Instant', 'Sorcery', 'Enchantment', 'Artifact', 'Planeswalker', 'Land', 'Battle',
-]);
-
-function cardTypes(typeLine) {
-  const set = new Set();
-  String(typeLine || '')
-    .split('//')
-    .forEach((face) => {
-      face.split('—')[0].trim().split(/\s+/).forEach((w) => {
-        if (OFFICIAL_TYPES.has(w)) set.add(w);
-      });
-    });
-  return [...set];
-}
-
-function cardSubtypes(typeLine) {
-  const set = new Set();
-  String(typeLine || '')
-    .split('//')
-    .forEach((face) => {
-      const parts = face.split('—');
-      if (parts.length >= 2) {
-        parts.slice(1).join('—').trim().split(/\s+/).forEach((s) => {
-          if (s) set.add(s);
-        });
-      }
-    });
-  return [...set];
-}
-
-/* ---- Group language/finish variants of the same card into one tile ---- */
+/* ---- Group language/finish variants of the same card into one tile
+   (cardTypes / cardSubtypes / manaValue live in shared.js) ---- */
 function groupKey(c) {
   return c.setCode + '|' + (c.collectorNumber ? 'n:' + c.collectorNumber : 'name:' + c.name.toLowerCase());
 }
