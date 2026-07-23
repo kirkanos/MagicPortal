@@ -17,13 +17,27 @@ function renderStats(cards) {
   const gainColor = gain >= 0 ? '#4dbb6a' : '#e05656';
   const gainStr = (gain >= 0 ? '+' : '') + formatCurrency(gain, 'EUR');
 
+  const foilQty = cards.reduce((s, c) => s + (c.foil && c.foil !== 'normal' ? c.quantity : 0), 0);
+  const foilPct = totalQty ? (foilQty / totalQty) * 100 : 0;
+  const setCount = new Set(cards.map((c) => c.setCode)).size;
+  const binderCount = new Set(cards.map((c) => c.binderName).filter(Boolean)).size;
+  let topCard = { p: 0, name: '–' };
+  cards.forEach((c) => {
+    const p = c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0;
+    if (p > topCard.p) topCard = { p, name: c.name };
+  });
+
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat-tile"><div class="stat-value">${totalUnique}</div><div class="stat-label">${t('Einzelkarten', 'Card entries')}</div></div>
     <div class="stat-tile"><div class="stat-value">${totalQty}</div><div class="stat-label">${t('Karten gesamt', 'Cards total')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${setCount}</div><div class="stat-label">${t('Editionen', 'Editions')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${binderCount}</div><div class="stat-label">${t('Ordner', 'Folders')}</div></div>
     <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">${t('Kaufwert', 'Purchase value')}</div></div>
     <div class="stat-tile"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">${t('Marktwert', 'Market value')}</div></div>
     <div class="stat-tile"><div class="stat-value" style="color:${gainColor}">${gainStr}</div><div class="stat-label">${t('Wertzuwachs (Markt − Kauf)', 'Value change (market − purchase)')}</div></div>
     <div class="stat-tile"><div class="stat-value">${formatCurrency(avgValue, 'EUR')}</div><div class="stat-label">${t('Ø Wert / Karte', 'Avg. value / card')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${foilPct.toFixed(1)} %</div><div class="stat-label">${t('Foil-Anteil', 'Foil share')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(topCard.p, 'EUR')}</div><div class="stat-label">${t('Teuerste Karte', 'Most valuable')}: ${escapeHTML(topCard.name)}</div></div>
   `;
 }
 
@@ -217,6 +231,181 @@ function renderCmcChart(cards) {
   });
 }
 
+function el(id) {
+  return document.getElementById(id);
+}
+
+function colorGroup(c) {
+  const cols = (c.scryfall && c.scryfall.colors) || [];
+  if (cols.length === 0) return 'Farblos';
+  if (cols.length > 1) return 'Mehrfarbig';
+  return cols[0];
+}
+
+function colorFor(key) {
+  if (key === 'Farblos') return PALETTE.C;
+  if (key === 'Mehrfarbig') return '#b57bff';
+  return PALETTE[key] || '#7b5cff';
+}
+
+const VALUE_BUCKETS = [
+  { label: '< 0,10 €', max: 0.1 },
+  { label: '0,10–0,50 €', max: 0.5 },
+  { label: '0,50–1 €', max: 1 },
+  { label: '1–5 €', max: 5 },
+  { label: '5–20 €', max: 20 },
+  { label: '20–100 €', max: 100 },
+  { label: '> 100 €', max: Infinity },
+];
+
+/* Cards per single-card market-value bracket. */
+function renderValueDistChart(cards) {
+  const counts = VALUE_BUCKETS.map(() => 0);
+  cards.forEach((c) => {
+    const p = cardPrice(c);
+    let i = VALUE_BUCKETS.findIndex((b) => p < b.max);
+    if (i === -1) i = VALUE_BUCKETS.length - 1;
+    counts[i] += c.quantity;
+  });
+  new Chart(el('chart-value-dist'), {
+    type: 'bar',
+    data: { labels: VALUE_BUCKETS.map((b) => b.label), datasets: [{ label: t('Karten', 'Cards'), data: counts, backgroundColor: '#7b5cff' }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+}
+
+/* Market value grouped by color identity. */
+function renderValueByColorChart(cards) {
+  const order = ['W', 'U', 'B', 'R', 'G', 'Mehrfarbig', 'Farblos'];
+  const map = {};
+  cards.forEach((c) => {
+    const g = colorGroup(c);
+    map[g] = (map[g] || 0) + cardPrice(c) * c.quantity;
+  });
+  const labels = order.filter((k) => map[k]);
+  new Chart(el('chart-value-color'), {
+    type: 'bar',
+    data: {
+      labels: labels.map(COLOR_NAME),
+      datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: labels.map((k) => Math.round(map[k] * 100) / 100), backgroundColor: labels.map(colorFor) }],
+    },
+    options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.parsed.y, 'EUR') } } }, scales: { y: { beginAtZero: true } } },
+  });
+}
+
+/* Market value grouped by rarity. */
+function renderValueByRarityChart(cards) {
+  const order = ['common', 'uncommon', 'rare', 'mythic', 'special'];
+  const map = {};
+  cards.forEach((c) => {
+    const r = c.rarity || 'unbekannt';
+    map[r] = (map[r] || 0) + cardPrice(c) * c.quantity;
+  });
+  const labels = order.filter((k) => map[k]).concat(Object.keys(map).filter((k) => !order.includes(k)));
+  new Chart(el('chart-value-rarity'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: labels.map((k) => Math.round(map[k] * 100) / 100), backgroundColor: labels.map((k) => PALETTE[k] || '#7b5cff') }] },
+    options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.parsed.y, 'EUR') } } }, scales: { y: { beginAtZero: true } } },
+  });
+}
+
+/* Cards added per month (non-cumulative). */
+function renderAddedPerMonthChart(cards) {
+  const monthly = {};
+  cards.forEach((c) => {
+    if (!c.added || c.added.length < 7) return;
+    const m = c.added.slice(0, 7);
+    monthly[m] = (monthly[m] || 0) + c.quantity;
+  });
+  const months = Object.keys(monthly).sort();
+  new Chart(el('chart-added-month'), {
+    type: 'bar',
+    data: { labels: months, datasets: [{ label: t('Zugänge', 'Added'), data: months.map((m) => monthly[m]), backgroundColor: '#4dbb6a' }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+}
+
+function statTable(headers, rows) {
+  return (
+    '<div class="stat-table"><table class="lang-table"><thead><tr>' +
+    headers.map((h) => `<th${h.num ? ' class="num"' : ''}>${escapeHTML(h.label)}</th>`).join('') +
+    '</tr></thead><tbody>' +
+    rows.map((r) => '<tr>' + r.map((cell) => `<td${cell.num ? ' class="num"' : ''}>${cell.html}</td>`).join('') + '</tr>').join('') +
+    '</tbody></table></div>'
+  );
+}
+
+/* Detailed per-rarity breakdown: entries, copies, market value, avg, share. */
+function renderRarityTable(cards) {
+  const agg = {};
+  let totalMv = 0;
+  cards.forEach((c) => {
+    const r = c.rarity || '—';
+    const mv = cardPrice(c) * c.quantity;
+    const o = agg[r] || (agg[r] = { entries: 0, qty: 0, mv: 0 });
+    o.entries += 1;
+    o.qty += c.quantity;
+    o.mv += mv;
+    totalMv += mv;
+  });
+  const order = ['common', 'uncommon', 'rare', 'mythic', 'special'];
+  const keys = order.filter((k) => agg[k]).concat(Object.keys(agg).filter((k) => !order.includes(k)));
+  const rows = keys.map((k) => {
+    const o = agg[k];
+    const avg = o.qty ? o.mv / o.qty : 0;
+    const share = totalMv ? (o.mv / totalMv) * 100 : 0;
+    const label = k.charAt(0).toUpperCase() + k.slice(1);
+    return [
+      { html: `<span class="rarity-tag rarity-${escapeHTML(k)}">${escapeHTML(label)}</span>` },
+      { html: o.entries, num: true },
+      { html: o.qty, num: true },
+      { html: formatCurrency(o.mv, 'EUR'), num: true },
+      { html: formatCurrency(avg, 'EUR'), num: true },
+      { html: share.toFixed(1) + ' %', num: true },
+    ];
+  });
+  el('table-rarity').innerHTML = statTable(
+    [
+      { label: t('Rarität', 'Rarity') },
+      { label: t('Einträge', 'Entries'), num: true },
+      { label: t('Exemplare', 'Copies'), num: true },
+      { label: t('Marktwert', 'Market value'), num: true },
+      { label: t('Ø/Karte', 'Avg./card'), num: true },
+      { label: t('Wertanteil', 'Value share'), num: true },
+    ],
+    rows
+  );
+}
+
+/* Detailed per-edition breakdown (top 15 by market value). */
+function renderSetTable(cards) {
+  const agg = {};
+  cards.forEach((c) => {
+    const o = agg[c.setCode] || (agg[c.setCode] = { name: c.setName || c.setCode, code: c.setCode, entries: 0, qty: 0, mv: 0 });
+    o.entries += 1;
+    o.qty += c.quantity;
+    o.mv += cardPrice(c) * c.quantity;
+  });
+  const arr = Object.values(agg).sort((a, b) => b.mv - a.mv).slice(0, 15);
+  const rows = arr.map((o) => [
+    { html: `${escapeHTML(o.name)} <span class="edition-code">${escapeHTML(o.code)}</span>` },
+    { html: o.entries, num: true },
+    { html: o.qty, num: true },
+    { html: formatCurrency(o.mv, 'EUR'), num: true },
+    { html: formatCurrency(o.qty ? o.mv / o.qty : 0, 'EUR'), num: true },
+  ]);
+  el('table-sets').innerHTML = statTable(
+    [
+      { label: t('Edition', 'Edition') },
+      { label: t('Einträge', 'Entries'), num: true },
+      { label: t('Exemplare', 'Copies'), num: true },
+      { label: t('Marktwert', 'Market value'), num: true },
+      { label: t('Ø/Karte', 'Avg./card'), num: true },
+    ],
+    rows
+  );
+}
+
 async function init() {
   showLoading(t('Lade Sammlung...', 'Loading collection...'));
   let cards;
@@ -241,6 +430,12 @@ async function init() {
   renderLanguageChart(cards);
   renderConditionChart(cards);
   renderCmcChart(cards);
+  renderValueDistChart(cards);
+  renderValueByColorChart(cards);
+  renderValueByRarityChart(cards);
+  renderAddedPerMonthChart(cards);
+  renderRarityTable(cards);
+  renderSetTable(cards);
 }
 
 init();
