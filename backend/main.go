@@ -71,15 +71,17 @@ func writeJSON(w http.ResponseWriter, v interface{}) {
 // ---- Handlers ----
 
 type scryfallOut struct {
-	Name       string   `json:"name"`
-	Image      string   `json:"image"`
-	ImageSmall string   `json:"imageSmall"`
-	TypeLine   string   `json:"typeLine"`
-	Colors     []string `json:"colors"`
-	ManaCost   string   `json:"manaCost"`
-	OracleText string   `json:"oracleText"`
-	PriceEur   *float64 `json:"priceEur"`
-	SetName    string   `json:"setName"`
+	Name           string   `json:"name"`
+	Image          string   `json:"image"`
+	ImageSmall     string   `json:"imageSmall"`
+	TypeLine       string   `json:"typeLine"`
+	Colors         []string `json:"colors"`
+	ManaCost       string   `json:"manaCost"`
+	OracleText     string   `json:"oracleText"`
+	ImageBack      string   `json:"imageBack"`
+	ImageBackSmall string   `json:"imageBackSmall"`
+	PriceEur       *float64 `json:"priceEur"`
+	SetName        string   `json:"setName"`
 }
 
 type cardOut struct {
@@ -106,7 +108,8 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
 		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type,
-		       s.name, s.type_line, s.colors, s.mana_cost, s.oracle_text, s.image_normal, s.image_small, s.price_eur
+		       s.name, s.type_line, s.colors, s.mana_cost, s.oracle_text, s.image_normal, s.image_small,
+		       s.image_back_normal, s.image_back_small, s.price_eur
 		FROM collection c
 		LEFT JOIN scryfall_cards s
 		       ON s.set_code = c.set_code AND s.collector_number = c.collector_number
@@ -120,29 +123,32 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	out := []cardOut{}
 	for rows.Next() {
 		var (
-			c                                                    cardOut
-			setCode                                              string
-			sName, sType, sColors, sMana, sOracle, sImgN, sImgS  sql.NullString
-			sPrice                                               sql.NullFloat64
+			c                                                   cardOut
+			setCode                                             string
+			sName, sType, sColors, sMana, sOracle, sImgN, sImgS sql.NullString
+			sImgBackN, sImgBackS                                sql.NullString
+			sPrice                                              sql.NullFloat64
 		)
 		if err := rows.Scan(&c.Key, &c.ScryfallID, &setCode, &c.SetName, &c.CollectorNumber, &c.Name,
 			&c.Foil, &c.Rarity, &c.Language, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Condition, &c.Added,
 			&c.BinderName, &c.BinderType,
-			&sName, &sType, &sColors, &sMana, &sOracle, &sImgN, &sImgS, &sPrice); err != nil {
+			&sName, &sType, &sColors, &sMana, &sOracle, &sImgN, &sImgS, &sImgBackN, &sImgBackS, &sPrice); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
 		c.SetCode = strings.ToUpper(setCode)
 		if sName.Valid || sImgN.Valid {
 			so := &scryfallOut{
-				Name:       sName.String,
-				Image:      sImgN.String,
-				ImageSmall: sImgS.String,
-				TypeLine:   sType.String,
-				Colors:     colorsFromJSON(sColors.String),
-				ManaCost:   sMana.String,
-				OracleText: sOracle.String,
-				SetName:    c.SetName,
+				Name:           sName.String,
+				Image:          sImgN.String,
+				ImageSmall:     sImgS.String,
+				TypeLine:       sType.String,
+				Colors:         colorsFromJSON(sColors.String),
+				ManaCost:       sMana.String,
+				OracleText:     sOracle.String,
+				ImageBack:      sImgBackN.String,
+				ImageBackSmall: sImgBackS.String,
+				SetName:        c.SetName,
 			}
 			if sPrice.Valid {
 				p := sPrice.Float64
@@ -196,12 +202,15 @@ type setCardOut struct {
 	PriceEurFoil    *float64 `json:"priceEurFoil"`
 	Image           string   `json:"image"`
 	ImageSmall      string   `json:"imageSmall"`
+	ImageBack       string   `json:"imageBack"`
+	ImageBackSmall  string   `json:"imageBackSmall"`
 }
 
 func handleSetCards(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToLower(r.PathValue("code"))
 	rows, err := db.Query(`
-		SELECT collector_number, name, rarity, type_line, price_eur, price_eur_foil, image_normal, image_small
+		SELECT collector_number, name, rarity, type_line, price_eur, price_eur_foil, image_normal, image_small,
+		       image_back_normal, image_back_small
 		FROM scryfall_cards WHERE set_code = ?
 		ORDER BY CAST(collector_number AS INTEGER), collector_number`, code)
 	if err != nil {
@@ -214,7 +223,8 @@ func handleSetCards(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var c setCardOut
 		var price, priceFoil sql.NullFloat64
-		if err := rows.Scan(&c.CollectorNumber, &c.Name, &c.Rarity, &c.TypeLine, &price, &priceFoil, &c.Image, &c.ImageSmall); err != nil {
+		var back, backSmall sql.NullString
+		if err := rows.Scan(&c.CollectorNumber, &c.Name, &c.Rarity, &c.TypeLine, &price, &priceFoil, &c.Image, &c.ImageSmall, &back, &backSmall); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -226,6 +236,8 @@ func handleSetCards(w http.ResponseWriter, r *http.Request) {
 			p := priceFoil.Float64
 			c.PriceEurFoil = &p
 		}
+		c.ImageBack = back.String
+		c.ImageBackSmall = backSmall.String
 		out = append(out, c)
 	}
 	writeJSON(w, out)

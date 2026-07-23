@@ -278,7 +278,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 }
 .modal-close:hover { color: var(--text); }
 .modal-card { display: flex; gap: 20px; padding: 24px; flex-wrap: wrap; }
-.modal-image { flex: 0 0 260px; }
+.modal-image { flex: 0 0 260px; display: flex; flex-direction: column; gap: 12px; }
 .modal-image img { width: 100%; border-radius: 12px; }
 .modal-image .no-image { width: 260px; aspect-ratio: 63/88; background: #0d0e14; display: flex; align-items: center; justify-content: center; color: var(--text-dim); border-radius: 12px; }
 .modal-details { flex: 1; min-width: 220px; }

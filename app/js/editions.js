@@ -396,6 +396,7 @@ function closeEditionOverlay() {
 
 function editionCardDetailHTML(card, ownedInfo) {
   const img = card.image || card.imageSmall;
+  const backImg = card.imageBack || card.imageBackSmall || '';
   const price = card.priceEur ? formatCurrency(parseFloat(card.priceEur), 'EUR') : '–';
   const foilPrice = card.priceEurFoil ? formatCurrency(parseFloat(card.priceEurFoil), 'EUR') : null;
 
@@ -423,7 +424,10 @@ function editionCardDetailHTML(card, ownedInfo) {
   return `
     <span class="modal-close eo-card-close">&times;</span>
     <div class="modal-card">
-      <div class="modal-image">${img ? `<img src="${img}" alt="${escapeHTML(card.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}</div>
+      <div class="modal-image">
+        ${img ? `<img src="${img}" alt="${escapeHTML(card.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
+        ${backImg ? `<img src="${backImg}" alt="${escapeHTML(card.name)} (${t('Rückseite', 'back')})">` : ''}
+      </div>
       <div class="modal-details">
         <h2>${escapeHTML(card.name)}</h2>
         <p class="modal-type">${escapeHTML(card.typeLine || '')}</p>

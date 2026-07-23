@@ -219,6 +219,7 @@ function renderOracleText(text) {
 function cardGroupModalHTML(group) {
   const rep = group.rep;
   const img = cardImage(rep, 'normal');
+  const backImg = (rep.scryfall && rep.scryfall.imageBack) || '';
   const variants = group.variants
     .slice()
     .sort((a, b) => (a.language || '').localeCompare(b.language || '') || a.foil.localeCompare(b.foil));
@@ -246,7 +247,10 @@ function cardGroupModalHTML(group) {
 
   return `
     <div class="modal-card">
-      <div class="modal-image">${img ? `<img src="${img}" alt="${escapeHTML(group.name)}">` : '<div class="no-image">Kein Bild</div>'}</div>
+      <div class="modal-image">
+        ${img ? `<img src="${img}" alt="${escapeHTML(group.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
+        ${backImg ? `<img src="${backImg}" alt="${escapeHTML(group.name)} (${t('Rückseite', 'back')})">` : ''}
+      </div>
       <div class="modal-details">
         <h2>${escapeHTML(group.name)}</h2>
         ${rep.scryfall && rep.scryfall.manaCost ? `<div class="mana-cost">${renderManaCost(rep.scryfall.manaCost)}</div>` : ''}
