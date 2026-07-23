@@ -259,28 +259,65 @@ function renderTable() {
 let overlayCards = [];
 let overlayEdition = null;
 
+const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic', special: 'Special', bonus: 'Bonus' };
+const RARITY_ORDER = ['common', 'uncommon', 'rare', 'mythic', 'special', 'bonus'];
+
 function cardMarketPrice(c) {
   if (c.priceEur) return parseFloat(c.priceEur);
   if (c.priceEurFoil) return parseFloat(c.priceEurFoil);
   return 0;
 }
 
-function overlayCounts() {
+function overlayRarity() {
+  const sel = document.getElementById('eo-rarity');
+  return sel ? sel.value : '';
+}
+
+/* Owned/total/missing + missing value, restricted to the selected rarity. */
+function overlayStats(rarity) {
   let owned = 0;
+  let total = 0;
   let missingValue = 0;
   overlayCards.forEach((c) => {
+    if (rarity && (c.rarity || '').toLowerCase() !== rarity) return;
+    total++;
     if (overlayEdition.ownedByNumber[normNumber(c.collectorNumber)]) owned++;
     else missingValue += cardMarketPrice(c);
   });
-  return { owned, total: overlayCards.length, missing: overlayCards.length - owned, missingValue };
+  return { owned, total, missing: total - owned, missingValue };
+}
+
+function populateOverlayRarities() {
+  const sel = document.getElementById('eo-rarity');
+  const present = [...new Set(overlayCards.map((c) => (c.rarity || '').toLowerCase()).filter(Boolean))];
+  present.sort((a, b) => {
+    const ia = RARITY_ORDER.indexOf(a);
+    const ib = RARITY_ORDER.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  sel.innerHTML =
+    `<option value="">${t('Alle Raritäten', 'All rarities')}</option>` +
+    present.map((r) => `<option value="${escapeHTML(r)}">${escapeHTML(RARITY_LABEL[r] || r)}</option>`).join('');
+  sel.value = '';
+}
+
+/* Recomputes the header line for the current rarity selection. */
+function updateOverlaySub() {
+  const { owned, total, missing, missingValue } = overlayStats(overlayRarity());
+  const pct = total ? Math.round((owned / total) * 100) : 0;
+  document.getElementById('eo-sub').innerHTML =
+    `<strong>${owned}</strong> ${t('von', 'of')} <strong>${total}</strong> ${t('Karten', 'cards')} (${pct}%) · ` +
+    `<span class="eo-sub-missing">${t(`${missing} fehlen für ${formatCurrency(missingValue, 'EUR')}`, `${missing} missing worth ${formatCurrency(missingValue, 'EUR')}`)}</span>`;
 }
 
 function renderOverlayGrid() {
   const filter = document.querySelector('input[name="eo-filter"]:checked').value;
+  const rarity = overlayRarity();
   const grid = document.getElementById('eo-grid');
   const frag = document.createDocumentFragment();
 
   overlayCards.forEach((c, idx) => {
+    if (rarity && (c.rarity || '').toLowerCase() !== rarity) return;
     const ownedInfo = overlayEdition.ownedByNumber[normNumber(c.collectorNumber)];
     const isOwned = !!ownedInfo;
     if (filter === 'owned' && !isOwned) return;
@@ -344,11 +381,8 @@ async function openEditionOverlay(edition) {
     return;
   }
 
-  const { owned, total, missing, missingValue } = overlayCounts();
-  const pct = total ? Math.round((owned / total) * 100) : 0;
-  document.getElementById('eo-sub').innerHTML =
-    `<strong>${owned}</strong> ${t('von', 'of')} <strong>${total}</strong> ${t('Karten', 'cards')} (${pct}%) · ` +
-    `<span class="eo-sub-missing">${t(`${missing} fehlen für ${formatCurrency(missingValue, 'EUR')}`, `${missing} missing worth ${formatCurrency(missingValue, 'EUR')}`)}</span>`;
+  populateOverlayRarities();
+  updateOverlaySub();
   renderOverlayGrid();
 }
 
@@ -478,6 +512,10 @@ async function init() {
     else closeEditionOverlay();
   });
   document.querySelectorAll('input[name="eo-filter"]').forEach((r) => r.addEventListener('change', renderOverlayGrid));
+  document.getElementById('eo-rarity').addEventListener('change', () => {
+    updateOverlaySub();
+    renderOverlayGrid();
+  });
 }
 
 init();

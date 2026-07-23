@@ -511,6 +511,11 @@ table.deck-table th { color: var(--text-dim); font-weight: 600; }
   padding: 5px 12px; font-size: 0.85rem; color: var(--text-dim);
 }
 .eo-radio:has(input:checked) { border-color: var(--accent); color: var(--text); }
+.eo-rarity {
+  margin-left: auto; cursor: pointer; font-family: inherit; font-size: 0.85rem;
+  background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+  border-radius: 6px; padding: 5px 10px;
+}
 .eo-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px;
   padding: 20px 22px; overflow-y: auto;
