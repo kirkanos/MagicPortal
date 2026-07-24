@@ -279,6 +279,19 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .modal-close:hover { color: var(--text); }
 .modal-card { display: flex; gap: 20px; padding: 24px; flex-wrap: wrap; }
 .modal-image { flex: 0 0 260px; display: flex; flex-direction: column; gap: 12px; }
+.cardmarket-link {
+  display: inline-block;
+  margin: 4px 0 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #1f6feb;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+.cardmarket-link:hover { background: #388bfd; }
 .modal-image img { width: 100%; border-radius: 12px; }
 .modal-image .no-image { width: 260px; aspect-ratio: 63/88; background: #0d0e14; display: flex; align-items: center; justify-content: center; color: var(--text-dim); border-radius: 12px; }
 .modal-details { flex: 1; min-width: 220px; }

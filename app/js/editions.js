@@ -437,6 +437,11 @@ function editionCardDetailHTML(card, ownedInfo) {
           <dt>${t('Marktwert', 'Market value')}</dt><dd>${price}</dd>
           ${foilPrice ? `<dt>${t('Marktwert (Foil)', 'Market value (foil)')}</dt><dd>${foilPrice}</dd>` : ''}
         </dl>
+        ${
+          card.cardmarketUri
+            ? `<a class="cardmarket-link" href="${escapeHTML(card.cardmarketUri)}" target="_blank" rel="noopener noreferrer">${t('Auf Cardmarket ansehen', 'View on Cardmarket')} ↗</a>`
+            : ''
+        }
         ${ownership}
       </div>
     </div>`;

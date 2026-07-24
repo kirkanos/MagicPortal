@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS scryfall_cards (
   image_small      TEXT,
   image_back_normal TEXT,
   image_back_small  TEXT,
+  cardmarket_uri   TEXT,
   price_eur        REAL,
   price_eur_foil   REAL,
   updated_at       TEXT,
@@ -99,6 +100,7 @@ func migrate(db *sql.DB) {
 		`ALTER TABLE scryfall_cards ADD COLUMN oracle_text TEXT`,
 		`ALTER TABLE scryfall_cards ADD COLUMN image_back_normal TEXT`,
 		`ALTER TABLE scryfall_cards ADD COLUMN image_back_small TEXT`,
+		`ALTER TABLE scryfall_cards ADD COLUMN cardmarket_uri TEXT`,
 	} {
 		if _, err := db.Exec(stmt); err == nil {
 			_, _ = db.Exec(`DELETE FROM meta WHERE key = 'bulk_remote_updated_at'`)

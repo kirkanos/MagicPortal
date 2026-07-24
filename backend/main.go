@@ -204,13 +204,14 @@ type setCardOut struct {
 	ImageSmall      string   `json:"imageSmall"`
 	ImageBack       string   `json:"imageBack"`
 	ImageBackSmall  string   `json:"imageBackSmall"`
+	CardmarketURI   string   `json:"cardmarketUri"`
 }
 
 func handleSetCards(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToLower(r.PathValue("code"))
 	rows, err := db.Query(`
 		SELECT collector_number, name, rarity, type_line, price_eur, price_eur_foil, image_normal, image_small,
-		       image_back_normal, image_back_small
+		       image_back_normal, image_back_small, cardmarket_uri
 		FROM scryfall_cards WHERE set_code = ?
 		ORDER BY CAST(collector_number AS INTEGER), collector_number`, code)
 	if err != nil {
@@ -223,8 +224,8 @@ func handleSetCards(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var c setCardOut
 		var price, priceFoil sql.NullFloat64
-		var back, backSmall sql.NullString
-		if err := rows.Scan(&c.CollectorNumber, &c.Name, &c.Rarity, &c.TypeLine, &price, &priceFoil, &c.Image, &c.ImageSmall, &back, &backSmall); err != nil {
+		var back, backSmall, cardmarket sql.NullString
+		if err := rows.Scan(&c.CollectorNumber, &c.Name, &c.Rarity, &c.TypeLine, &price, &priceFoil, &c.Image, &c.ImageSmall, &back, &backSmall, &cardmarket); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -238,6 +239,7 @@ func handleSetCards(w http.ResponseWriter, r *http.Request) {
 		}
 		c.ImageBack = back.String
 		c.ImageBackSmall = backSmall.String
+		c.CardmarketURI = cardmarket.String
 		out = append(out, c)
 	}
 	writeJSON(w, out)
