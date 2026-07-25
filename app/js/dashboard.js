@@ -406,6 +406,150 @@ function renderSetTable(cards) {
   );
 }
 
+/* ---- Value over time (market vs. purchase), from persisted snapshots ---- */
+
+let valueHistory = null; // cached full series
+let historyChart = null;
+
+async function loadValueHistory() {
+  try {
+    const res = await fetch(API + '/value-history', { cache: 'no-store' });
+    valueHistory = res.ok ? await res.json() : [];
+  } catch (e) {
+    valueHistory = [];
+  }
+}
+
+function renderValueHistory(days) {
+  const note = el('history-note');
+  if (!valueHistory || valueHistory.length === 0) {
+    note.hidden = false;
+    note.textContent = t(
+      'Noch keine Historie – die Wertentwicklung wird ab jetzt täglich aufgezeichnet.',
+      'No history yet – value is recorded daily from now on.'
+    );
+    return;
+  }
+  let series = valueHistory;
+  if (days > 0) {
+    const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+    series = valueHistory.filter((p) => p.date >= cutoff);
+  }
+  if (series.length < 2) {
+    note.hidden = false;
+    note.textContent = t(
+      'Erst ein Messpunkt vorhanden – ab morgen entsteht eine Kurve.',
+      'Only one data point so far – a curve appears from tomorrow.'
+    );
+  } else {
+    note.hidden = true;
+  }
+
+  const labels = series.map((p) => p.date);
+  if (historyChart) historyChart.destroy();
+  historyChart = new Chart(el('chart-value-history'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: t('Marktwert (EUR)', 'Market value (EUR)'),
+          data: series.map((p) => Math.round(p.marketEur * 100) / 100),
+          borderColor: '#4dbb6a', backgroundColor: 'rgba(77,187,106,0.15)', fill: true, tension: 0.25, pointRadius: series.length > 60 ? 0 : 2,
+        },
+        {
+          label: t('Kaufwert (EUR)', 'Purchase value (EUR)'),
+          data: series.map((p) => Math.round(p.purchaseEur * 100) / 100),
+          borderColor: '#7b5cff', backgroundColor: 'rgba(123,92,255,0.08)', fill: true, tension: 0.25, pointRadius: series.length > 60 ? 0 : 2,
+        },
+      ],
+    },
+    options: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.y, 'EUR') } },
+      },
+      scales: { y: { beginAtZero: false } },
+    },
+  });
+}
+
+function initValueHistory() {
+  const box = el('history-range');
+  renderValueHistory(0);
+  box.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      box.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderValueHistory(parseInt(btn.dataset.days, 10));
+    });
+  });
+}
+
+/* ---- Top movers (biggest value impact over a period) ---- */
+
+function moverRows(list) {
+  if (!list.length) return `<p class="chart-note">${t('Keine Bewegungen im Zeitraum.', 'No movement in this period.')}</p>`;
+  const rows = list.map((m) => {
+    const sign = m.delta >= 0 ? '+' : '';
+    const cls = m.delta >= 0 ? 'up' : 'down';
+    const impact = (m.valueImpact >= 0 ? '+' : '') + formatCurrency(m.valueImpact, 'EUR');
+    return [
+      { html: `${escapeHTML(m.name)}${m.quantity > 1 ? ` <span class="edition-code">×${m.quantity}</span>` : ''}` },
+      { html: `${formatCurrency(m.priceThen, 'EUR')} → ${formatCurrency(m.priceNow, 'EUR')}`, num: true },
+      { html: `<span class="mv-${cls}">${sign}${m.pct.toFixed(0)} %</span>`, num: true },
+      { html: `<span class="mv-${cls}">${impact}</span>`, num: true },
+    ];
+  });
+  return statTable(
+    [
+      { label: t('Karte', 'Card') },
+      { label: t('Preis', 'Price'), num: true },
+      { label: t('Δ %', 'Δ %'), num: true },
+      { label: t('Wert-Einfluss', 'Value impact'), num: true },
+    ],
+    rows
+  );
+}
+
+async function renderMovers(days) {
+  const note = el('movers-note');
+  let data;
+  try {
+    const res = await fetch(API + '/value-movers?days=' + days, { cache: 'no-store' });
+    data = res.ok ? await res.json() : null;
+  } catch (e) {
+    data = null;
+  }
+  if (!data || ((data.gainers || []).length === 0 && (data.losers || []).length === 0)) {
+    el('movers-gainers').innerHTML = '';
+    el('movers-losers').innerHTML = '';
+    note.hidden = false;
+    note.textContent = t(
+      'Noch nicht genug Historie für Bewegungen – wird mit der Zeit gefüllt.',
+      'Not enough history for movers yet – fills up over time.'
+    );
+    return;
+  }
+  note.hidden = data.baseDate ? true : false;
+  if (data.baseDate) {
+    note.hidden = false;
+    note.textContent = t(
+      `Vergleich seit ${data.baseDate} bis ${data.latestDate}.`,
+      `Compared from ${data.baseDate} to ${data.latestDate}.`
+    );
+  }
+  el('movers-gainers').innerHTML = moverRows(data.gainers || []);
+  el('movers-losers').innerHTML = moverRows(data.losers || []);
+}
+
+function initMovers() {
+  const sel = el('movers-range');
+  renderMovers(parseInt(sel.value, 10));
+  sel.addEventListener('change', () => renderMovers(parseInt(sel.value, 10)));
+}
+
 async function init() {
   showLoading(t('Lade Sammlung...', 'Loading collection...'));
   let cards;
@@ -436,6 +580,11 @@ async function init() {
   renderAddedPerMonthChart(cards);
   renderRarityTable(cards);
   renderSetTable(cards);
+
+  // Value history + movers come from persisted snapshots (independent of `cards`).
+  await loadValueHistory();
+  initValueHistory();
+  initMovers();
 }
 
 init();

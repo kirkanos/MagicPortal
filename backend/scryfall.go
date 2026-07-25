@@ -443,6 +443,16 @@ func doSync(force bool) error {
 			firstErr = err
 		}
 	}
+	// Record a value snapshot once the (possibly refreshed) prices are in place.
+	// Only when there is a collection to value, so history starts at first import.
+	if countRows(db, "collection") > 0 {
+		if err := snapshotValue(db); err != nil {
+			log.Printf("[value] Snapshot fehlgeschlagen: %v", err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
 	return firstErr
 }
 

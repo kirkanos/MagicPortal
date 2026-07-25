@@ -422,6 +422,28 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .stat-table { overflow-x: auto; }
 .stat-table table { margin: 0; }
 
+/* Value history + movers */
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.chart-head h3 { margin: 0; }
+.range-btns { display: inline-flex; gap: 4px; }
+.range-btns button {
+  background: var(--bg); color: var(--text-dim); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 10px; font-size: 0.82rem; cursor: pointer;
+}
+.range-btns button:hover { color: var(--text); }
+.range-btns button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+.range-select {
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 10px; font-size: 0.82rem;
+}
+.chart-note { margin: 10px 2px 0; font-size: 0.82rem; color: var(--text-dim); }
+.movers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.movers-title { margin: 0 0 8px; font-size: 0.9rem; }
+.movers-title.up { color: #4dbb6a; }
+.movers-title.down { color: #e05656; }
+.mv-up { color: #4dbb6a; }
+.mv-down { color: #e05656; }
+
 /* Deck checker */
 .deck-checker-layout { display: grid; grid-template-columns: 1fr 1.4fr; gap: 20px; }
 .deck-checker-layout textarea {

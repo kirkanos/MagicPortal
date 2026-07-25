@@ -45,6 +45,27 @@ CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
   value TEXT
 );
+
+-- Daily aggregate value snapshots (one row per day, upserted).
+CREATE TABLE IF NOT EXISTS value_snapshots (
+  date           TEXT PRIMARY KEY,   -- YYYY-MM-DD (UTC)
+  market_eur     REAL,
+  purchase_eur   REAL,
+  card_count     INTEGER,
+  distinct_count INTEGER,
+  created_at     TEXT
+);
+
+-- Per-collection-card daily price snapshots (enables movers + attribution).
+CREATE TABLE IF NOT EXISTS price_history (
+  date           TEXT,
+  scryfall_key   TEXT,               -- set_code|collector_number
+  name           TEXT,
+  price_eur      REAL,
+  price_eur_foil REAL,
+  PRIMARY KEY (date, scryfall_key)
+);
+CREATE INDEX IF NOT EXISTS idx_price_history_key ON price_history(scryfall_key);
 `
 
 // collectionSchema is kept separate (not part of `schema`) so it is only ever
