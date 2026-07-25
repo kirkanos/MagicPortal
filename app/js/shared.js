@@ -406,6 +406,8 @@ function initCollectionUpload() {
   const resetBtn = document.getElementById('csv-reset');
   const unlockBtn = document.getElementById('csv-unlock');
   const syncBtn = document.getElementById('csv-sync');
+  const backupBtn = document.getElementById('csv-backup');
+  const restoreBtn = document.getElementById('csv-restore');
   if (!uploadInput || !uploadLabel || !resetBtn || !unlockBtn) return;
 
   // Status indicator is shown to everyone; refresh on load.
@@ -415,6 +417,8 @@ function initCollectionUpload() {
     uploadLabel.style.display = unlocked ? '' : 'none';
     resetBtn.style.display = unlocked ? '' : 'none';
     if (syncBtn) syncBtn.style.display = unlocked ? '' : 'none';
+    if (backupBtn) backupBtn.style.display = unlocked ? '' : 'none';
+    if (restoreBtn) restoreBtn.style.display = unlocked ? '' : 'none';
     unlockBtn.style.display = unlocked ? 'none' : '';
   }
 
@@ -472,8 +476,55 @@ function initCollectionUpload() {
     }
   });
 
+  if (backupBtn) {
+    backupBtn.addEventListener('click', async () => {
+      backupBtn.disabled = true;
+      try {
+        const res = await fetch(API + '/backup', { method: 'POST', headers: uploadHeaders() });
+        if (res.status === 403) {
+          alert(t('Falsches oder fehlendes Passwort', 'Wrong or missing password'));
+        } else if (res.status === 400) {
+          alert(t('Kein Backup-Ziel konfiguriert (Nextcloud/Google Drive).', 'No backup target configured (Nextcloud/Google Drive).'));
+        } else if (!res.ok) {
+          alert(t('Backup fehlgeschlagen.', 'Backup failed.'));
+        } else {
+          alert(t('Backup wurde gestartet.', 'Backup started.'));
+        }
+      } catch (e) {
+        alert(t('Backup fehlgeschlagen: ', 'Backup failed: ') + e.message);
+      } finally {
+        backupBtn.disabled = false;
+      }
+    });
+  }
+
+  if (restoreBtn) {
+    restoreBtn.addEventListener('click', async () => {
+      if (!confirm(t('Neuestes Backup wiederherstellen? Die aktuelle Sammlung und Wert-Historie werden ersetzt.', 'Restore the latest backup? The current collection and value history will be replaced.'))) return;
+      showLoading(t('Stelle Backup wieder her...', 'Restoring backup...'));
+      try {
+        const res = await fetch(API + '/backup/restore-latest', { method: 'POST', headers: uploadHeaders() });
+        if (res.status === 403) {
+          hideLoading();
+          alert(t('Falsches oder fehlendes Passwort', 'Wrong or missing password'));
+        } else if (res.status === 404) {
+          hideLoading();
+          alert(t('Kein Backup gefunden.', 'No backup found.'));
+        } else if (!res.ok) {
+          hideLoading();
+          alert(t('Wiederherstellung fehlgeschlagen.', 'Restore failed.'));
+        } else {
+          location.reload();
+        }
+      } catch (e) {
+        hideLoading();
+        alert(t('Wiederherstellung fehlgeschlagen: ', 'Restore failed: ') + e.message);
+      }
+    });
+  }
+
   unlockBtn.addEventListener('click', async () => {
-    const pw = prompt(t('Passwort für den CSV-Upload:', 'Password for CSV upload:'));
+    const pw = prompt(t('Passwort:', 'Password:'));
     if (pw == null || pw === '') return;
     try {
       if (await checkUploadAuth(pw)) {

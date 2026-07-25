@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title data-en="MTG Collection – Cards">MTG Sammlung – Karten</title>
+<title data-en="MagicPortal – Cards">MagicPortal – Karten</title>
 <link rel="icon" type="image/svg+xml" href="images/magic-portal-icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
@@ -24,11 +24,13 @@
     <button type="button" id="lang-toggle" class="lang-toggle" aria-label="Sprache" data-en-aria="Language"></button>
     <span class="sync-status" id="sync-status" title="Letzte Aktualisierung der Kartendaten/Preise" data-en-title="Last update of card data / prices"></span>
     <button type="button" id="csv-sync" class="reset-btn" title="Kartendaten & Preise jetzt von Scryfall aktualisieren" data-en-title="Refresh card data & prices from Scryfall now" data-en="🔄 Refresh" style="display:none">🔄 Aktualisieren</button>
-    <button type="button" id="csv-unlock" class="reset-btn" title="Upload mit Passwort freischalten" data-en-title="Unlock upload with password" data-en="🔒 Unlock upload" style="display:none">🔒 Upload freischalten</button>
+    <button type="button" id="csv-unlock" class="reset-btn" title="Anmelden" data-en-title="Log in" data-en="🔑 Login" style="display:none">🔑 Login</button>
     <label class="upload-btn" id="csv-upload-label" title="Eigene ManaBox-CSV hochladen" data-en-title="Upload your own ManaBox CSV" style="display:none"><span data-en="⬆ Upload CSV">⬆ CSV hochladen</span>
       <input type="file" id="csv-upload" accept=".csv,text/csv" hidden>
     </label>
     <button type="button" id="csv-reset" class="reset-btn" title="Gesamte Sammlung leeren" data-en-title="Clear the entire collection" data-en="Clear" style="display:none">Leeren</button>
+    <button type="button" id="csv-backup" class="reset-btn" title="Jetzt sichern (Sammlung + Wert-Historie)" data-en-title="Back up now (collection + value history)" data-en="💾 Backup" style="display:none">💾 Backup</button>
+    <button type="button" id="csv-restore" class="reset-btn" title="Neuestes Backup wiederherstellen" data-en-title="Restore latest backup" data-en="⟲ Restore" style="display:none">⟲ Wiederherstellen</button>
   </span>
 </nav>
 

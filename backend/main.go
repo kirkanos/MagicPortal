@@ -26,8 +26,10 @@ func main() {
 	}
 	defer db.Close()
 
+	maybeAutoRestore()
 	startScheduler()
 	startRemoteImportScheduler()
+	startBackupScheduler()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/collection", handleCollection)
@@ -39,6 +41,9 @@ func main() {
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/value-history", handleValueHistory)
 	mux.HandleFunc("GET /api/value-movers", handleValueMovers)
+	mux.HandleFunc("POST /api/backup", handleBackupNow)
+	mux.HandleFunc("POST /api/backup/restore-latest", handleRestoreLatest)
+	mux.HandleFunc("POST /api/backup/restore-upload", handleRestoreUpload)
 	mux.HandleFunc("GET /api/auth-check", handleAuthCheck)
 	mux.HandleFunc("POST /api/upload", handleUpload)
 	mux.HandleFunc("POST /api/reset", handleReset)
@@ -403,6 +408,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 			"lastSource": metaGet(db, "remote_import_last_source"),
 			"lastError":  metaGet(db, "remote_import_last_error"),
 		},
+		"backup": backupStatus(),
 	})
 }
 

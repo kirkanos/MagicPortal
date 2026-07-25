@@ -72,7 +72,8 @@ Der Stack ist für den Betrieb hinter [Traefik](https://traefik.io) gedacht und 
 
 ## 📥 Sammlung befüllen & aktualisieren
 
-Oben rechts im Menü: **„🔒 Upload freischalten"** → Passwort → **„⬆ CSV hochladen"**.
+Oben rechts im Menü: **„🔑 Login"** → Passwort → dann erscheinen **„⬆ CSV hochladen"**, **„Leeren"**,
+**„💾 Backup"** und **„⟲ Wiederherstellen"** (alle Aktionen sind erst nach dem Login sichtbar).
 Der Import **ersetzt** die Sammlung vollständig: Der Datenbestand entspricht danach exakt der
 hochgeladenen CSV – Karten, die nicht mehr enthalten sind, werden entfernt (atomar; bei einem
 Fehler bleibt die bisherige Sammlung erhalten). **„Leeren"** entfernt die gesamte Sammlung.
@@ -119,6 +120,33 @@ bibliothek (JWT-Signierung), ohne zusätzliche Abhängigkeit.
 
 Der zuletzt erfolgte Remote-Import (Zeitpunkt, Quelle, evtl. Fehler) wird unter `/api/status`
 ausgewiesen.
+
+### 💾 Automatisches Backup (optional)
+
+Die **eigenen, nicht wiederherstellbaren Daten** – Sammlung (`collection`) und die Wert-Historie
+(`value_snapshots`, `price_history`) – werden regelmäßig in eine kompakte, gzip-komprimierte
+SQLite-Datei gesichert und als **datierte Kopie** zu jeder konfigurierten Quelle hochgeladen
+(Nextcloud per WebDAV-`PUT`, Google Drive per API). Der Scryfall-Katalog wird **nicht** gesichert
+(er wird ohnehin neu geladen), daher bleibt ein Backup klein (typisch < 1 MB).
+
+Bei **leerer Datenbank** (frisches Volume) stellt das Backend beim Start automatisch das neueste
+Remote-Backup wieder her. Manuell geht das ebenfalls – siehe Endpoints unten.
+
+| Variable | Zweck |
+|---|---|
+| `BACKUP_INTERVAL_HOURS` | Backup-Intervall (Standard 24) |
+| `BACKUP_KEEP` | Anzahl behaltener Kopien; ältere werden gelöscht (Standard 30, `0` = alle behalten) |
+| `WEBDAV_BACKUP_DIR` | Ziel-**Ordner** als WebDAV-URL (z. B. `…/remote.php/dav/files/<user>/mtg-backups/`); nutzt `WEBDAV_USER`/`WEBDAV_PASSWORD` |
+| `GDRIVE_BACKUP_FOLDER_ID` | Ziel-**Ordner-ID** in Google Drive; nutzt `GDRIVE_SA_JSON` |
+
+**Google Drive (Backup):** Der Ziel-Ordner muss für die Service-Account-E-Mail mit **Bearbeiter**-Recht
+freigegeben sein. Für das Backup wird der Schreib-Scope `drive` angefordert (Import allein nutzt weiter
+nur `drive.readonly`).
+
+Endpoints (passwortgeschützt): `POST /api/backup` (jetzt sichern),
+`POST /api/backup/restore-latest` (neuestes Remote-Backup einspielen),
+`POST /api/backup/restore-upload` (hochgeladene `.db.gz` einspielen). Backup-Status (Zeitpunkt,
+Datei, letzter Restore, evtl. Fehler) steht unter `/api/status`.
 
 ## 🔐 Deployment (Woodpecker CI + SOPS)
 

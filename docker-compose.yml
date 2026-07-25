@@ -20,6 +20,13 @@ services:
       - GDRIVE_FILE_ID=${GDRIVE_FILE_ID:-}
       # Service-Account-JSON: inline, base64-kodiert oder Pfad zu gemounteter Datei.
       - GDRIVE_SA_JSON=${GDRIVE_SA_JSON:-}
+      # Automatisches Backup der eigenen Daten (Historie + Sammlung).
+      - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-24}
+      - BACKUP_KEEP=${BACKUP_KEEP:-30}
+      # -- Nextcloud / WebDAV (Ziel-Ordner, gleiche Zugangsdaten wie oben) --
+      - WEBDAV_BACKUP_DIR=${WEBDAV_BACKUP_DIR:-}
+      # -- Google Drive (Ziel-Ordner-ID, gleiches Service-Account wie oben) --
+      - GDRIVE_BACKUP_FOLDER_ID=${GDRIVE_BACKUP_FOLDER_ID:-}
     volumes:
       - mtg-db:/data
     # --- Hardening ---

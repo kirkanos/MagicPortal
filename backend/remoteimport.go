@@ -222,7 +222,7 @@ func checkGDrive() error {
 	if err != nil {
 		return err
 	}
-	token, err := gdriveAccessToken(sa)
+	token, err := gdriveAccessToken(sa, "https://www.googleapis.com/auth/drive.readonly")
 	if err != nil {
 		return err
 	}
@@ -283,7 +283,7 @@ func checkGDrive() error {
 
 // gdriveAccessToken builds and signs a service-account JWT and exchanges it for a
 // short-lived OAuth access token with read-only Drive scope.
-func gdriveAccessToken(sa *gdriveSA) (string, error) {
+func gdriveAccessToken(sa *gdriveSA, scope string) (string, error) {
 	key, err := parseRSAPrivateKey(sa.PrivateKey)
 	if err != nil {
 		return "", err
@@ -291,8 +291,8 @@ func gdriveAccessToken(sa *gdriveSA) (string, error) {
 	now := time.Now()
 	header := base64url(`{"alg":"RS256","typ":"JWT"}`)
 	claims := fmt.Sprintf(
-		`{"iss":%q,"scope":"https://www.googleapis.com/auth/drive.readonly","aud":%q,"iat":%d,"exp":%d}`,
-		sa.ClientEmail, sa.TokenURI, now.Unix(), now.Add(time.Hour).Unix())
+		`{"iss":%q,"scope":%q,"aud":%q,"iat":%d,"exp":%d}`,
+		sa.ClientEmail, scope, sa.TokenURI, now.Unix(), now.Add(time.Hour).Unix())
 	signingInput := header + "." + base64url(claims)
 
 	h := sha256.Sum256([]byte(signingInput))
