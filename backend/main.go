@@ -27,6 +27,7 @@ func main() {
 	defer db.Close()
 
 	startScheduler()
+	startRemoteImportScheduler()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/collection", handleCollection)
@@ -394,6 +395,12 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		"collectionCount": countRows(db, "collection"),
 		"cardCount":       countRows(db, "scryfall_cards"),
 		"setCount":        countRows(db, "sets"),
+		"remoteImport": map[string]interface{}{
+			"enabled":    webdavConfigured() || gdriveConfigured(),
+			"lastAt":     metaGet(db, "remote_import_last_at"),
+			"lastSource": metaGet(db, "remote_import_last_source"),
+			"lastError":  metaGet(db, "remote_import_last_error"),
+		},
 	})
 }
 

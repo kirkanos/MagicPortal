@@ -95,6 +95,30 @@ Optional: `SYNC_INTERVAL_MINUTES` (Standard 5) steuert das Hintergrund-Intervall
 Die Datenbank liegt im benannten Volume `mtg-db`. Das Passwort wird via `X-Upload-Password`-Header
 übertragen (kein Browser-Login-Dialog).
 
+### 📥 Automatischer Remote-Import (optional)
+
+Das Backend kann regelmäßig eine Nextcloud- und/oder Google-Drive-Datei nach einem neuen
+ManaBox-Export durchsuchen und ihn bei Änderung automatisch importieren (Full-Replace, wie beim
+manuellen Upload). Die Änderungserkennung nutzt ETag/`Last-Modified` bzw. die Datei-Prüfsumme –
+unveränderte Dateien werden nicht erneut importiert. Alle Felder sind optional; leer = deaktiviert.
+
+| Variable | Zweck |
+|---|---|
+| `REMOTE_IMPORT_INTERVAL_MINUTES` | Prüf-Intervall (Standard 15) |
+| `WEBDAV_URL` | Direkte WebDAV-URL zur CSV (Nextcloud: `…/remote.php/dav/files/<user>/<pfad>/export.csv`) |
+| `WEBDAV_USER` | Nextcloud-Benutzer |
+| `WEBDAV_PASSWORD` | Nextcloud-**App-Passwort** (nicht das Login-Passwort) |
+| `GDRIVE_FILE_ID` | Datei-ID der CSV in Google Drive |
+| `GDRIVE_SA_JSON` | Service-Account-JSON (inline, base64-kodiert oder Pfad zu gemounteter Datei) |
+
+**Google Drive:** einen Service-Account in der Google Cloud Console anlegen, die Drive-API aktivieren
+und die CSV-Datei (bzw. deren Ordner) für die Service-Account-E-Mail freigeben. Es wird nur
+lesender Zugriff (`drive.readonly`) angefordert. Der Zugriff läuft komplett über die Go-Standard­-
+bibliothek (JWT-Signierung), ohne zusätzliche Abhängigkeit.
+
+Der zuletzt erfolgte Remote-Import (Zeitpunkt, Quelle, evtl. Fehler) wird unter `/api/status`
+ausgewiesen.
+
 ## 🔐 Deployment (Woodpecker CI + SOPS)
 
 Push auf `main` löst die [Woodpecker](https://woodpecker-ci.org)-Pipeline aus
