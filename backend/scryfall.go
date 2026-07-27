@@ -167,6 +167,7 @@ type bulkCard struct {
 	ManaCost        string            `json:"mana_cost"`
 	OracleText      string            `json:"oracle_text"`
 	Digital         bool              `json:"digital"`
+	Reserved        bool              `json:"reserved"`
 	ImageUris       map[string]string `json:"image_uris"`
 	CardFaces       []struct {
 		ImageUris  map[string]string `json:"image_uris"`
@@ -245,15 +246,15 @@ func syncBulk(db *sql.DB, force bool) error {
 		INSERT INTO scryfall_cards
 			(set_code, collector_number, scryfall_id, name, rarity, type_line, colors,
 			 mana_cost, oracle_text, image_normal, image_small, image_back_normal, image_back_small,
-			 cardmarket_uri, price_eur, price_eur_foil, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 cardmarket_uri, reserved, price_eur, price_eur_foil, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(set_code, collector_number) DO UPDATE SET
 			scryfall_id=excluded.scryfall_id, name=excluded.name, rarity=excluded.rarity,
 			type_line=excluded.type_line, colors=excluded.colors,
 			mana_cost=excluded.mana_cost, oracle_text=excluded.oracle_text,
 			image_normal=excluded.image_normal, image_small=excluded.image_small,
 			image_back_normal=excluded.image_back_normal, image_back_small=excluded.image_back_small,
-			cardmarket_uri=excluded.cardmarket_uri,
+			cardmarket_uri=excluded.cardmarket_uri, reserved=excluded.reserved,
 			price_eur=excluded.price_eur, price_eur_foil=excluded.price_eur_foil,
 			updated_at=excluded.updated_at`
 
@@ -331,10 +332,14 @@ func syncBulk(db *sql.DB, force bool) error {
 		}
 
 		cardmarketURI := c.PurchaseUris["cardmarket"]
+		reserved := 0
+		if c.Reserved {
+			reserved = 1
+		}
 
 		if _, err := stmt.Exec(c.Set, c.CollectorNumber, c.ID, c.Name, c.Rarity, typeLine,
 			colorsToJSON(colors), manaCost, oracleText, imgN, imgS, imgBackN, imgBackS,
-			cardmarketURI, parsePrice(c.Prices.Eur), parsePrice(c.Prices.EurFoil), now); err != nil {
+			cardmarketURI, reserved, parsePrice(c.Prices.Eur), parsePrice(c.Prices.EurFoil), now); err != nil {
 			stmt.Close()
 			tx.Rollback()
 			return err

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title data-en="MagicPortal – Decks">MagicPortal – Decks</title>
+<title data-en="MagicPortal – Reserved List">MagicPortal – Reserved List</title>
 <link rel="icon" type="image/svg+xml" href="images/magic-portal-icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
@@ -15,10 +15,10 @@
   <a href="index.html" class="brand"><img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="brand-logo"></a>
   <a href="index.html" data-en="Cards">Karten</a>
   <a href="editions.html" data-en="Editions">Editionen</a>
-  <a href="reserved.html" data-en="Reserved List">Reserved List</a>
+  <a href="reserved.html" class="active" data-en="Reserved List">Reserved List</a>
   <a href="binders.html" data-en="Folders">Ordner</a>
   <a href="lists.html" data-en="Lists">Listen</a>
-  <a href="decks.html" class="active" data-en="Decks">Decks</a>
+  <a href="decks.html" data-en="Decks">Decks</a>
   <a href="dashboard.html" data-en="Statistics">Statistik</a>
   <a href="deck-checker.html" data-en="Deck Checker">Deck-Checker</a>
   <span class="nav-actions">
@@ -36,19 +36,30 @@
 </nav>
 
 <main>
-  <h1 class="page-title" data-en="Decks">Decks</h1>
-  <div class="coming-soon">
-    <p class="coming-soon-icon">🧩</p>
-    <h2 data-en="Decks – coming soon">Decks – in Vorbereitung</h2>
-    <p data-en="Here you'll be able to import and export decks. Since the exact import format is still being worked out, the buttons below are not active yet.">
-      Hier kannst du künftig Decks importieren und exportieren. Da der genaue Import-Ablauf noch nicht feststeht,
-      sind die Schaltflächen unten noch ohne Funktion.
-    </p>
-    <div class="coming-soon-actions">
-      <button type="button" class="upload-btn" disabled data-en="⬇ Import deck">⬇ Deck importieren</button>
-      <button type="button" class="reset-btn" disabled data-en="⬆ Export deck">⬆ Deck exportieren</button>
-    </div>
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Karte suchen..." data-en-placeholder="Search card...">
+    <select id="filter-owned">
+      <option value="all" data-en="All cards">Alle Karten</option>
+      <option value="owned" data-en="Only collected">Nur gesammelte</option>
+      <option value="missing" data-en="Only missing">Nur fehlende</option>
+    </select>
+    <select id="sort-by">
+      <option value="price-desc" data-en="Sort: Price (high → low)">Sortieren: Preis (hoch → niedrig)</option>
+      <option value="price-asc" data-en="Sort: Price (low → high)">Sortieren: Preis (niedrig → hoch)</option>
+      <option value="name" data-en="Sort: Name (A → Z)">Sortieren: Name (A → Z)</option>
+    </select>
   </div>
+
+  <p class="section-hint" id="section-hint" data-en-html="The <strong>Reserved List</strong> is Wizards&rsquo; list of cards that will never be reprinted. A card counts as collected once you own <strong>any</strong> printing/language of it. &ldquo;Cost to complete&rdquo; sums the cheapest available printing of every missing card.">
+    Die <strong>Reserved List</strong> ist die Liste von Karten, die von Wizards nie wieder nachgedruckt werden.
+    Eine Karte gilt als gesammelt, sobald du <strong>irgendeine</strong> Version/Sprache davon besitzt.
+    „Investition für den Rest" summiert die jeweils günstigste verfügbare Version jeder fehlenden Karte.
+  </p>
+
+  <div class="result-count" id="result-count"></div>
+  <div class="eo-grid rl-grid" id="rl-grid"></div>
 </main>
 
 <footer class="site-footer">
@@ -58,7 +69,13 @@
   </a>
 </footer>
 
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-text" data-en="Loading Reserved List...">Lade Reserved List...</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
 <script src="js/i18n.js"></script>
 <script src="js/shared.js"></script>
+<script src="js/reserved.js"></script>
 </body>
 </html>

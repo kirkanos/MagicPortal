@@ -39,6 +39,7 @@ func main() {
 	mux.HandleFunc("GET /api/binders", handleBinders)
 	mux.HandleFunc("GET /api/subtypes", handleSubtypes)
 	mux.HandleFunc("GET /api/status", handleStatus)
+	mux.HandleFunc("GET /api/reserved", handleReserved)
 	mux.HandleFunc("GET /api/value-history", handleValueHistory)
 	mux.HandleFunc("GET /api/value-movers", handleValueMovers)
 	mux.HandleFunc("POST /api/backup", handleBackupNow)

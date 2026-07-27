@@ -557,6 +557,18 @@ table.deck-table th { color: var(--text-dim); font-weight: 600; }
 }
 .eo-loading, .eo-empty { grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 40px 0; }
 
+/* Reserved List page: same card grid, but flows on the page (no inner scroll). */
+.rl-grid { padding: 0; overflow: visible; }
+.rl-cardprice { font-size: 0.74rem; }
+.rl-price { color: var(--text); font-weight: 600; }
+.rl-owned { color: var(--green); font-weight: 600; }
+.eo-card.missing .rl-cardprice { opacity: 0.75; }
+.rl-cm-link {
+  display: inline-block; font-size: 0.72rem; font-weight: 600; text-decoration: none;
+  color: #4fa8e0; margin-top: 1px;
+}
+.rl-cm-link:hover { color: #7cc3f0; text-decoration: underline; }
+
 .eo-card { display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
 .eo-thumb {
   position: relative; aspect-ratio: 63/88; border-radius: 8px; overflow: hidden;
