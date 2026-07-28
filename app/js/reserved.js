@@ -21,8 +21,8 @@ function renderSummary() {
     <div class="stat-tile"><div class="stat-value">${s.owned}</div><div class="stat-label">${t('Gesammelt', 'Collected')}</div></div>
     <div class="stat-tile"><div class="stat-value">${s.missing}</div><div class="stat-label">${t('Fehlt', 'Missing')}</div></div>
     <div class="stat-tile"><div class="stat-value">${pct.toFixed(1)} %</div><div class="stat-label">${t('Vollständigkeit', 'Completion')}</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(s.ownedValue, 'EUR')}</div><div class="stat-label">${t('Wert gesammelt', 'Collected value')}</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(s.costToComplete, 'EUR')}</div><div class="stat-label">${t('Investition für den Rest', 'Cost to complete')}${unpriced}</div></div>
+    <div class="stat-tile" title="${priceHint()}"><div class="stat-value">${formatCurrency(s.ownedValue, 'EUR')}</div><div class="stat-label">${t('Wert gesammelt', 'Collected value')}</div></div>
+    <div class="stat-tile" title="${priceHint()}"><div class="stat-value">${formatCurrency(s.costToComplete, 'EUR')}</div><div class="stat-label">${t('Investition für den Rest', 'Cost to complete')}${unpriced}</div></div>
   `;
 }
 

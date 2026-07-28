@@ -50,6 +50,15 @@ function uploadHeaders(extra) {
   return headers;
 }
 
+/* Explains what the shown market value represents – used as a mouseover title on
+   market-value figures. Prices come from Scryfall (Cardmarket trend, daily). */
+function priceHint() {
+  return t(
+    'Marktwert = Cardmarket-Preistrend, von Scryfall einmal täglich übernommen – nicht der aktuell günstigste Kaufpreis. Abweichungen zu Cardmarket oder ManaBox (andere Metrik/Quelle/Währung) sind daher normal.',
+    'Market value = Cardmarket price trend, pulled from Scryfall once a day – not the current lowest buy price. Differences from Cardmarket or ManaBox (different metric/source/currency) are therefore expected.'
+  );
+}
+
 /* Verifies the upload password against the server. Pass a password to test it,
    or null to probe whether a password is required. true = access granted (204). */
 async function checkUploadAuth(pw) {
@@ -260,11 +269,11 @@ function cardGroupModalHTML(group) {
           <dt>Set</dt><dd>${escapeHTML(group.setName)} (${escapeHTML(group.setCode)} #${escapeHTML(group.collectorNumber)})</dd>
           <dt>${t('Rarität', 'Rarity')}</dt><dd>${escapeHTML(rep.rarity)}</dd>
           <dt>${t('Exemplare gesamt', 'Copies total')}</dt><dd>${group.totalQty}</dd>
-          <dt>${t('Marktwert gesamt', 'Total market value')}</dt><dd>${formatCurrency(totalMarket, 'EUR')}</dd>
+          <dt title="${priceHint()}">${t('Marktwert gesamt', 'Total market value')}</dt><dd title="${priceHint()}">${formatCurrency(totalMarket, 'EUR')}</dd>
         </dl>
         <h3 class="lang-table-title">${t('Sprachen in deiner Sammlung', 'Languages in your collection')}</h3>
         <table class="lang-table">
-          <thead><tr><th>${t('Sprache', 'Language')}</th><th>${t('Zustand', 'Condition')}</th><th>${t('Ordner', 'Folder')}</th><th class="num">${t('Preis (Scryfall)', 'Price (Scryfall)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
+          <thead><tr><th>${t('Sprache', 'Language')}</th><th>${t('Zustand', 'Condition')}</th><th>${t('Ordner', 'Folder')}</th><th class="num" title="${priceHint()}">${t('Preis (Cardmarket-Trend)', 'Price (Cardmarket trend)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <h3 class="lang-table-title">${t('Weitere Editionen dieser Karte', 'Other printings of this card')}</h3>

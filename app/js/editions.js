@@ -434,8 +434,8 @@ function editionCardDetailHTML(card, ownedInfo) {
         <dl>
           <dt>${t('Nummer', 'Number')}</dt><dd>#${escapeHTML(card.collectorNumber)}</dd>
           <dt>${t('Rarität', 'Rarity')}</dt><dd>${escapeHTML(card.rarity || '')}</dd>
-          <dt>${t('Marktwert', 'Market value')}</dt><dd>${price}</dd>
-          ${foilPrice ? `<dt>${t('Marktwert (Foil)', 'Market value (foil)')}</dt><dd>${foilPrice}</dd>` : ''}
+          <dt title="${priceHint()}">${t('Marktwert', 'Market value')}</dt><dd title="${priceHint()}">${price}</dd>
+          ${foilPrice ? `<dt title="${priceHint()}">${t('Marktwert (Foil)', 'Market value (foil)')}</dt><dd title="${priceHint()}">${foilPrice}</dd>` : ''}
         </dl>
         ${
           card.cardmarketUri

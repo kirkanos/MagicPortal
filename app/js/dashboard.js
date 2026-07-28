@@ -33,11 +33,11 @@ function renderStats(cards) {
     <div class="stat-tile"><div class="stat-value">${setCount}</div><div class="stat-label">${t('Editionen', 'Editions')}</div></div>
     <div class="stat-tile"><div class="stat-value">${binderCount}</div><div class="stat-label">${t('Ordner', 'Folders')}</div></div>
     <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">${t('Kaufwert', 'Purchase value')}</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">${t('Marktwert', 'Market value')}</div></div>
-    <div class="stat-tile"><div class="stat-value" style="color:${gainColor}">${gainStr}</div><div class="stat-label">${t('Wertzuwachs (Markt − Kauf)', 'Value change (market − purchase)')}</div></div>
+    <div class="stat-tile" title="${priceHint()}"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">${t('Marktwert', 'Market value')}</div></div>
+    <div class="stat-tile" title="${priceHint()}"><div class="stat-value" style="color:${gainColor}">${gainStr}</div><div class="stat-label">${t('Wertzuwachs (Markt − Kauf)', 'Value change (market − purchase)')}</div></div>
     <div class="stat-tile"><div class="stat-value">${formatCurrency(avgValue, 'EUR')}</div><div class="stat-label">${t('Ø Wert / Karte', 'Avg. value / card')}</div></div>
     <div class="stat-tile"><div class="stat-value">${foilPct.toFixed(1)} %</div><div class="stat-label">${t('Foil-Anteil', 'Foil share')}</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(topCard.p, 'EUR')}</div><div class="stat-label">${t('Teuerste Karte', 'Most valuable')}: ${escapeHTML(topCard.name)}</div></div>
+    <div class="stat-tile" title="${priceHint()}"><div class="stat-value">${formatCurrency(topCard.p, 'EUR')}</div><div class="stat-label">${t('Teuerste Karte', 'Most valuable')}: ${escapeHTML(topCard.name)}</div></div>
   `;
 }
 
