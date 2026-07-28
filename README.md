@@ -108,6 +108,7 @@ unveränderte Dateien werden nicht erneut importiert. Alle Felder sind optional;
 | Variable | Zweck |
 |---|---|
 | `REMOTE_IMPORT_INTERVAL_MINUTES` | Prüf-Intervall (Standard 15) |
+| `REMOTE_IMPORT_DELETE` | Quelldatei nach erfolgreichem Import löschen (Standard `true`; `false` = behalten) |
 | `WEBDAV_URL` | Direkte WebDAV-URL zur CSV (Nextcloud: `…/remote.php/dav/files/<user>/<pfad>/export.csv`) |
 | `WEBDAV_USER` | Nextcloud-Benutzer |
 | `WEBDAV_PASSWORD` | Nextcloud-**App-Passwort** (nicht das Login-Passwort) |
@@ -115,9 +116,15 @@ unveränderte Dateien werden nicht erneut importiert. Alle Felder sind optional;
 | `GDRIVE_SA_JSON` | Service-Account-JSON (inline, base64-kodiert oder Pfad zu gemounteter Datei) |
 
 **Google Drive:** einen Service-Account in der Google Cloud Console anlegen, die Drive-API aktivieren
-und die CSV-Datei (bzw. deren Ordner) für die Service-Account-E-Mail freigeben. Es wird nur
-lesender Zugriff (`drive.readonly`) angefordert. Der Zugriff läuft komplett über die Go-Standard­-
-bibliothek (JWT-Signierung), ohne zusätzliche Abhängigkeit.
+und die CSV-Datei (bzw. deren Ordner) für die Service-Account-E-Mail freigeben. Für den reinen Import
+genügt lesender Zugriff (`drive.readonly`); ist `REMOTE_IMPORT_DELETE` aktiv, wird der Schreib-Scope
+`drive` angefordert und die Datei muss für den Service-Account **löschbar** sein (Bearbeiter-Recht;
+kann sie nicht endgültig gelöscht werden, wird sie in den Papierkorb verschoben). Der Zugriff läuft
+komplett über die Go-Standardbibliothek (JWT-Signierung), ohne zusätzliche Abhängigkeit.
+
+Nach einem erfolgreichen Import wird die Quelldatei standardmäßig **gelöscht** (bei Nextcloud per
+WebDAV-`DELETE`), sodass ein neuer ManaBox-Export einfach wieder abgelegt werden kann. Mit
+`REMOTE_IMPORT_DELETE=false` bleibt die Datei liegen.
 
 Der zuletzt erfolgte Remote-Import (Zeitpunkt, Quelle, evtl. Fehler) wird unter `/api/status`
 ausgewiesen.

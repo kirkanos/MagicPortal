@@ -12,6 +12,8 @@ services:
       - DB_PATH=/data/mtg.db
       # Automatischer Remote-Import (alle Felder optional; leer = deaktiviert).
       - REMOTE_IMPORT_INTERVAL_MINUTES=${REMOTE_IMPORT_INTERVAL_MINUTES:-15}
+      # Quelldatei nach erfolgreichem Import löschen (Standard: true).
+      - REMOTE_IMPORT_DELETE=${REMOTE_IMPORT_DELETE:-true}
       # -- Nextcloud / WebDAV --
       - WEBDAV_URL=${WEBDAV_URL:-}
       - WEBDAV_USER=${WEBDAV_USER:-}

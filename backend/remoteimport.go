@@ -115,6 +115,13 @@ func webdavConfigured() bool {
 	return os.Getenv("WEBDAV_URL") != ""
 }
 
+// remoteImportDelete reports whether the source file should be deleted after a
+// successful import. Enabled by default; set REMOTE_IMPORT_DELETE=false to keep.
+func remoteImportDelete() bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("REMOTE_IMPORT_DELETE")))
+	return v != "false" && v != "0" && v != "no"
+}
+
 func checkWebDAV() error {
 	rawURL := os.Getenv("WEBDAV_URL")
 	user := os.Getenv("WEBDAV_USER")
@@ -124,12 +131,14 @@ func checkWebDAV() error {
 
 	// Cheap change check via HEAD (ETag preferred, else Last-Modified).
 	tag := ""
+	headStatus := 0
 	if req, err := http.NewRequest("HEAD", rawURL, nil); err == nil {
 		if user != "" {
 			req.SetBasicAuth(user, pass)
 		}
 		if resp, err := remoteImportClient.Do(req); err == nil {
 			resp.Body.Close()
+			headStatus = resp.StatusCode
 			if resp.StatusCode == http.StatusOK {
 				tag = resp.Header.Get("ETag")
 				if tag == "" {
@@ -137,6 +146,9 @@ func checkWebDAV() error {
 				}
 			}
 		}
+	}
+	if headStatus == http.StatusNotFound {
+		return nil // no file present (e.g. deleted after a previous import)
 	}
 	if tag != "" && tag == stored {
 		return nil // unchanged, no download needed
@@ -156,6 +168,9 @@ func checkWebDAV() error {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil // file vanished between HEAD and GET
+	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d beim Download", resp.StatusCode)
 	}
@@ -171,7 +186,40 @@ func checkWebDAV() error {
 	if marker == stored {
 		return nil // content unchanged despite header change
 	}
-	return applyRemoteCSV("Nextcloud", body, marker, markerKey)
+	if err := applyRemoteCSV("Nextcloud", body, marker, markerKey); err != nil {
+		return err
+	}
+
+	if remoteImportDelete() {
+		if err := webdavDelete(rawURL, user, pass); err != nil {
+			log.Printf("[remote-import] Nextcloud: Quelldatei konnte nicht gelöscht werden: %v", err)
+		} else {
+			log.Printf("[remote-import] Nextcloud: Quelldatei nach Import gelöscht")
+		}
+		// Clear the marker so a re-appearing file is always re-imported and a
+		// failed deletion is retried on the next round (import is idempotent).
+		metaSet(db, markerKey, "")
+	}
+	return nil
+}
+
+func webdavDelete(rawURL, user, pass string) error {
+	req, err := http.NewRequest("DELETE", rawURL, nil)
+	if err != nil {
+		return err
+	}
+	if user != "" {
+		req.SetBasicAuth(user, pass)
+	}
+	resp, err := remoteImportClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	if resp.StatusCode >= 300 && resp.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("DELETE HTTP %d", resp.StatusCode)
+	}
+	return nil
 }
 
 // ---- Google Drive (service account, stdlib-only JWT) ----
@@ -222,7 +270,12 @@ func checkGDrive() error {
 	if err != nil {
 		return err
 	}
-	token, err := gdriveAccessToken(sa, "https://www.googleapis.com/auth/drive.readonly")
+	// Deletion needs write access, so request the broader scope in that case.
+	scope := "https://www.googleapis.com/auth/drive.readonly"
+	if remoteImportDelete() {
+		scope = "https://www.googleapis.com/auth/drive"
+	}
+	token, err := gdriveAccessToken(sa, scope)
 	if err != nil {
 		return err
 	}
@@ -238,6 +291,9 @@ func checkGDrive() error {
 	}
 	metaBody, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil // no file present (e.g. deleted after a previous import)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("Metadaten HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(metaBody)))
 	}
@@ -264,6 +320,9 @@ func checkGDrive() error {
 		return err
 	}
 	defer dresp.Body.Close()
+	if dresp.StatusCode == http.StatusNotFound {
+		return nil // file vanished between metadata and download
+	}
 	if dresp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(dresp.Body)
 		return fmt.Errorf("Download HTTP %d: %s", dresp.StatusCode, strings.TrimSpace(string(b)))
@@ -278,7 +337,57 @@ func checkGDrive() error {
 	if marker == stored {
 		return nil
 	}
-	return applyRemoteCSV("Google Drive", body, marker, markerKey)
+	if err := applyRemoteCSV("Google Drive", body, marker, markerKey); err != nil {
+		return err
+	}
+
+	if remoteImportDelete() {
+		if err := gdriveDeleteFile(fileID, token); err != nil {
+			log.Printf("[remote-import] Google Drive: Quelldatei konnte nicht gelöscht werden: %v", err)
+		} else {
+			log.Printf("[remote-import] Google Drive: Quelldatei nach Import gelöscht")
+		}
+		metaSet(db, markerKey, "")
+	}
+	return nil
+}
+
+// gdriveDeleteFile permanently deletes the file; if the service account may not
+// delete it (403), it falls back to moving it to the trash.
+func gdriveDeleteFile(fileID, token string) error {
+	u := "https://www.googleapis.com/drive/v3/files/" + url.PathEscape(fileID) + "?supportsAllDrives=true"
+	req, _ := http.NewRequest("DELETE", u, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := remoteImportClient.Do(req)
+	if err != nil {
+		return err
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode < 300 || resp.StatusCode == http.StatusNotFound {
+		return nil
+	}
+	if resp.StatusCode == http.StatusForbidden {
+		return gdriveTrashFile(fileID, token)
+	}
+	return fmt.Errorf("DELETE HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+}
+
+func gdriveTrashFile(fileID, token string) error {
+	u := "https://www.googleapis.com/drive/v3/files/" + url.PathEscape(fileID) + "?supportsAllDrives=true"
+	req, _ := http.NewRequest("PATCH", u, strings.NewReader(`{"trashed":true}`))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := remoteImportClient.Do(req)
+	if err != nil {
+		return err
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("Trash HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	return nil
 }
 
 // gdriveAccessToken builds and signs a service-account JWT and exchanges it for a
