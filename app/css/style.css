@@ -146,6 +146,8 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .lang-toggle:hover { border-color: var(--accent); color: var(--text); }
 .sync-status { font-size: 0.78rem; color: var(--text-dim); white-space: nowrap; }
 .sync-status.busy { color: var(--accent); }
+.sync-status.has-error { color: #e05656; }
+.sync-status .sync-err { font-weight: 600; }
 .sync-spin { display: inline-block; animation: sync-rot 1s linear infinite; }
 @keyframes sync-rot { to { transform: rotate(360deg); } }
 

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"compress/gzip"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -148,9 +150,10 @@ func syncSubtypes(db *sql.DB) error {
 // ---- Bulk cards ----
 
 type bulkEntry struct {
-	Type        string `json:"type"`
-	DownloadURI string `json:"download_uri"`
-	UpdatedAt   string `json:"updated_at"`
+	Type             string `json:"type"`
+	DownloadURI      string `json:"download_uri"`       // legacy: uncompressed JSON array
+	JsonlDownloadURI string `json:"jsonl_download_uri"` // current: gzipped JSONL
+	UpdatedAt        string `json:"updated_at"`
 }
 type bulkList struct {
 	Data []bulkEntry `json:"data"`
@@ -215,7 +218,12 @@ func syncBulk(db *sql.DB, force bool) error {
 	var dlURI, remoteUpdated string
 	for _, e := range list.Data {
 		if e.Type == "default_cards" {
-			dlURI = e.DownloadURI
+			// Prefer the current gzipped-JSONL URL; fall back to the legacy array.
+			if e.JsonlDownloadURI != "" {
+				dlURI = e.JsonlDownloadURI
+			} else {
+				dlURI = e.DownloadURI
+			}
 			remoteUpdated = e.UpdatedAt
 			break
 		}
@@ -236,10 +244,24 @@ func syncBulk(db *sql.DB, force bool) error {
 	}
 	defer dl.Body.Close()
 
-	dec := json.NewDecoder(dl.Body)
-	// Expect a top-level JSON array.
-	if _, err := dec.Token(); err != nil {
-		return err
+	// Scryfall now serves gzipped JSONL (one card object per line); older dumps
+	// were an uncompressed top-level JSON array.
+	var src io.Reader = dl.Body
+	if strings.HasSuffix(dlURI, ".gz") {
+		gz, err := gzip.NewReader(dl.Body)
+		if err != nil {
+			return err
+		}
+		defer gz.Close()
+		src = gz
+	}
+	dec := json.NewDecoder(src)
+	// The legacy array needs its opening bracket consumed; the JSONL stream has
+	// no wrapping array. Either way, the dec.More() loop below reads all objects.
+	if !strings.HasSuffix(dlURI, ".gz") {
+		if _, err := dec.Token(); err != nil {
+			return err
+		}
 	}
 
 	upsert := `

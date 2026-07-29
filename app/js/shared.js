@@ -396,11 +396,20 @@ async function refreshSyncStatus() {
   } else {
     el.classList.remove('busy');
     const label = t('Kartendaten: ', 'Card data: ') + relTime(st.cardsSyncedAt);
-    el.textContent = st.lastError ? label + t(' (Fehler)', ' (error)') : label;
-    el.title = st.lastError
-      ? t('Letzter Sync-Fehler: ', 'Last sync error: ') + st.lastError
-      : t(`Sammlung: ${st.collectionCount} · Karten-DB: ${st.cardCount} · Sets: ${st.setCount}`,
-          `Collection: ${st.collectionCount} · Card DB: ${st.cardCount} · Sets: ${st.setCount}`);
+    if (st.lastError) {
+      el.innerHTML = label + ' <span class="sync-err">⚠ ' + t('Fehler', 'error') + '</span>';
+      el.classList.add('has-error');
+      el.title = t('Letzter Sync-Fehler (klicken für Details): ', 'Last sync error (click for details): ') + st.lastError;
+      el.style.cursor = 'pointer';
+      el.onclick = () => alert(t('Letzter Sync-Fehler:\n\n', 'Last sync error:\n\n') + st.lastError);
+    } else {
+      el.textContent = label;
+      el.classList.remove('has-error');
+      el.title = t(`Sammlung: ${st.collectionCount} · Karten-DB: ${st.cardCount} · Sets: ${st.setCount}`,
+        `Collection: ${st.collectionCount} · Card DB: ${st.cardCount} · Sets: ${st.setCount}`);
+      el.style.cursor = '';
+      el.onclick = null;
+    }
   }
   return st;
 }
@@ -446,6 +455,8 @@ function initCollectionUpload() {
           const st = await refreshSyncStatus();
           if (st && st.running) {
             setTimeout(wait, 3000);
+          } else if (st && st.lastError) {
+            alert(t('Aktualisierung mit Fehler beendet:\n\n', 'Update finished with an error:\n\n') + st.lastError);
           } else {
             location.reload();
           }
