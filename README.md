@@ -25,6 +25,15 @@ Typzeilen und **Preise** kommen aus [Scryfall](https://scryfall.com) und werden 
 Hintergrund gepflegt – die Oberfläche lädt alles fertig angereichert und schnell aus der API.
 Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection-viewer).
 
+## 📸 Eindrücke
+
+|  |  |
+|---|---|
+| ![Karten-Ansicht](docs/screenshots/cards.png)<br>*Karten-Ansicht: Raster mit Filtern, Preisen, Sprachflaggen* | ![Editionen](docs/screenshots/editions.png)<br>*Editionen: gesammelt / fehlt / mehrfach je Set* |
+| ![Reserved List](docs/screenshots/reserved.png)<br>*Reserved List: besessen vs. fehlend + Investition* | ![Statistik-Dashboard](docs/screenshots/dashboard.png)<br>*Statistik: Wertentwicklung & größte Bewegungen* |
+
+<sub>Screenshots von der [Live-Demo](https://mtg.kirkanos.net). Aktuell halten mit `docs/screenshots.sh` (nutzt headless Chrome, kein Node nötig).</sub>
+
 ## ✨ Features
 
 - **🗃️ Karten-Ansicht** – durchsuchbares, filterbares Raster (Set, Rarität, Farbe, Foil, **Ordner/Liste**, **Kartentyp & Untertyp** – z. B. Creature → Dragon, Sortierung inkl. Erscheinungsdatum). Gleiche Karten in verschiedenen Sprachen werden zu **einer** Kachel zusammengefasst (Gesamtanzahl + Sprachflaggen); jede Kachel zeigt Editionssymbol, ausgeschriebenen Set-Namen und die nach Rarität eingefärbte Rarität. Die **Stichwort-Suche** (UND) erfasst auch Kartentext und Manakosten (z. B. `create token soldier`, `2rr`, `wu`).
