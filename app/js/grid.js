@@ -47,7 +47,7 @@ function groupCards(rows) {
         g.langs.push(l);
       }
     });
-    g.marketPrice = g.rep.scryfall && g.rep.scryfall.priceEur ? parseFloat(g.rep.scryfall.priceEur) : 0;
+    g.marketPrice = variantMarketPrice(g.rep) || 0;
     g.purchasePrice = g.rep.purchasePrice;
     g.added = g.variants.reduce((m, v) => ((v.added || '') > m ? v.added || '' : m), '');
     g.released = (setIndex[g.setCode.toLowerCase()] || {}).releasedAt || '';
@@ -142,10 +142,7 @@ function populateSubtypes(type) {
 function renderStats(rows, distinctCount) {
   const totalQty = rows.reduce((s, c) => s + c.quantity, 0);
   const totalValue = rows.reduce((s, c) => s + c.purchasePrice * c.quantity, 0);
-  const marketValue = rows.reduce((s, c) => {
-    const p = c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0;
-    return s + p * c.quantity;
-  }, 0);
+  const marketValue = rows.reduce((s, c) => s + (variantMarketPrice(c) || 0) * c.quantity, 0);
 
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat-tile" title="${countHint('distinct')}"><div class="stat-value">${distinctCount}</div><div class="stat-label">${t('Verschiedene Karten', 'Distinct cards')}</div></div>

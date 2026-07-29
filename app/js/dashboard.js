@@ -16,7 +16,7 @@ function renderStats(cards) {
   ).size;
   const totalQty = cards.reduce((s, c) => s + c.quantity, 0);
   const totalValue = cards.reduce((s, c) => s + c.purchasePrice * c.quantity, 0);
-  const marketValue = cards.reduce((s, c) => s + (c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0) * c.quantity, 0);
+  const marketValue = cards.reduce((s, c) => s + cardPrice(c) * c.quantity, 0);
   const avgValue = totalQty ? totalValue / totalQty : 0;
   const gain = marketValue - totalValue;
   const gainColor = gain >= 0 ? '#4dbb6a' : '#e05656';
@@ -28,7 +28,7 @@ function renderStats(cards) {
   const binderCount = new Set(cards.map((c) => c.binderName).filter(Boolean)).size;
   let topCard = { p: 0, name: '–' };
   cards.forEach((c) => {
-    const p = c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0;
+    const p = cardPrice(c);
     if (p > topCard.p) topCard = { p, name: c.name };
   });
 
@@ -107,7 +107,7 @@ function renderSetValueChart(cards) {
   const map = {};
   const names = {};
   cards.forEach((c) => {
-    const price = c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0;
+    const price = cardPrice(c);
     map[c.setCode] = (map[c.setCode] || 0) + price * c.quantity;
     if (!names[c.setCode]) names[c.setCode] = c.setName || c.setCode;
   });
@@ -169,7 +169,8 @@ function renderTopValueChart(cards) {
 const CHART_COLORS = ['#7b5cff', '#4fa8e0', '#4dbb6a', '#e0743d', '#c9a24d', '#e05656', '#c9c9d4', '#8a8a94', '#f0e6c8', '#b57bff'];
 
 function cardPrice(c) {
-  return c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0;
+  // Foil-aware (shared helper): foil/etched copies use the foil price when known.
+  return variantMarketPrice(c) || 0;
 }
 
 function renderTopMarketChart(cards) {

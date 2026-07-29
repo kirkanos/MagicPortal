@@ -4,7 +4,8 @@ let editions = [];
 let editionByCode = {};
 
 function priceEur(c) {
-  return c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0;
+  // Foil-aware (shared helper): foil/etched copies use the foil price when known.
+  return variantMarketPrice(c) || 0;
 }
 
 /* Collector number is language- and finish-independent, so the same card in
