@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/license-MIT-informational" alt="License: MIT">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-informational" alt="License: Apache 2.0">
   <img src="https://img.shields.io/badge/backend-Go-00ADD8" alt="Go">
   <img src="https://img.shields.io/badge/data-SQLite-003B57" alt="SQLite">
   <img src="https://img.shields.io/badge/deploy-Docker%20Compose-2496ED" alt="Docker Compose">
@@ -218,7 +218,8 @@ mtg-portal/
 
 ## 📄 Lizenz
 
-[MIT](LICENSE) – frei nutzbar, anpassbar und weiterverteilbar.
+[Apache License 2.0](LICENSE) – frei nutzbar, anpassbar und weiterverteilbar, inklusive
+ausdrücklicher Patentlizenz. Urheberrechtshinweise siehe [NOTICE](NOTICE).
 
 Kartendaten und -bilder stammen von [Scryfall](https://scryfall.com); *Magic: The Gathering*
 ist ein Markenzeichen von Wizards of the Coast. Dieses Projekt steht in keiner Verbindung zu
