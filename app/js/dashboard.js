@@ -9,6 +9,11 @@ Chart.defaults.font.family = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 function renderStats(cards) {
   const totalUnique = cards.length;
+  // Same grouping key as the Cards grid: merges languages/foil/condition of the
+  // same printing into one, so this matches the grid's "Verschiedene Karten".
+  const distinctCards = new Set(
+    cards.map((c) => c.setCode + '|' + (c.collectorNumber ? 'n:' + c.collectorNumber : 'name:' + (c.name || '').toLowerCase()))
+  ).size;
   const totalQty = cards.reduce((s, c) => s + c.quantity, 0);
   const totalValue = cards.reduce((s, c) => s + c.purchasePrice * c.quantity, 0);
   const marketValue = cards.reduce((s, c) => s + (c.scryfall && c.scryfall.priceEur ? parseFloat(c.scryfall.priceEur) : 0) * c.quantity, 0);
@@ -28,8 +33,9 @@ function renderStats(cards) {
   });
 
   document.getElementById('stats-bar').innerHTML = `
-    <div class="stat-tile"><div class="stat-value">${totalUnique}</div><div class="stat-label">${t('Einzelkarten', 'Card entries')}</div></div>
-    <div class="stat-tile"><div class="stat-value">${totalQty}</div><div class="stat-label">${t('Karten gesamt', 'Cards total')}</div></div>
+    <div class="stat-tile" title="${countHint('entries')}"><div class="stat-value">${totalUnique}</div><div class="stat-label">${t('Einzelkarten', 'Card entries')}</div></div>
+    <div class="stat-tile" title="${countHint('distinct')}"><div class="stat-value">${distinctCards}</div><div class="stat-label">${t('Verschiedene Karten', 'Distinct cards')}</div></div>
+    <div class="stat-tile" title="${countHint('total')}"><div class="stat-value">${totalQty}</div><div class="stat-label">${t('Karten gesamt', 'Cards total')}</div></div>
     <div class="stat-tile"><div class="stat-value">${setCount}</div><div class="stat-label">${t('Editionen', 'Editions')}</div></div>
     <div class="stat-tile"><div class="stat-value">${binderCount}</div><div class="stat-label">${t('Ordner', 'Folders')}</div></div>
     <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">${t('Kaufwert', 'Purchase value')}</div></div>

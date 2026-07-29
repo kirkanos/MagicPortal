@@ -50,6 +50,24 @@ function uploadHeaders(extra) {
   return headers;
 }
 
+/* Mouseover explanations for the different card-count definitions used across
+   the Cards grid and the statistics page. */
+function countHint(kind) {
+  if (kind === 'entries') {
+    return t(
+      'Einzelne Sammlungseinträge – jede Sprache, Foil-Variante und jeder Zustand zählt separat.',
+      'Individual collection entries – each language, foil variant and condition counts separately.'
+    );
+  }
+  if (kind === 'distinct') {
+    return t(
+      'Verschiedene Drucke – dieselbe Karte in mehreren Sprachen/Foil/Zustand wird zusammengefasst (wie in der Karten-Ansicht).',
+      'Distinct printings – the same card across languages/foil/condition is merged (like the Cards view).'
+    );
+  }
+  return t('Physische Exemplare gesamt (Summe aller Mengen).', 'Total physical copies (sum of all quantities).');
+}
+
 /* Explains what the shown market value represents – used as a mouseover title on
    market-value figures. Prices come from Scryfall (Cardmarket trend, daily). */
 function priceHint() {
