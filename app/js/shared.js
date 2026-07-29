@@ -243,6 +243,16 @@ function renderOracleText(text) {
 
 /* Detail modal for a grouped card: one row per language/finish/condition variant
    with its condition, price, quantity and date added. */
+/* Foil-aware market price of a single collection variant: foil/etched copies use
+   the foil price when available, everything else the normal price. */
+function variantMarketPrice(v) {
+  const s = v.scryfall;
+  if (!s) return null;
+  const isFoil = v.foil && v.foil.toLowerCase() !== 'normal' && v.foil !== '';
+  if (isFoil && s.priceEurFoil != null) return parseFloat(s.priceEurFoil);
+  return s.priceEur != null ? parseFloat(s.priceEur) : null;
+}
+
 function cardGroupModalHTML(group) {
   const rep = group.rep;
   const img = cardImage(rep, 'normal');
@@ -253,7 +263,8 @@ function cardGroupModalHTML(group) {
 
   const rows = variants
     .map((v) => {
-      const price = v.scryfall && v.scryfall.priceEur ? formatCurrency(parseFloat(v.scryfall.priceEur), 'EUR') : '–';
+      const mp = variantMarketPrice(v);
+      const price = mp != null ? formatCurrency(mp, 'EUR') : '–';
       const foilTag = v.foil && v.foil !== 'normal' ? ` <span class="lang-foil">${escapeHTML(v.foil)}</span>` : '';
       return `
         <tr>
@@ -267,10 +278,7 @@ function cardGroupModalHTML(group) {
     })
     .join('');
 
-  const totalMarket = variants.reduce(
-    (a, v) => a + (v.scryfall && v.scryfall.priceEur ? parseFloat(v.scryfall.priceEur) : 0) * v.quantity,
-    0
-  );
+  const totalMarket = variants.reduce((a, v) => a + (variantMarketPrice(v) || 0) * v.quantity, 0);
 
   return `
     <div class="modal-card">

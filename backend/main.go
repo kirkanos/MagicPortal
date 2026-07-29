@@ -90,6 +90,7 @@ type scryfallOut struct {
 	ImageBack      string   `json:"imageBack"`
 	ImageBackSmall string   `json:"imageBackSmall"`
 	PriceEur       *float64 `json:"priceEur"`
+	PriceEurFoil   *float64 `json:"priceEurFoil"`
 	SetName        string   `json:"setName"`
 }
 
@@ -118,7 +119,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
 		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type,
 		       s.name, s.type_line, s.colors, s.mana_cost, s.oracle_text, s.image_normal, s.image_small,
-		       s.image_back_normal, s.image_back_small, s.price_eur
+		       s.image_back_normal, s.image_back_small, s.price_eur, s.price_eur_foil
 		FROM collection c
 		LEFT JOIN scryfall_cards s
 		       ON s.set_code = c.set_code AND s.collector_number = c.collector_number
@@ -136,12 +137,12 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 			setCode                                             string
 			sName, sType, sColors, sMana, sOracle, sImgN, sImgS sql.NullString
 			sImgBackN, sImgBackS                                sql.NullString
-			sPrice                                              sql.NullFloat64
+			sPrice, sPriceFoil                                  sql.NullFloat64
 		)
 		if err := rows.Scan(&c.Key, &c.ScryfallID, &setCode, &c.SetName, &c.CollectorNumber, &c.Name,
 			&c.Foil, &c.Rarity, &c.Language, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Condition, &c.Added,
 			&c.BinderName, &c.BinderType,
-			&sName, &sType, &sColors, &sMana, &sOracle, &sImgN, &sImgS, &sImgBackN, &sImgBackS, &sPrice); err != nil {
+			&sName, &sType, &sColors, &sMana, &sOracle, &sImgN, &sImgS, &sImgBackN, &sImgBackS, &sPrice, &sPriceFoil); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -162,6 +163,10 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 			if sPrice.Valid {
 				p := sPrice.Float64
 				so.PriceEur = &p
+			}
+			if sPriceFoil.Valid {
+				p := sPriceFoil.Float64
+				so.PriceEurFoil = &p
 			}
 			c.Scryfall = so
 		}
