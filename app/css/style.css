@@ -571,6 +571,18 @@ table.deck-table th { color: var(--text-dim); font-weight: 600; }
 }
 .rl-cm-link:hover { color: #7cc3f0; text-decoration: underline; }
 
+/* Activity log */
+.activity-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.activity-head h1 { margin: 0; font-size: 1.4rem; }
+.activity-actions { display: inline-flex; gap: 8px; }
+.act-table td { vertical-align: top; }
+.act-ts { white-space: nowrap; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.act-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.act-badge.act-info { background: rgba(79,168,224,0.15); color: #7cc3f0; }
+.act-badge.act-error { background: rgba(224,86,86,0.18); color: #ef8a8a; }
+.act-msg-error { color: #ef8a8a; }
+.act-row-error td { background: rgba(224,86,86,0.06); }
+
 .eo-card { display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
 .eo-thumb {
   position: relative; aspect-ratio: 63/88; border-radius: 8px; overflow: hidden;

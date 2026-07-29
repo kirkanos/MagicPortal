@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -42,6 +43,8 @@ func main() {
 	mux.HandleFunc("GET /api/reserved", handleReserved)
 	mux.HandleFunc("GET /api/value-history", handleValueHistory)
 	mux.HandleFunc("GET /api/value-movers", handleValueMovers)
+	mux.HandleFunc("GET /api/activity", handleActivity)
+	mux.HandleFunc("POST /api/activity/clear", handleActivityClear)
 	mux.HandleFunc("POST /api/backup", handleBackupNow)
 	mux.HandleFunc("POST /api/backup/restore-latest", handleRestoreLatest)
 	mux.HandleFunc("POST /api/backup/restore-upload", handleRestoreUpload)
@@ -378,10 +381,12 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	res, err := importCSV(db, r.Body)
 	if err != nil {
+		logActivity("error", "Upload", "CSV-Import fehlgeschlagen: "+err.Error())
 		http.Error(w, "Import fehlgeschlagen: "+err.Error(), 400)
 		return
 	}
 	log.Printf("[upload] %d neu, %d aktualisiert", res.Added, res.Updated)
+	logActivity("info", "Upload", fmt.Sprintf("CSV hochgeladen: %d neu, %d aktualisiert (%d gesamt)", res.Added, res.Updated, res.Total))
 	// Pull any missing card metadata/prices in the background.
 	go startSync(false)
 	writeJSON(w, res)
@@ -393,9 +398,11 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := clearCollection(db); err != nil {
+		logActivity("error", "Reset", "Leeren fehlgeschlagen: "+err.Error())
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	logActivity("info", "Reset", "Sammlung geleert")
 	writeJSON(w, map[string]string{"status": "reset"})
 }
 
@@ -424,5 +431,8 @@ func handleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	started := startSync(true)
+	if started {
+		logActivity("info", "Sync", "Manuelle Aktualisierung gestartet")
+	}
 	writeJSON(w, map[string]bool{"started": started, "running": true})
 }

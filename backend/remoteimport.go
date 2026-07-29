@@ -83,12 +83,14 @@ func checkRemoteImports() {
 		if err := checkWebDAV(); err != nil {
 			log.Printf("[remote-import] Nextcloud/WebDAV: %v", err)
 			metaSet(db, "remote_import_last_error", "WebDAV: "+err.Error())
+			logActivityDedup("error", "Import", "Nextcloud-Import fehlgeschlagen: "+err.Error())
 		}
 	}
 	if gdriveConfigured() {
 		if err := checkGDrive(); err != nil {
 			log.Printf("[remote-import] Google Drive: %v", err)
 			metaSet(db, "remote_import_last_error", "Google Drive: "+err.Error())
+			logActivityDedup("error", "Import", "Google-Drive-Import fehlgeschlagen: "+err.Error())
 		}
 	}
 }
@@ -104,6 +106,7 @@ func applyRemoteCSV(source string, body []byte, marker, markerKey string) error 
 	metaSet(db, "remote_import_last_source", source)
 	metaSet(db, "remote_import_last_error", "")
 	log.Printf("[remote-import] %s: %d neu, %d aktualisiert (%d gesamt)", source, res.Added, res.Updated, res.Total)
+	logActivity("info", "Import", fmt.Sprintf("Automatischer Import aus %s: %d neu, %d aktualisiert (%d gesamt)", source, res.Added, res.Updated, res.Total))
 	// Fill metadata/prices for any new cards.
 	go startSync(false)
 	return nil

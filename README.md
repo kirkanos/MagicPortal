@@ -39,6 +39,7 @@ Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection
 - **🌐 Zweisprachig** – Oberfläche in Deutsch und Englisch, umschaltbar im Menü; die Auswahl wird gespeichert (Standard: Deutsch).
 - **⬆️ CSV-Upload** – neue ManaBox-Exporte direkt im Menü hochladen (passwortgeschützt); der Import **ersetzt** die Sammlung vollständig, sodass sie exakt der CSV entspricht (nicht mehr enthaltene Karten verschwinden).
 - **🔄 Auto-Sync** – Kartendaten & Preise werden alle 5 Minuten im Hintergrund aktualisiert (Download nur, wenn Scryfall wirklich einen neuen Datensatz veröffentlicht hat).
+- **🧾 Aktivitätsprotokoll** – ein **nur im eingeloggten Zustand** sichtbarer Menüpunkt „Aktivität" zeigt die letzten Aktionen des Tools (Importe, Sync, Backups, Wiederherstellungen) samt Fehlermeldungen. Das Protokoll ist **persistent** (übersteht Neustarts) und lässt sich jederzeit leeren.
 
 ## 🏗️ Architektur
 

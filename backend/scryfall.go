@@ -387,6 +387,7 @@ func syncBulk(db *sql.DB, force bool) error {
 		metaSet(db, "bulk_remote_updated_at", remoteUpdated)
 	}
 	log.Printf("[sync] bulk cards: %d gespeichert", count)
+	logActivity("info", "Sync", fmt.Sprintf("Kartendaten & Preise aktualisiert (%d Karten)", count))
 	return nil
 }
 
@@ -432,6 +433,10 @@ func startSync(force bool) bool {
 			syncLastErr = ""
 		}
 		syncMu.Unlock()
+		if err != nil {
+			// Dedup so a persistent failure (5-min poll) logs once, not repeatedly.
+			logActivityDedup("error", "Sync", "Aktualisierung fehlgeschlagen: "+err.Error())
+		}
 	}()
 	return true
 }

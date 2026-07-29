@@ -453,6 +453,7 @@ function initCollectionUpload() {
   const syncBtn = document.getElementById('csv-sync');
   const backupBtn = document.getElementById('csv-backup');
   const restoreBtn = document.getElementById('csv-restore');
+  const activityLink = document.getElementById('nav-activity');
   if (!uploadInput || !uploadLabel || !resetBtn || !unlockBtn) return;
 
   // Status indicator is shown to everyone; refresh on load.
@@ -464,6 +465,8 @@ function initCollectionUpload() {
     if (syncBtn) syncBtn.style.display = unlocked ? '' : 'none';
     if (backupBtn) backupBtn.style.display = unlocked ? '' : 'none';
     if (restoreBtn) restoreBtn.style.display = unlocked ? '' : 'none';
+    // Activity log is only offered once logged in.
+    if (activityLink) activityLink.style.display = unlocked ? '' : 'none';
     unlockBtn.style.display = unlocked ? 'none' : '';
   }
 

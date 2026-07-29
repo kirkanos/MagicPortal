@@ -67,6 +67,15 @@ CREATE TABLE IF NOT EXISTS price_history (
   PRIMARY KEY (date, scryfall_key)
 );
 CREATE INDEX IF NOT EXISTS idx_price_history_key ON price_history(scryfall_key);
+
+-- Persistent activity log (tool actions + errors), shown in the UI.
+CREATE TABLE IF NOT EXISTS activity_log (
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts      TEXT,
+  level   TEXT,
+  source  TEXT,
+  message TEXT
+);
 `
 
 // collectionSchema is kept separate (not part of `schema`) so it is only ever

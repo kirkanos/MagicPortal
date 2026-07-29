@@ -85,6 +85,7 @@ func runBackup() {
 	if err != nil {
 		log.Printf("[backup] Erstellung fehlgeschlagen: %v", err)
 		metaSet(db, "backup_last_error", err.Error())
+		logActivityDedup("error", "Backup", "Backup-Erstellung fehlgeschlagen: "+err.Error())
 		return
 	}
 	name := backupPrefix + time.Now().UTC().Format(dateLayout) + backupSuffix
@@ -94,6 +95,7 @@ func runBackup() {
 		if err := webdavBackup(name, data); err != nil {
 			log.Printf("[backup] WebDAV: %v", err)
 			metaSet(db, "backup_last_error", "WebDAV: "+err.Error())
+			logActivityDedup("error", "Backup", "Backup zu Nextcloud fehlgeschlagen: "+err.Error())
 		} else {
 			ok = true
 		}
@@ -102,6 +104,7 @@ func runBackup() {
 		if err := gdriveBackup(name, data); err != nil {
 			log.Printf("[backup] Google Drive: %v", err)
 			metaSet(db, "backup_last_error", "Google Drive: "+err.Error())
+			logActivityDedup("error", "Backup", "Backup zu Google Drive fehlgeschlagen: "+err.Error())
 		} else {
 			ok = true
 		}
@@ -111,6 +114,7 @@ func runBackup() {
 		metaSet(db, "backup_last_file", name)
 		metaSet(db, "backup_last_error", "")
 		log.Printf("[backup] gespeichert: %s (%d Bytes)", name, len(data))
+		logActivity("info", "Backup", fmt.Sprintf("Backup gespeichert: %s (%d KB)", name, len(data)/1024))
 	}
 }
 
@@ -223,6 +227,7 @@ func maybeAutoRestore() {
 	}
 	log.Printf("[backup] Auto-Restore aus %s: %d Einträge, %d Wert-Snapshots wiederhergestellt",
 		src, countRows(db, "collection"), countRows(db, "value_snapshots"))
+	logActivity("info", "Restore", fmt.Sprintf("Auto-Wiederherstellung aus %s (%d Einträge)", src, countRows(db, "collection")))
 	metaSet(db, "backup_last_restore_at", time.Now().UTC().Format(time.RFC3339))
 }
 
@@ -557,6 +562,7 @@ func handleRestoreLatest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	metaSet(db, "backup_last_restore_at", time.Now().UTC().Format(time.RFC3339))
+	logActivity("info", "Restore", fmt.Sprintf("Backup wiederhergestellt aus %s (%d Einträge)", src, countRows(db, "collection")))
 	go startSync(false)
 	writeJSON(w, map[string]interface{}{
 		"restored": true, "source": src,
@@ -582,6 +588,7 @@ func handleRestoreUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	metaSet(db, "backup_last_restore_at", time.Now().UTC().Format(time.RFC3339))
+	logActivity("info", "Restore", fmt.Sprintf("Backup aus Datei wiederhergestellt (%d Einträge)", countRows(db, "collection")))
 	go startSync(false)
 	writeJSON(w, map[string]interface{}{
 		"restored":        true,
