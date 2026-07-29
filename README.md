@@ -191,6 +191,7 @@ nginx-Proxy.
 | `GET` | `/api/prints?name=…` | Alle Drucke einer Karte (Editionen) |
 | `GET` | `/api/binders` | Ordner/Listen mit Kartenanzahl & Wert |
 | `GET` | `/api/status` | Sync-Status & Datenstand |
+| `GET` | `/api/summary` | Kompakte Kennzahlen (Kartenzahl + Sammlungswert), öffentlich mit CORS – für Einbettung |
 | `GET` | `/api/auth-check` | Passwortprüfung (204/403) |
 | `POST` | `/api/upload` | CSV hochladen (Upsert) |
 | `POST` | `/api/reset` | Sammlung leeren |
