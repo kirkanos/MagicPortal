@@ -42,7 +42,8 @@ async function fetchSetCards(code) {
 /* ---- Upload / reset with password (custom header, no browser auth dialog) ---- */
 
 const UPLOAD_PW_KEY = 'mtg_upload_pw';
-let uploadPassword = sessionStorage.getItem(UPLOAD_PW_KEY) || null;
+// localStorage (not sessionStorage) so the login persists across browser sessions.
+let uploadPassword = localStorage.getItem(UPLOAD_PW_KEY) || sessionStorage.getItem(UPLOAD_PW_KEY) || null;
 
 function uploadHeaders(extra) {
   const headers = Object.assign({}, extra || {});
@@ -575,7 +576,7 @@ function initCollectionUpload() {
     try {
       if (await checkUploadAuth(pw)) {
         uploadPassword = pw;
-        sessionStorage.setItem(UPLOAD_PW_KEY, pw);
+        localStorage.setItem(UPLOAD_PW_KEY, pw);
         setUnlocked(true);
       } else {
         alert(t('Falsches Passwort.', 'Wrong password.'));
@@ -594,6 +595,7 @@ function initCollectionUpload() {
       } else if (uploadPassword && (await checkUploadAuth(uploadPassword))) {
         setUnlocked(true);
       } else {
+        localStorage.removeItem(UPLOAD_PW_KEY);
         sessionStorage.removeItem(UPLOAD_PW_KEY);
         uploadPassword = null;
         setUnlocked(false);
