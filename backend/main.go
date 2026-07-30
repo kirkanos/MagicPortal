@@ -431,9 +431,19 @@ func handleSync(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Falsches oder fehlendes Passwort", 403)
 		return
 	}
+	// If a remote source is configured, also look for a new CSV to import first.
+	// checkRemoteImports guards itself (TryLock), so a spammed button is safe.
+	remote := webdavConfigured() || gdriveConfigured()
+	if remote {
+		go checkRemoteImports()
+	}
 	started := startSync(true)
-	if started {
-		logActivity("info", "Sync", "Manuelle Aktualisierung gestartet")
+	if started || remote {
+		msg := "Manuelle Aktualisierung gestartet"
+		if remote {
+			msg += " (inkl. Prüfung auf neuen CSV-Import)"
+		}
+		logActivity("info", "Sync", msg)
 	}
 	writeJSON(w, map[string]bool{"started": started, "running": true})
 }

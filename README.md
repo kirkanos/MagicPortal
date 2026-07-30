@@ -114,6 +114,8 @@ Das Backend kann regelmäßig eine Nextcloud- und/oder Google-Drive-Datei nach e
 ManaBox-Export durchsuchen und ihn bei Änderung automatisch importieren (Full-Replace, wie beim
 manuellen Upload). Die Änderungserkennung nutzt ETag/`Last-Modified` bzw. die Datei-Prüfsumme –
 unveränderte Dateien werden nicht erneut importiert. Alle Felder sind optional; leer = deaktiviert.
+Der **„🔄 Aktualisieren"-Button** stößt diese Prüfung zusätzlich manuell an (nur wenn eine Quelle
+konfiguriert ist); andernfalls aktualisiert er nur die Scryfall-Daten.
 
 | Variable | Zweck |
 |---|---|
