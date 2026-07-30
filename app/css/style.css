@@ -271,6 +271,32 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
   display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px;
 }
 .modal-overlay.open { display: flex; }
+
+/* Settings gear (top-right, logged-in only) */
+.gear-btn { background: var(--bg-card); color: var(--text-dim); border: 1px solid var(--border); border-radius: 8px; padding: 5px 9px; font-size: 1rem; line-height: 1; cursor: pointer; }
+.gear-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* Random-cards strip on the Cards page */
+.random-strip { margin: 2px 0 20px; }
+.random-title { font-size: 0.95rem; color: var(--text-dim); margin: 0 0 10px; font-weight: 600; }
+.random-row { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; }
+.random-row .card-tile { flex: 0 0 150px; width: 150px; }
+
+/* Admin / settings overlay */
+.admin-panel { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); width: min(560px, 100%); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
+.admin-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.admin-header h2 { margin: 0; font-size: 1.15rem; }
+.admin-body { padding: 4px 18px; overflow-y: auto; }
+.admin-section { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.admin-section:last-child { border-bottom: none; }
+.admin-section h3 { margin: 0 0 10px; font-size: 0.95rem; color: var(--text); }
+.admin-hint { margin: 0 0 8px; font-size: 0.8rem; color: var(--text-dim); }
+.admin-check { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.9rem; cursor: pointer; }
+.admin-num { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.9rem; }
+.admin-num input { width: 72px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; }
+.admin-navlist { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 16px; }
+.admin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--border); }
 .modal-body {
   background: var(--bg-elevated); border-radius: var(--radius); border: 1px solid var(--border);
   max-width: 1040px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;

@@ -1,47 +1,40 @@
 #!/usr/bin/env bash
 #
-# Regenerates the README screenshots from a running MagicPortal instance using
-# headless Google Chrome (no Node/Playwright toolchain needed).
+# Regenerates the README screenshots using a headless-Chrome *Docker container*
+# (no Node/Playwright and no host browser needed).
 #
-# Usage:   docs/screenshots.sh [BASE_URL]
-# Default: BASE_URL = https://mtg.kirkanos.net  (the public demo)
+# Usage:
+#   docs/screenshots.sh                      # shoots the public demo
+#   BASE_URL=http://web docs/screenshots.sh  # shoot a local instance …
+#   DOCKER_NETWORK=mtg-portal_default docs/screenshots.sh   # … on the compose network
 #
-# Re-run this whenever the UI changes to keep the images in docs/screenshots/
-# up to date.
+# Re-run whenever the UI changes to keep docs/screenshots/ up to date.
 set -euo pipefail
 
-BASE_URL="${1:-https://mtg.kirkanos.net}"
+BASE_URL="${BASE_URL:-https://mtg.kirkanos.net}"
+IMAGE="${CHROME_IMAGE:-zenika/alpine-chrome:latest}"
 OUT_DIR="$(cd "$(dirname "$0")" && pwd)/screenshots"
 mkdir -p "$OUT_DIR"
 
-CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-if [ ! -x "$CHROME" ]; then
-  for c in chromium chromium-browser google-chrome google-chrome-stable; do
-    command -v "$c" >/dev/null 2>&1 && CHROME="$c" && break
-  done
-fi
+NET_ARGS=()
+[ -n "${DOCKER_NETWORK:-}" ] && NET_ARGS=(--network "$DOCKER_NETWORK")
 
 shot() {
-  local page="$1" file="$2" out="$OUT_DIR/$2"
-  local profile
-  profile="$(mktemp -d)"
+  local page="$1" file="$2" name="mtg-shot-$2"
   echo "→ $page → screenshots/$file"
-  rm -f "$out"
-  # headless Chrome (=new) does not reliably self-exit after --screenshot, so run
-  # it in the background, wait for the file, then stop it.
-  "$CHROME" --headless=new --disable-gpu --hide-scrollbars \
-    --force-device-scale-factor=1 --window-size=1440,1000 \
-    --virtual-time-budget=15000 \
-    --user-data-dir="$profile" \
-    --screenshot="$out" \
-    "$BASE_URL/$page" >/dev/null 2>&1 &
-  local pid=$!
+  docker rm -f "$name" >/dev/null 2>&1 || true
+  # Run detached so a non-exiting Chrome can't block us; wait for the file, then stop.
+  docker run -d --rm --name "$name" "${NET_ARGS[@]}" \
+    -v "$OUT_DIR:/out" "$IMAGE" \
+    --no-sandbox --headless=new --disable-gpu --hide-scrollbars \
+    --force-device-scale-factor=1 --window-size=1440,1100 \
+    --virtual-time-budget=22000 \
+    --screenshot="/out/$file" "$BASE_URL/$page" >/dev/null
+
   local i=0
-  while [ ! -s "$out" ] && [ "$i" -lt 60 ]; do sleep 0.5; i=$((i + 1)); done
-  sleep 1 # let the render finalize before killing
-  kill "$pid" >/dev/null 2>&1 || true
-  wait "$pid" 2>/dev/null || true
-  rm -rf "$profile"
+  while [ ! -s "$OUT_DIR/$file" ] && [ "$i" -lt 60 ]; do sleep 1; i=$((i + 1)); done
+  sleep 2 # let the render finalize
+  docker stop "$name" >/dev/null 2>&1 || true
 }
 
 shot "index.html"     "cards.png"

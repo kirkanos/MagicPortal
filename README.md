@@ -32,7 +32,7 @@ Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection
 | ![Karten-Ansicht](docs/screenshots/cards.png)<br>*Karten-Ansicht: Raster mit Filtern, Preisen, Sprachflaggen* | ![Editionen](docs/screenshots/editions.png)<br>*Editionen: gesammelt / fehlt / mehrfach je Set* |
 | ![Reserved List](docs/screenshots/reserved.png)<br>*Reserved List: besessen vs. fehlend + Investition* | ![Statistik-Dashboard](docs/screenshots/dashboard.png)<br>*Statistik: Wertentwicklung & größte Bewegungen* |
 
-<sub>Screenshots von der [Live-Demo](https://mtg.kirkanos.net). Aktuell halten mit `docs/screenshots.sh` (nutzt headless Chrome, kein Node nötig).</sub>
+<sub>Screenshots von der [Live-Demo](https://mtg.kirkanos.net). Aktuell halten mit `docs/screenshots.sh` (nutzt einen headless-Chrome-Docker-Container – kein Node, kein Host-Browser nötig).</sub>
 
 ## ✨ Features
 
@@ -49,6 +49,8 @@ Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection
 - **⬆️ CSV-Upload** – neue ManaBox-Exporte direkt im Menü hochladen (passwortgeschützt); der Import **ersetzt** die Sammlung vollständig, sodass sie exakt der CSV entspricht (nicht mehr enthaltene Karten verschwinden).
 - **🔄 Auto-Sync** – Kartendaten & Preise werden alle 5 Minuten im Hintergrund aktualisiert (Download nur, wenn Scryfall wirklich einen neuen Datensatz veröffentlicht hat).
 - **🧾 Aktivitätsprotokoll** – ein **nur im eingeloggten Zustand** sichtbarer Menüpunkt „Aktivität" zeigt die letzten Aktionen des Tools (Importe, Sync, Backups, Wiederherstellungen) samt Fehlermeldungen. Das Protokoll ist **persistent** (übersteht Neustarts) und lässt sich jederzeit leeren.
+- **⚙️ Admin-Interface** – ein **nur für eingeloggte Nutzer** sichtbares Zahnrad (oben rechts) öffnet ein Einstellungs-Overlay: der **Zufallskarten-Streifen** auf der Karten-Seite (an/aus + Anzahl), das **Aus-/Einblenden einzelner Menüpunkte** sowie die Wartungsaktionen **Sammlung leeren / Backup / Wiederherstellen** (serverseitig gespeichert, gilt für alle Besucher).
+- **🎲 Zufallskarten** – optionaler Streifen zufälliger Karten aus der Sammlung oben auf der Karten-Seite (nebeneinander, konfigurierbare Anzahl über das Admin-Interface).
 
 ## 🏗️ Architektur
 
@@ -203,6 +205,8 @@ nginx-Proxy.
 | `GET` | `/api/binders` | Ordner/Listen mit Kartenanzahl & Wert |
 | `GET` | `/api/status` | Sync-Status & Datenstand |
 | `GET` | `/api/summary` | Kompakte Kennzahlen (Kartenzahl + Sammlungswert), öffentlich mit CORS – für Einbettung |
+| `GET` | `/api/config` | UI-Einstellungen (Zufallskarten, versteckte Menüpunkte) – öffentlich |
+| `POST` | `/api/config` | UI-Einstellungen speichern (passwortgeschützt) |
 | `GET` | `/api/auth-check` | Passwortprüfung (204/403) |
 | `POST` | `/api/upload` | CSV hochladen (Upsert) |
 | `POST` | `/api/reset` | Sammlung leeren |

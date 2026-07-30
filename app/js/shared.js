@@ -441,6 +441,146 @@ async function refreshSyncStatus() {
   return st;
 }
 
+/* ---- Admin-configurable UI settings (served by the backend) ---- */
+
+let UI_CONFIG = null;
+async function loadUIConfig() {
+  try {
+    const res = await fetch(API + '/config', { cache: 'no-store' });
+    UI_CONFIG = res.ok ? await res.json() : null;
+  } catch (e) {
+    UI_CONFIG = null;
+  }
+  if (!UI_CONFIG) UI_CONFIG = { randomEnabled: true, randomCount: 6, hiddenNav: [] };
+  if (!Array.isArray(UI_CONFIG.hiddenNav)) UI_CONFIG.hiddenNav = [];
+  return UI_CONFIG;
+}
+// Kicked off immediately so pages can `await uiConfigReady`.
+const uiConfigReady = loadUIConfig();
+
+// Configurable navigation entries (key = page filename without .html).
+const NAV_ITEMS = [
+  { key: 'index', label: () => t('Karten', 'Cards') },
+  { key: 'editions', label: () => t('Editionen', 'Editions') },
+  { key: 'reserved', label: () => t('Reserved List', 'Reserved List') },
+  { key: 'binders', label: () => t('Ordner', 'Folders') },
+  { key: 'lists', label: () => t('Listen', 'Lists') },
+  { key: 'decks', label: () => t('Decks', 'Decks') },
+  { key: 'dashboard', label: () => t('Statistik', 'Statistics') },
+  { key: 'deck-checker', label: () => t('Deck-Checker', 'Deck Checker') },
+];
+
+function navKeyFromHref(href) {
+  return ((href || '').split('/').pop() || '').replace('.html', '') || 'index';
+}
+
+/* Hides the nav entries the admin disabled. Applied on every page. */
+function applyNavConfig() {
+  const hidden = (UI_CONFIG && UI_CONFIG.hiddenNav) || [];
+  document.querySelectorAll('nav.topnav a[href$=".html"]').forEach((a) => {
+    if (a.classList.contains('brand') || a.id === 'nav-activity') return;
+    a.style.display = hidden.includes(navKeyFromHref(a.getAttribute('href'))) ? 'none' : '';
+  });
+}
+
+/* Builds the admin overlay once and appends it to the body. It also hosts the
+   maintenance buttons (Reset/Backup/Restore) that used to sit in the nav – they
+   keep their ids so initCollectionUpload wires them as before. */
+function buildAdminOverlay() {
+  if (document.getElementById('admin-overlay')) return;
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay admin-overlay';
+  ov.id = 'admin-overlay';
+  ov.innerHTML = `
+    <div class="admin-panel">
+      <div class="admin-header">
+        <h2>${t('Einstellungen', 'Settings')}</h2>
+        <span class="modal-close admin-close">&times;</span>
+      </div>
+      <div class="admin-body">
+        <section class="admin-section">
+          <h3>${t('Zufallskarten', 'Random cards')}</h3>
+          <label class="admin-check"><input type="checkbox" id="cfg-random-enabled"> ${t('Zufällige Karten auf der Karten-Seite anzeigen', 'Show random cards on the Cards page')}</label>
+          <label class="admin-num">${t('Anzahl', 'Count')} <input type="number" id="cfg-random-count" min="1" max="30"></label>
+        </section>
+        <section class="admin-section">
+          <h3>${t('Menüpunkte', 'Menu items')}</h3>
+          <p class="admin-hint">${t('Abgewählte Punkte werden im Menü ausgeblendet.', 'Unchecked items are hidden from the menu.')}</p>
+          <div id="cfg-nav-list" class="admin-navlist"></div>
+        </section>
+        <section class="admin-section">
+          <h3>${t('Wartung', 'Maintenance')}</h3>
+          <div class="admin-actions">
+            <button type="button" id="csv-reset" class="reset-btn" title="Gesamte Sammlung leeren" data-en-title="Clear the entire collection">${t('Sammlung leeren', 'Clear collection')}</button>
+            <button type="button" id="csv-backup" class="reset-btn" title="Jetzt sichern (Sammlung + Wert-Historie)" data-en-title="Back up now">💾 ${t('Backup', 'Backup')}</button>
+            <button type="button" id="csv-restore" class="reset-btn" title="Neuestes Backup wiederherstellen" data-en-title="Restore latest backup">⟲ ${t('Wiederherstellen', 'Restore')}</button>
+          </div>
+        </section>
+      </div>
+      <div class="admin-footer">
+        <button type="button" class="reset-btn admin-close">${t('Abbrechen', 'Cancel')}</button>
+        <button type="button" id="cfg-save" class="upload-btn admin-save">${t('Speichern', 'Save')}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+
+  ov.querySelectorAll('.admin-close').forEach((el) => el.addEventListener('click', closeAdminOverlay));
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov) closeAdminOverlay();
+  });
+  document.getElementById('cfg-save').addEventListener('click', saveAdminConfig);
+}
+
+async function openAdminOverlay() {
+  await uiConfigReady;
+  const ov = document.getElementById('admin-overlay');
+  if (!ov) return;
+  document.getElementById('cfg-random-enabled').checked = !!UI_CONFIG.randomEnabled;
+  document.getElementById('cfg-random-count').value = UI_CONFIG.randomCount || 6;
+  const list = document.getElementById('cfg-nav-list');
+  list.innerHTML = NAV_ITEMS.map(
+    (n) =>
+      `<label class="admin-check"><input type="checkbox" data-nav-key="${n.key}" ${
+        UI_CONFIG.hiddenNav.includes(n.key) ? '' : 'checked'
+      }> ${escapeHTML(n.label())}</label>`
+  ).join('');
+  ov.classList.add('open');
+}
+
+function closeAdminOverlay() {
+  const ov = document.getElementById('admin-overlay');
+  if (ov) ov.classList.remove('open');
+}
+
+async function saveAdminConfig() {
+  const hiddenNav = [...document.querySelectorAll('#cfg-nav-list input[data-nav-key]')]
+    .filter((c) => !c.checked)
+    .map((c) => c.dataset.navKey);
+  const body = {
+    randomEnabled: document.getElementById('cfg-random-enabled').checked,
+    randomCount: parseInt(document.getElementById('cfg-random-count').value, 10) || 6,
+    hiddenNav,
+  };
+  try {
+    const res = await fetch(API + '/config', {
+      method: 'POST',
+      headers: uploadHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body),
+    });
+    if (res.status === 403) {
+      alert(t('Falsches oder fehlendes Passwort', 'Wrong or missing password'));
+      return;
+    }
+    if (!res.ok) {
+      alert(t('Speichern fehlgeschlagen.', 'Saving failed.'));
+      return;
+    }
+    location.reload(); // apply everywhere cleanly
+  } catch (e) {
+    alert(t('Speichern fehlgeschlagen: ', 'Saving failed: ') + e.message);
+  }
+}
+
 /* Wires the CSV upload/reset/unlock buttons and the sync controls in the top
    navigation (present on every page). The upload/reset/sync buttons are only
    revealed once access is granted - either because no password is configured,
@@ -451,9 +591,11 @@ function initCollectionUpload() {
   const resetBtn = document.getElementById('csv-reset');
   const unlockBtn = document.getElementById('csv-unlock');
   const syncBtn = document.getElementById('csv-sync');
+  // Reset/Backup/Restore now live inside the admin overlay (built in JS).
   const backupBtn = document.getElementById('csv-backup');
   const restoreBtn = document.getElementById('csv-restore');
   const activityLink = document.getElementById('nav-activity');
+  const adminGear = document.getElementById('admin-gear');
   if (!uploadInput || !uploadLabel || !resetBtn || !unlockBtn) return;
 
   // Status indicator is shown to everyone; refresh on load.
@@ -461,14 +603,14 @@ function initCollectionUpload() {
 
   function setUnlocked(unlocked) {
     uploadLabel.style.display = unlocked ? '' : 'none';
-    resetBtn.style.display = unlocked ? '' : 'none';
     if (syncBtn) syncBtn.style.display = unlocked ? '' : 'none';
-    if (backupBtn) backupBtn.style.display = unlocked ? '' : 'none';
-    if (restoreBtn) restoreBtn.style.display = unlocked ? '' : 'none';
-    // Activity log is only offered once logged in.
+    // Admin settings + activity log are only offered once logged in.
+    if (adminGear) adminGear.style.display = unlocked ? '' : 'none';
     if (activityLink) activityLink.style.display = unlocked ? '' : 'none';
     unlockBtn.style.display = unlocked ? 'none' : '';
   }
+
+  if (adminGear) adminGear.addEventListener('click', openAdminOverlay);
 
   if (syncBtn) {
     syncBtn.addEventListener('click', async () => {
@@ -609,8 +751,14 @@ function initCollectionUpload() {
   })();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initCollectionUpload);
-} else {
+function initShared() {
+  buildAdminOverlay(); // must exist before initCollectionUpload wires its buttons
   initCollectionUpload();
+  uiConfigReady.then(applyNavConfig); // hide disabled menu items once config is loaded
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initShared);
+} else {
+  initShared();
 }
