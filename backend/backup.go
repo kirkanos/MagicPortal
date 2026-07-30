@@ -21,18 +21,24 @@ import (
 )
 
 // Backup: periodically snapshots the non-reconstructable / user-owned data
-// (collection + value_snapshots + price_history) into a small gzipped SQLite
-// file and uploads a dated copy to every configured remote (Nextcloud/WebDAV
-// and/or Google Drive). On a fresh (empty) database the newest remote backup is
-// restored automatically at startup. Restore is also available manually.
+// (collection + value_snapshots + price_history + the meta table, which holds
+// admin settings) into a small gzipped SQLite file and uploads a dated copy to
+// every configured remote (Nextcloud/WebDAV and/or Google Drive). On a fresh
+// (empty) database the newest remote backup is restored automatically at
+// startup. Restore is also available manually.
 //
-// The Scryfall catalog (sets, scryfall_cards, subtypes) is intentionally NOT
-// backed up – it is re-downloaded on the next sync.
+// The Scryfall catalog (sets, scryfall_cards) is intentionally NOT backed up –
+// it is re-downloaded on the next sync (its tables are empty after a restore,
+// which forces that download regardless of restored sync markers).
 
 const backupPrefix = "mtg-portal-backup-"
 const backupSuffix = ".db.gz"
 
-var backupTables = []string{"collection", "value_snapshots", "price_history"}
+// meta is included so admin settings (ui_config) and other non-derivable keys
+// come back on restore. The Scryfall catalog (scryfall_cards, sets) is still not
+// backed up – it is empty after a fresh restore, which makes the sync re-download
+// it regardless of any restored sync markers.
+var backupTables = []string{"collection", "value_snapshots", "price_history", "meta"}
 
 // ---- config ----
 

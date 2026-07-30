@@ -145,11 +145,13 @@ ausgewiesen.
 
 ### 💾 Automatisches Backup (optional)
 
-Die **eigenen, nicht wiederherstellbaren Daten** – Sammlung (`collection`) und die Wert-Historie
-(`value_snapshots`, `price_history`) – werden regelmäßig in eine kompakte, gzip-komprimierte
-SQLite-Datei gesichert und als **datierte Kopie** zu jeder konfigurierten Quelle hochgeladen
-(Nextcloud per WebDAV-`PUT`, Google Drive per API). Der Scryfall-Katalog wird **nicht** gesichert
-(er wird ohnehin neu geladen), daher bleibt ein Backup klein (typisch < 1 MB).
+Die **eigenen, nicht wiederherstellbaren Daten** – Sammlung (`collection`), die Wert-Historie
+(`value_snapshots`, `price_history`) und die Einstellungen/Metadaten (`meta`, u. a. das
+Admin-`ui_config`) – werden regelmäßig in eine kompakte, gzip-komprimierte SQLite-Datei gesichert
+und als **datierte Kopie** zu jeder konfigurierten Quelle hochgeladen (Nextcloud per WebDAV-`PUT`,
+Google Drive per API). Der Scryfall-Katalog (`scryfall_cards`, `sets`) wird **nicht** gesichert
+(er wird ohnehin neu geladen – nach einem Restore sind seine Tabellen leer, was den Download
+erzwingt), daher bleibt ein Backup klein (typisch < 2 MB).
 
 Bei **leerer Datenbank** (frisches Volume) stellt das Backend beim Start automatisch das neueste
 Remote-Backup wieder her. Manuell geht das ebenfalls – siehe Endpoints unten.
