@@ -2,6 +2,8 @@ let allCards = [];
 let setIndex = {};
 let editions = [];
 let editionByCode = {};
+// Set-type filter state. mode: 'collectable' | 'all' | 'custom'; types = chosen set-types.
+let typeState = { mode: 'collectable', types: new Set() };
 
 function priceEur(c) {
   // Foil-aware (shared helper): foil/etched copies use the foil price when known.
@@ -181,26 +183,98 @@ function progressCell(e) {
 }
 
 /* Fills the set-type dropdown: "collectable" (default) + "all" + every type present. */
+function allSetTypes() {
+  return [...new Set(editions.map((e) => e.setType).filter(Boolean))].sort((a, b) =>
+    setTypeLabel(a).localeCompare(setTypeLabel(b))
+  );
+}
+
+/* Which set-types are currently effectively selected (for the checkbox state). */
+function effectiveSelectedTypes() {
+  if (typeState.mode === 'all') return new Set(allSetTypes());
+  if (typeState.mode === 'collectable') return new Set(allSetTypes().filter((ty) => COLLECTABLE_SET_TYPES.has(ty)));
+  return typeState.types;
+}
+
+function updateTypeLabel() {
+  const label = document.getElementById('type-label');
+  if (typeState.mode === 'collectable') label.textContent = t('Sammelbare Typen', 'Collectable types');
+  else if (typeState.mode === 'all') label.textContent = t('Alle Typen', 'All types');
+  else {
+    const n = typeState.types.size;
+    if (n === 0) label.textContent = t('Keine Typen', 'No types');
+    else if (n === 1) label.textContent = setTypeLabel([...typeState.types][0]);
+    else label.textContent = t(`${n} Typen`, `${n} types`);
+  }
+}
+
+/* Reflect the current selection in the checkboxes. */
+function syncTypeCheckboxes() {
+  const sel = effectiveSelectedTypes();
+  document.querySelectorAll('#type-options input[type="checkbox"]').forEach((b) => (b.checked = sel.has(b.value)));
+}
+
 function populateTypeFilter() {
-  const sel = document.getElementById('filter-type');
-  const types = [...new Set(editions.map((e) => e.setType).filter(Boolean))]
-    .sort((a, b) => setTypeLabel(a).localeCompare(setTypeLabel(b)));
-  sel.innerHTML =
-    `<option value="collectable">${t('Sammelbare Typen', 'Collectable types')}</option>` +
-    `<option value="all">${t('Alle Typen', 'All types')}</option>` +
-    types.map((ty) => `<option value="${escapeHTML(ty)}">${escapeHTML(setTypeLabel(ty))}</option>`).join('');
-  sel.value = 'collectable';
+  const opts = document.getElementById('type-options');
+  opts.innerHTML = allSetTypes()
+    .map(
+      (ty) =>
+        `<label class="ms-check"><input type="checkbox" value="${escapeHTML(ty)}"> ${escapeHTML(setTypeLabel(ty))}</label>`
+    )
+    .join('');
+
+  // Presets keep the exact previous behaviour.
+  document.querySelectorAll('#type-panel .ms-preset').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      typeState = { mode: btn.dataset.preset, types: new Set() };
+      syncTypeCheckboxes();
+      updateTypeLabel();
+      renderTable();
+    })
+  );
+
+  // Individual checkboxes → custom multi-selection.
+  opts.querySelectorAll('input[type="checkbox"]').forEach((b) =>
+    b.addEventListener('change', () => {
+      typeState = {
+        mode: 'custom',
+        types: new Set([...opts.querySelectorAll('input:checked')].map((c) => c.value)),
+      };
+      updateTypeLabel();
+      renderTable();
+    })
+  );
+
+  // Dropdown open/close.
+  const wrap = document.getElementById('type-filter');
+  const toggle = document.getElementById('type-toggle');
+  const panel = document.getElementById('type-panel');
+  const setOpen = (open) => {
+    panel.hidden = !open;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(panel.hidden);
+  });
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target)) setOpen(false);
+  });
+
+  typeState = { mode: 'collectable', types: new Set() };
+  syncTypeCheckboxes();
+  updateTypeLabel();
 }
 
 function renderTable() {
   const q = document.getElementById('search').value.trim().toLowerCase();
   const sortBy = document.getElementById('sort-by').value;
   const ownedFilter = document.getElementById('filter-owned').value;
-  const typeFilter = document.getElementById('filter-type').value;
 
   let list = editions;
-  if (typeFilter === 'collectable') list = list.filter((e) => COLLECTABLE_SET_TYPES.has(e.setType) || e.inCollection);
-  else if (typeFilter !== 'all') list = list.filter((e) => e.setType === typeFilter);
+  if (typeState.mode === 'collectable') list = list.filter((e) => COLLECTABLE_SET_TYPES.has(e.setType) || e.inCollection);
+  else if (typeState.mode === 'custom') list = list.filter((e) => typeState.types.has(e.setType));
+  // mode 'all' → no type restriction
   if (ownedFilter === 'owned') list = list.filter((e) => e.inCollection);
   else if (ownedFilter === 'missing') list = list.filter((e) => !e.inCollection);
   if (q) list = list.filter((e) => e.name.toLowerCase().includes(q) || e.code.toLowerCase().includes(q));
@@ -481,7 +555,7 @@ async function init() {
   document.getElementById('search').addEventListener('input', debounce(renderTable, 150));
   document.getElementById('sort-by').addEventListener('change', renderTable);
   document.getElementById('filter-owned').addEventListener('change', renderTable);
-  document.getElementById('filter-type').addEventListener('change', renderTable);
+  // The type multi-select wires its own listeners in populateTypeFilter().
 
   const hintBtn = document.getElementById('hint-toggle');
   const hint = document.getElementById('section-hint');

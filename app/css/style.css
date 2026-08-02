@@ -145,6 +145,34 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .controls input[type="text"] { flex: 2; min-width: 200px; }
 .controls select { flex: 1; min-width: 130px; }
 
+/* Multi-select dropdown (editions set-type filter) */
+.multiselect { position: relative; flex: 1; min-width: 150px; }
+.ms-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+  padding: 8px 10px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; text-align: left;
+}
+.ms-toggle:hover { border-color: var(--accent); }
+.ms-toggle #type-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-caret { color: var(--text-dim); font-size: 0.72rem; flex: none; }
+.ms-panel {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 60;
+  min-width: 100%; width: max-content; max-width: 320px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.45); max-height: 340px; overflow-y: auto;
+}
+.ms-panel[hidden] { display: none; }
+.ms-preset {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+}
+.ms-preset:hover { background: var(--bg-card); }
+.ms-divider { height: 1px; background: var(--border); margin: 6px 4px; }
+.ms-options { display: flex; flex-direction: column; }
+.ms-check { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
+.ms-check:hover { background: var(--bg-card); }
+.ms-check input { flex: none; }
+
 .nav-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .lang-toggle {
   cursor: pointer; font-family: inherit; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;

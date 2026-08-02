@@ -40,7 +40,17 @@
 
   <div class="controls">
     <input type="text" id="search" placeholder="Edition suchen (Name oder Code)..." data-en-placeholder="Search edition (name or code)...">
-    <select id="filter-type"></select>
+    <div class="multiselect" id="type-filter">
+      <button type="button" class="ms-toggle" id="type-toggle" aria-haspopup="true" aria-expanded="false">
+        <span id="type-label">Sammelbare Typen</span><span class="ms-caret">▾</span>
+      </button>
+      <div class="ms-panel" id="type-panel" hidden>
+        <button type="button" class="ms-preset" data-preset="collectable" data-en="Collectable types">Sammelbare Typen</button>
+        <button type="button" class="ms-preset" data-preset="all" data-en="All types">Alle Typen</button>
+        <div class="ms-divider"></div>
+        <div class="ms-options" id="type-options"></div>
+      </div>
+    </div>
     <select id="filter-owned">
       <option value="all" data-en="All editions">Alle Editionen</option>
       <option value="owned" data-en="Only collected">Nur gesammelte</option>
