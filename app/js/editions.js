@@ -214,6 +214,31 @@ function syncTypeCheckboxes() {
   document.querySelectorAll('#type-options input[type="checkbox"]').forEach((b) => (b.checked = sel.has(b.value)));
 }
 
+const EDITIONS_TYPE_KEY = 'mtg_editions_type';
+
+function saveTypeState() {
+  try {
+    localStorage.setItem(EDITIONS_TYPE_KEY, JSON.stringify({ mode: typeState.mode, types: [...typeState.types] }));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function loadTypeState() {
+  try {
+    const raw = localStorage.getItem(EDITIONS_TYPE_KEY);
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && (o.mode === 'collectable' || o.mode === 'all' || o.mode === 'custom')) {
+        return { mode: o.mode, types: new Set(Array.isArray(o.types) ? o.types : []) };
+      }
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  return { mode: 'collectable', types: new Set() };
+}
+
 function populateTypeFilter() {
   const opts = document.getElementById('type-options');
   opts.innerHTML = allSetTypes()
@@ -229,6 +254,7 @@ function populateTypeFilter() {
       typeState = { mode: btn.dataset.preset, types: new Set() };
       syncTypeCheckboxes();
       updateTypeLabel();
+      saveTypeState();
       renderTable();
     })
   );
@@ -241,6 +267,7 @@ function populateTypeFilter() {
         types: new Set([...opts.querySelectorAll('input:checked')].map((c) => c.value)),
       };
       updateTypeLabel();
+      saveTypeState();
       renderTable();
     })
   );
@@ -261,7 +288,7 @@ function populateTypeFilter() {
     if (!wrap.contains(e.target)) setOpen(false);
   });
 
-  typeState = { mode: 'collectable', types: new Set() };
+  typeState = loadTypeState();
   syncTypeCheckboxes();
   updateTypeLabel();
 }
