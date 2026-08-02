@@ -751,9 +751,25 @@ function initCollectionUpload() {
   })();
 }
 
+/* Mobile hamburger: toggles the collapsed nav (links + actions). */
+function initNavToggle() {
+  const nav = document.querySelector('nav.topnav');
+  const btn = document.getElementById('nav-toggle');
+  if (!nav || !btn) return;
+  const setOpen = (open) => {
+    nav.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.textContent = open ? '✕' : '☰';
+  };
+  btn.addEventListener('click', () => setOpen(!nav.classList.contains('open')));
+  // A link navigates away, so close on tap; action buttons keep it open.
+  nav.querySelectorAll('a:not(.brand)').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+}
+
 function initShared() {
   buildAdminOverlay(); // must exist before initCollectionUpload wires its buttons
   initCollectionUpload();
+  initNavToggle();
   uiConfigReady.then(applyNavConfig); // hide disabled menu items once config is loaded
 }
 

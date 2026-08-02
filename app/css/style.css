@@ -76,6 +76,14 @@ nav.topnav a {
 nav.topnav a:hover { background: var(--bg-card); color: var(--text); }
 nav.topnav a.active { background: var(--accent); color: #1b1400; font-weight: 600; }
 
+/* Hamburger toggle – hidden on desktop, shown on phones via the media query. */
+.nav-toggle {
+  display: none; margin-left: auto; background: var(--bg-card); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; font-size: 1.25rem; line-height: 1;
+  padding: 4px 11px; cursor: pointer;
+}
+.nav-toggle:hover { border-color: var(--accent); }
+
 main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
 .site-footer {
@@ -648,4 +656,53 @@ table.deck-table th { color: var(--text-dim); font-weight: 600; }
   .edition-overlay { padding: 0; }
   .eo-panel { max-height: 100vh; border-radius: 0; }
   .eo-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; padding: 14px; }
+}
+
+/* Phones */
+@media (max-width: 640px) {
+  main { padding: 12px; }
+  .site-footer { flex-direction: column; gap: 8px; text-align: center; padding: 16px 12px; }
+
+  /* Nav: keep each item at its natural width and wrap cleanly (no clipped text). */
+  nav.topnav { padding: 8px 12px; gap: 2px 6px; }
+  nav.topnav .brand { margin-right: 8px; }
+  nav.topnav a { flex: 0 0 auto; white-space: nowrap; font-size: 0.88rem; padding: 5px 8px; }
+  .nav-actions { gap: 6px; }
+
+  /* Numbers */
+  .stats-bar { gap: 10px; }
+  .stat-tile { min-width: 104px; padding: 10px 12px; }
+  .stat-tile .stat-value { font-size: 1.3rem; }
+
+  /* Filters: one per row, full width */
+  .controls { padding: 10px; gap: 8px; }
+  .controls input[type="text"], .controls select { flex: 1 1 100%; min-width: 0; }
+
+  /* Card grid a touch denser */
+  .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .random-row .card-tile { flex: 0 0 132px; width: 132px; }
+
+  /* Dashboard: single-column (min 340px charts would otherwise overflow) */
+  .chart-grid { grid-template-columns: 1fr; gap: 14px; }
+  .movers-grid { grid-template-columns: 1fr; }
+
+  /* Card detail: stack image over details, stacked definition rows */
+  .modal-card { padding: 16px; gap: 14px; }
+  .modal-image { flex-basis: 100%; align-items: center; }
+  .modal-image img, .modal-image .no-image { max-width: 240px; }
+  .modal-details { min-width: 0; }
+  .modal-details dl { grid-template-columns: 110px 1fr; }
+
+  /* Admin overlay + settings list */
+  .admin-navlist { grid-template-columns: 1fr; }
+
+  /* Hamburger menu: collapse links + actions behind the toggle */
+  .nav-toggle { display: inline-flex; }
+  nav.topnav a:not(.brand),
+  nav.topnav .nav-actions { display: none; }
+  nav.topnav.open a:not(.brand) { display: block; width: 100%; margin: 0; }
+  nav.topnav.open .nav-actions {
+    display: flex; width: 100%; margin: 6px 0 0; padding-top: 8px;
+    flex-wrap: wrap; align-items: center; gap: 8px; border-top: 1px solid var(--border);
+  }
 }
