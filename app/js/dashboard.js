@@ -7,6 +7,23 @@ Chart.defaults.color = '#9a9cae';
 Chart.defaults.borderColor = '#2f3140';
 Chart.defaults.font.family = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
+/* Richer default tooltips for the categorical charts: show the exact value
+   (cards or EUR, auto-detected from the dataset label) plus its share of the
+   chart total. Time-series charts set their own tooltip and are unaffected. */
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.boxPadding = 4;
+Chart.defaults.plugins.tooltip.callbacks.label = function (ctx) {
+  const v =
+    typeof ctx.raw === 'number' ? ctx.raw : (ctx.parsed && (ctx.parsed.y ?? ctx.parsed.x)) ?? ctx.parsed ?? 0;
+  const data = (ctx.dataset && ctx.dataset.data) || [];
+  const total = data.reduce((s, x) => s + (typeof x === 'number' ? x : 0), 0);
+  const pct = total ? (v / total) * 100 : 0;
+  const isEur = /eur|€/i.test((ctx.dataset && ctx.dataset.label) || '');
+  const locale = typeof LANG !== 'undefined' && LANG === 'en' ? 'en-GB' : 'de-DE';
+  const valStr = isEur ? formatCurrency(v, 'EUR') : v.toLocaleString(locale) + ' ' + t('Karten', 'cards');
+  return total ? `${valStr} · ${pct.toFixed(1)} %` : valStr;
+};
+
 function renderStats(cards) {
   const totalUnique = cards.length;
   // Same grouping key as the Cards grid: merges languages/foil/condition of the
@@ -122,7 +139,6 @@ function renderSetValueChart(cards) {
       indexAxis: 'y',
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.parsed.x, 'EUR') } },
       },
       scales: { x: { beginAtZero: true } },
     },
@@ -153,7 +169,23 @@ function renderValueOverTimeChart(cards) {
   new Chart(document.getElementById('chart-value-time'), {
     type: 'line',
     data: { labels: months, datasets: [{ label: t('Kumulativer Kaufwert (EUR)', 'Cumulative purchase value (EUR)'), data, borderColor: '#7b5cff', backgroundColor: 'rgba(123,92,255,0.15)', fill: true, tension: 0.25 }] },
-    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => (items[0] ? t('Monat ', 'Month ') + items[0].label : ''),
+            label: (ctx) => t('Kumulierter Kaufwert: ', 'Cumulative purchase value: ') + formatCurrency(ctx.parsed.y, 'EUR'),
+            afterLabel: (ctx) => {
+              const prev = ctx.dataIndex > 0 ? ctx.dataset.data[ctx.dataIndex - 1] : 0;
+              const delta = ctx.parsed.y - prev;
+              return t('Zugang in diesem Monat: ', 'Added this month: ') + formatCurrency(delta, 'EUR');
+            },
+          },
+        },
+      },
+      scales: { y: { beginAtZero: true } },
+    },
   });
 }
 
@@ -185,7 +217,7 @@ function renderTopMarketChart(cards) {
     data: { labels: sorted.map((e) => e[0]), datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: sorted.map((e) => e[1]), backgroundColor: '#4dbb6a' }] },
     options: {
       indexAxis: 'y',
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.parsed.x, 'EUR') } } },
+      plugins: { legend: { display: false } },
       scales: { x: { beginAtZero: true } },
     },
   });
@@ -296,7 +328,7 @@ function renderValueByColorChart(cards) {
       labels: labels.map(COLOR_NAME),
       datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: labels.map((k) => Math.round(map[k] * 100) / 100), backgroundColor: labels.map(colorFor) }],
     },
-    options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.parsed.y, 'EUR') } } }, scales: { y: { beginAtZero: true } } },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
 }
 
@@ -312,7 +344,7 @@ function renderValueByRarityChart(cards) {
   new Chart(el('chart-value-rarity'), {
     type: 'bar',
     data: { labels, datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: labels.map((k) => Math.round(map[k] * 100) / 100), backgroundColor: labels.map((k) => PALETTE[k] || '#7b5cff') }] },
-    options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.parsed.y, 'EUR') } } }, scales: { y: { beginAtZero: true } } },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
 }
 
@@ -475,7 +507,23 @@ function renderValueHistory(days) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'bottom' },
-        tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.y, 'EUR') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.y, 'EUR'),
+            afterBody: (items) => {
+              // Show market − purchase (unrealised gain) for the hovered date.
+              let market = null;
+              let purchase = null;
+              items.forEach((it) => {
+                if (/kauf|purchase/i.test(it.dataset.label)) purchase = it.parsed.y;
+                else market = it.parsed.y;
+              });
+              if (market == null || purchase == null) return '';
+              const gain = market - purchase;
+              return (gain >= 0 ? '▲ ' : '▼ ') + t('Wertzuwachs: ', 'Gain: ') + (gain >= 0 ? '+' : '') + formatCurrency(gain, 'EUR');
+            },
+          },
+        },
       },
       scales: { y: { beginAtZero: false } },
     },
