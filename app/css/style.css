@@ -115,11 +115,12 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px 18px;
-  min-width: 140px;
-  flex: 1;
+  /* flex-basis sets the preferred width; min-width stays `auto` so a tile never
+     shrinks below its content – large numbers grow the tile instead of wrapping. */
+  flex: 1 1 150px;
 }
 
-.stat-tile .stat-value { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+.stat-tile .stat-value { font-size: 1.6rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
 .stat-tile .stat-label { font-size: 0.8rem; color: var(--text-dim); margin-top: 2px; }
 
 .controls {
@@ -699,7 +700,7 @@ table.deck-table th { color: var(--text-dim); font-weight: 600; }
 
   /* Numbers */
   .stats-bar { gap: 10px; }
-  .stat-tile { min-width: 104px; padding: 10px 12px; }
+  .stat-tile { flex-basis: 116px; padding: 10px 12px; }
   .stat-tile .stat-value { font-size: 1.3rem; }
 
   /* Filters: one per row, full width */
