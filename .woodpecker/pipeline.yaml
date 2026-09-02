@@ -34,7 +34,6 @@ steps:
       - echo "Deploy target host=$SSH_HOST_LOCAL service=$SERVICE"
       - export SSH_OPTS='-o BatchMode=yes -o RequestTTY=no -o ConnectTimeout=30 -o ConnectionAttempts=1 -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -p822'
       - export SCP_OPTS='-o BatchMode=yes -o ConnectTimeout=30 -o ConnectionAttempts=1 -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -P822'
-      - timeout 60 sh -c "ssh -n -T $SSH_OPTS \"$SSH_HOST_LOCAL\" 'echo SSH-OK host=\$(hostname) user=\$(whoami)'"
       - timeout 60 sh -c "ssh -n -T $SSH_OPTS \"$SSH_HOST_LOCAL\" \"mkdir -p /services/$SERVICE/nginx /services/$SERVICE/app /services/$SERVICE/backend\""
       - echo "Upload root files"
       - timeout 120 sh -c "scp $SCP_OPTS docker-compose.yml Dockerfile .dockerignore .env \"$SSH_HOST_LOCAL\":/services/$SERVICE/"
