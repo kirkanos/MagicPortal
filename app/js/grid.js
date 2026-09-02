@@ -3,6 +3,7 @@ let allGroups = [];
 let filteredCards = [];
 let setIndex = {};
 let officialSubtypes = null;
+let selectedSet = ''; // set-code chosen in the custom set filter ('' = all sets)
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic', special: 'Special' };
 const COLOR_LABEL = {
@@ -55,19 +56,93 @@ function groupCards(rows) {
   });
 }
 
+/* Set symbol as a tinted CSS-mask span (same technique as the card tiles). */
+function setSymHTML(icon) {
+  return icon
+    ? `<span class="set-sym" style="-webkit-mask-image:url('${escapeHTML(icon)}');mask-image:url('${escapeHTML(icon)}')"></span>`
+    : '';
+}
+
+function setIcon(code) {
+  const info = setIndex[(code || '').toLowerCase()];
+  return (info && info.iconSvgUri) || '';
+}
+
+function updateSetLabel() {
+  const label = document.getElementById('set-label');
+  if (!selectedSet) {
+    label.textContent = t('Alle Sets', 'All sets');
+    return;
+  }
+  const card = allCards.find((c) => c.setCode === selectedSet);
+  const name = (setIndex[selectedSet.toLowerCase()] || {}).name || (card && card.setName) || selectedSet;
+  label.innerHTML = setSymHTML(setIcon(selectedSet)) + `<span class="set-name">${escapeHTML(name)}</span>`;
+}
+
+/* Custom set filter: a searchable dropdown showing the edition symbol + name
+   (a native <select> can't render the set symbols). */
+function populateSetFilter(cards) {
+  const opts = document.getElementById('set-options');
+  const seen = {};
+  cards.forEach((c) => {
+    if (!seen[c.setCode]) seen[c.setCode] = (setIndex[c.setCode.toLowerCase()] || {}).name || c.setName || c.setCode;
+  });
+  const list = Object.keys(seen)
+    .map((code) => ({ code, name: seen[code] }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  opts.innerHTML =
+    `<div class="ms-option" data-code="" data-search="alle sets all sets">${t('Alle Sets', 'All sets')}</div>` +
+    list
+      .map(
+        (s) =>
+          `<div class="ms-option" data-code="${escapeHTML(s.code)}" data-search="${escapeHTML((s.name + ' ' + s.code).toLowerCase())}">${setSymHTML(
+            setIcon(s.code)
+          )}<span>${escapeHTML(s.name)}</span></div>`
+      )
+      .join('');
+
+  const wrap = document.getElementById('set-filter');
+  const toggle = document.getElementById('set-toggle');
+  const panel = document.getElementById('set-panel');
+  const search = document.getElementById('set-search');
+  const setOpen = (open) => {
+    panel.hidden = !open;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      search.value = '';
+      opts.querySelectorAll('.ms-option').forEach((o) => (o.style.display = ''));
+      search.focus();
+    }
+  };
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(panel.hidden);
+  });
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target)) setOpen(false);
+  });
+  search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    opts.querySelectorAll('.ms-option').forEach((o) => {
+      o.style.display = !q || o.dataset.search.includes(q) ? '' : 'none';
+    });
+  });
+  opts.addEventListener('click', (e) => {
+    const opt = e.target.closest('.ms-option');
+    if (!opt) return;
+    selectedSet = opt.dataset.code;
+    updateSetLabel();
+    setOpen(false);
+    applyFilters();
+  });
+
+  updateSetLabel();
+}
+
 function populateFilters(cards) {
-  const setSel = document.getElementById('filter-set');
   const raritySel = document.getElementById('filter-rarity');
   const colorSel = document.getElementById('filter-color');
-
-  const sets = uniqueSorted(cards.map((c) => c.setCode + ' — ' + c.setName));
-  sets.forEach((s) => {
-    const code = s.split(' — ')[0];
-    const opt = document.createElement('option');
-    opt.value = code;
-    opt.textContent = s;
-    setSel.appendChild(opt);
-  });
 
   const rarities = uniqueSorted(cards.map((c) => c.rarity));
   rarities.forEach((r) => {
@@ -156,7 +231,7 @@ function applyFilters() {
   const q = document.getElementById('search').value.trim().toLowerCase();
   // Stichwortsuche (UND): jedes Wort muss irgendwo vorkommen, Reihenfolge egal.
   const terms = q ? q.split(/\s+/).filter(Boolean) : [];
-  const set = document.getElementById('filter-set').value;
+  const set = selectedSet;
   const rarity = document.getElementById('filter-rarity').value;
   const color = document.getElementById('filter-color').value;
   const foil = document.getElementById('filter-foil').value;
@@ -318,6 +393,7 @@ async function init() {
   }
 
   populateFilters(allCards);
+  populateSetFilter(allCards);
   populateSubtypes('');
 
   // Optional deep-link from the Ordner/Listen pages: index.html?binder=<name>
@@ -333,7 +409,8 @@ async function init() {
   renderRandomStrip();
 
   document.getElementById('search').addEventListener('input', debounce(applyFilters, 150));
-  ['filter-set', 'filter-rarity', 'filter-color', 'filter-foil', 'filter-binder', 'filter-subtype', 'sort-by'].forEach((id) => {
+  // The set filter (custom dropdown) wires its own events in populateSetFilter().
+  ['filter-rarity', 'filter-color', 'filter-foil', 'filter-binder', 'filter-subtype', 'sort-by'].forEach((id) => {
     document.getElementById(id).addEventListener('change', applyFilters);
   });
   document.getElementById('filter-type').addEventListener('change', (e) => {

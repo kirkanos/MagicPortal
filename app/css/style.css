@@ -174,6 +174,22 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .ms-check:hover { background: var(--bg-card); }
 .ms-check input { flex: none; }
 
+/* Searchable set filter with edition symbols */
+.setselect .ms-panel { padding: 0; }
+.setselect .ms-search {
+  position: sticky; top: 0; z-index: 1; width: 100%; box-sizing: border-box;
+  background: var(--bg-elevated); color: var(--text); border: none; border-bottom: 1px solid var(--border);
+  border-radius: 8px 8px 0 0; padding: 8px 10px; font-size: 0.88rem;
+}
+.setselect .ms-options { padding: 6px; }
+.ms-option { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
+.ms-option:hover { background: var(--bg-card); }
+.ms-option > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-option .set-sym { color: var(--text); width: 16px; height: 16px; }
+.setselect #set-label { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.setselect #set-label .set-sym { color: var(--text); }
+.setselect #set-label .set-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .nav-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .lang-toggle {
   cursor: pointer; font-family: inherit; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;

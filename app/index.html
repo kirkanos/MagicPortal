@@ -42,7 +42,15 @@
 
   <div class="controls">
     <input type="text" id="search" placeholder="Name, Text, Mana suchen..." data-en-placeholder="Search name, text, mana...">
-    <select id="filter-set"><option value="" data-en="All sets">Alle Sets</option></select>
+    <div class="multiselect setselect" id="set-filter">
+      <button type="button" class="ms-toggle" id="set-toggle" aria-haspopup="true" aria-expanded="false">
+        <span id="set-label" data-en="All sets">Alle Sets</span><span class="ms-caret">▾</span>
+      </button>
+      <div class="ms-panel" id="set-panel" hidden>
+        <input type="text" class="ms-search" id="set-search" placeholder="Set suchen..." data-en-placeholder="Search set...">
+        <div class="ms-options" id="set-options"></div>
+      </div>
+    </div>
     <select id="filter-rarity"><option value="" data-en="All rarities">Alle Raritäten</option></select>
     <select id="filter-color"><option value="" data-en="All colors">Alle Farben</option></select>
     <select id="filter-foil">
