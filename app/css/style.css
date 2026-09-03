@@ -250,6 +250,11 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   flex-direction: column;
+  /* Skip layout/paint for off-screen tiles in large grids; contain-intrinsic-size
+     keeps a placeholder height so rows don't collapse before first render, and
+     "auto" then reuses each tile's real measured size afterwards. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
 }
 
 .card-tile:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); border-color: var(--accent); }
@@ -662,7 +667,12 @@ table.deck-table th { color: var(--text-dim); font-weight: 600; }
 .act-msg-error { color: #ef8a8a; }
 .act-row-error td { background: rgba(224,86,86,0.06); }
 
-.eo-card { display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
+.eo-card {
+  display: flex; flex-direction: column; gap: 6px; cursor: pointer;
+  /* Edition overlays can list 500+ cards at once; skip off-screen layout/paint. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
 .eo-thumb {
   position: relative; aspect-ratio: 63/88; border-radius: 8px; overflow: hidden;
   background: #0d0e14; border: 1px solid var(--border);
