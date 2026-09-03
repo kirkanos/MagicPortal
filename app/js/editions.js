@@ -412,40 +412,43 @@ function updateOverlaySub() {
     `<span class="eo-sub-missing">${t(`${missing} fehlen für ${formatCurrency(missingValue, 'EUR')}`, `${missing} missing worth ${formatCurrency(missingValue, 'EUR')}`)}</span>`;
 }
 
+function buildEoTile({ card: c, idx, ownedInfo, isOwned }) {
+  const tile = document.createElement('div');
+  tile.className = 'eo-card ' + (isOwned ? 'owned' : 'missing');
+  tile.dataset.idx = idx;
+  const img = c.imageSmall || c.image;
+  tile.innerHTML = `
+    <div class="eo-thumb">
+      ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(c.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
+      ${isOwned && ownedInfo.copies > 1 ? `<span class="eo-qty">×${ownedInfo.copies}</span>` : ''}
+      ${isOwned ? '<span class="eo-check">✓</span>' : `<span class="eo-missing-tag">${t('fehlt', 'missing')}</span>`}
+    </div>
+    <div class="eo-cardname"><span class="eo-num">#${escapeHTML(c.collectorNumber)}</span> ${escapeHTML(c.name)}</div>
+  `;
+  return tile;
+}
+
 function renderOverlayGrid() {
   const filter = document.querySelector('input[name="eo-filter"]:checked').value;
   const rarity = overlayRarity();
   const grid = document.getElementById('eo-grid');
-  const frag = document.createDocumentFragment();
 
+  const items = [];
   overlayCards.forEach((c, idx) => {
     if (rarity && (c.rarity || '').toLowerCase() !== rarity) return;
     const ownedInfo = overlayEdition.ownedByNumber[normNumber(c.collectorNumber)];
     const isOwned = !!ownedInfo;
     if (filter === 'owned' && !isOwned) return;
     if (filter === 'missing' && isOwned) return;
-
-    const tile = document.createElement('div');
-    tile.className = 'eo-card ' + (isOwned ? 'owned' : 'missing');
-    tile.dataset.idx = idx;
-    const img = c.imageSmall || c.image;
-    tile.innerHTML = `
-      <div class="eo-thumb">
-        ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(c.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
-        ${isOwned && ownedInfo.copies > 1 ? `<span class="eo-qty">×${ownedInfo.copies}</span>` : ''}
-        ${isOwned ? '<span class="eo-check">✓</span>' : `<span class="eo-missing-tag">${t('fehlt', 'missing')}</span>`}
-      </div>
-      <div class="eo-cardname"><span class="eo-num">#${escapeHTML(c.collectorNumber)}</span> ${escapeHTML(c.name)}</div>
-    `;
-    frag.appendChild(tile);
+    items.push({ card: c, idx, ownedInfo, isOwned });
   });
 
-  grid.innerHTML = '';
-  if (!frag.childNodes.length) {
+  if (!items.length) {
+    stopIncremental(grid);
     grid.innerHTML = `<p class="eo-empty">${t('Keine Karten für diesen Filter.', 'No cards for this filter.')}</p>`;
-  } else {
-    grid.appendChild(frag);
+    return;
   }
+  renderIncremental(grid, items, buildEoTile);
 }
 
 async function openEditionOverlay(edition) {
@@ -462,7 +465,9 @@ async function openEditionOverlay(edition) {
   document.getElementById('eo-title').textContent = edition.name;
   document.getElementById('eo-code').textContent = edition.code;
   document.getElementById('eo-sub').textContent = t('Lade Karten von Scryfall…', 'Loading cards from Scryfall…');
-  document.getElementById('eo-grid').innerHTML = `<div class="eo-loading">${t('Lade Kartenbilder…', 'Loading card images…')}</div>`;
+  const grid = document.getElementById('eo-grid');
+  stopIncremental(grid);
+  grid.innerHTML = `<div class="eo-loading">${t('Lade Kartenbilder…', 'Loading card images…')}</div>`;
   document.querySelector('input[name="eo-filter"][value="all"]').checked = true;
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -471,7 +476,8 @@ async function openEditionOverlay(edition) {
     overlayCards = await fetchSetCards(edition.code);
   } catch (e) {
     document.getElementById('eo-sub').textContent = '';
-    document.getElementById('eo-grid').innerHTML = `<p class="eo-empty" style="color:#e05656">${t('Konnte Karten nicht laden', 'Could not load cards')}: ${escapeHTML(e.message)}</p>`;
+    stopIncremental(grid);
+    grid.innerHTML = `<p class="eo-empty" style="color:#e05656">${t('Konnte Karten nicht laden', 'Could not load cards')}: ${escapeHTML(e.message)}</p>`;
     return;
   }
   // Overlay was closed again while loading.
@@ -479,7 +485,8 @@ async function openEditionOverlay(edition) {
 
   if (!overlayCards.length) {
     document.getElementById('eo-sub').textContent = '';
-    document.getElementById('eo-grid').innerHTML = `<p class="eo-empty">${t('Keine Kartenliste für diese Edition gefunden.', 'No card list found for this edition.')}</p>`;
+    stopIncremental(grid);
+    grid.innerHTML = `<p class="eo-empty">${t('Keine Kartenliste für diese Edition gefunden.', 'No card list found for this edition.')}</p>`;
     return;
   }
 

@@ -339,11 +339,7 @@ function buildCardTile(g) {
 }
 
 function renderGrid(groups) {
-  const grid = document.getElementById('card-grid');
-  grid.innerHTML = '';
-  const fragment = document.createDocumentFragment();
-  groups.forEach((g) => fragment.appendChild(buildCardTile(g)));
-  grid.appendChild(fragment);
+  renderIncremental(document.getElementById('card-grid'), groups, buildCardTile);
 }
 
 /* Random-cards strip above the filters, controlled by the admin config. */
@@ -424,7 +420,9 @@ function renderEmptyState() {
   document.getElementById('result-count').textContent = '';
   const controls = document.querySelector('.controls');
   if (controls) controls.style.display = 'none';
-  document.getElementById('card-grid').innerHTML = `
+  const grid = document.getElementById('card-grid');
+  stopIncremental(grid);
+  grid.innerHTML = `
     <div class="empty-state">
       <img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="empty-logo">
       <h2>${t('Deine Sammlung ist noch leer', 'Your collection is empty')}</h2>

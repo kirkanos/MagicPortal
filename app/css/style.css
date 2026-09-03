@@ -222,6 +222,10 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
   gap: 14px;
 }
 
+/* Marker row appended by renderIncremental() – triggers loading the next
+   batch of tiles once it scrolls near the viewport, then removes itself. */
+.grid-sentinel { grid-column: 1 / -1; height: 1px; visibility: hidden; }
+
 .empty-state {
   grid-column: 1 / -1;
   display: flex;

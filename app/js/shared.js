@@ -180,6 +180,69 @@ function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
+/* Cancels a pending renderIncremental() run on `container`, if any (used
+   whenever a grid is about to be replaced by something other than another
+   renderIncremental call, e.g. a loading/error/empty-state message). */
+function stopIncremental(container) {
+  if (container._incrementalStop) {
+    container._incrementalStop();
+    container._incrementalStop = null;
+  }
+}
+
+/* Fills `container` with `items` via `buildTile(item)`, appending in batches
+   instead of turning the whole array into DOM nodes synchronously – matters
+   once a filter/search matches thousands of cards, since that work would
+   otherwise re-run in full on every keystroke. The first batch renders right
+   away; further batches append as a sentinel row scrolls near the viewport.
+   Safe to call repeatedly on the same container – any run still in progress
+   from a previous call is cancelled first. */
+function renderIncremental(container, items, buildTile, batchSize = 60) {
+  stopIncremental(container);
+  container.innerHTML = '';
+  if (!items.length) return;
+
+  let cursor = 0;
+  let stopped = false;
+
+  function appendBatch() {
+    const frag = document.createDocumentFragment();
+    const end = Math.min(cursor + batchSize, items.length);
+    for (; cursor < end; cursor++) frag.appendChild(buildTile(items[cursor]));
+    container.appendChild(frag);
+    if (stopped) return;
+    if (cursor >= items.length) {
+      container._incrementalStop = null;
+      return;
+    }
+    armSentinel();
+  }
+
+  function armSentinel() {
+    const sentinel = document.createElement('div');
+    sentinel.className = 'grid-sentinel';
+    container.appendChild(sentinel);
+    // Grids that scroll within themselves (e.g. the edition overlay) need
+    // that element as the intersection root instead of the page viewport.
+    const overflowY = getComputedStyle(container).overflowY;
+    const root = overflowY === 'auto' || overflowY === 'scroll' ? container : null;
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) return;
+      observer.disconnect();
+      sentinel.remove();
+      if (!stopped) appendBatch();
+    }, { root, rootMargin: '800px 0px' });
+    observer.observe(sentinel);
+    container._incrementalStop = () => {
+      stopped = true;
+      observer.disconnect();
+      sentinel.remove();
+    };
+  }
+
+  appendBatch();
+}
+
 function showLoading(message) {
   const el = document.getElementById('loading-overlay');
   if (!el) return;
