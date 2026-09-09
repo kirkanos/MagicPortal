@@ -181,6 +181,7 @@ func checkWebDAV() error {
 	if err != nil {
 		return err
 	}
+	log.Printf("[remote-import] Nextcloud: %d Bytes geladen (Content-Type: %s)", len(body), resp.Header.Get("Content-Type"))
 
 	marker := tag
 	if marker == "" {

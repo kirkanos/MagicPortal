@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"database/sql"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -20,9 +23,22 @@ type importResult struct {
 func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 	var res importResult
 
-	cr := csv.NewReader(r)
+	// Sniff BOM and delimiter before parsing: exports occasionally arrive as
+	// semicolon- or tab-separated (Excel round-trip) or with a UTF-8 BOM, which
+	// would otherwise silently yield a header without a usable "name" column.
+	br := bufio.NewReader(r)
+	if bom, _ := br.Peek(3); bytes.Equal(bom, []byte{0xEF, 0xBB, 0xBF}) {
+		_, _ = br.Discard(3)
+	}
+	firstLine, _ := br.Peek(8192)
+	if i := bytes.IndexByte(firstLine, '\n'); i >= 0 {
+		firstLine = firstLine[:i]
+	}
+
+	cr := csv.NewReader(br)
 	cr.FieldsPerRecord = -1
 	cr.LazyQuotes = true
+	cr.Comma = detectDelimiter(firstLine)
 
 	header, err := cr.Read()
 	if err != nil {
@@ -31,6 +47,12 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 	idx := map[string]int{}
 	for i, h := range header {
 		idx[strings.ToLower(strings.TrimSpace(h))] = i
+	}
+	// Without a name column every row would be skipped, which – because the import
+	// is a full replace – would wipe the collection without any error. Refuse
+	// instead and report what was actually received.
+	if _, ok := idx["name"]; !ok {
+		return res, fmt.Errorf("CSV ohne Spalte \"Name\" – erkannte Kopfzeile: %s", snippet(firstLine))
 	}
 	get := func(rec []string, key string) string {
 		if i, ok := idx[key]; ok && i < len(rec) {
@@ -127,11 +149,42 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 		}
 	}
 
+	// A file that parses but contains no card must not silently empty the
+	// collection (and, for remote imports, get deleted at the source afterwards).
+	// Clearing on purpose is what the reset endpoint is for.
+	if res.Added+res.Updated == 0 {
+		return res, fmt.Errorf("CSV enthält keine Karten – Sammlung unverändert (Kopfzeile: %s)", snippet(firstLine))
+	}
+
 	if err := tx.Commit(); err != nil {
 		return res, err
 	}
 	res.Total = res.Added + res.Updated
 	return res, nil
+}
+
+// detectDelimiter picks the separator that occurs most often in the header line.
+func detectDelimiter(headerLine []byte) rune {
+	best, bestCount := ',', bytes.Count(headerLine, []byte{','})
+	for _, c := range []rune{';', '\t'} {
+		if n := bytes.Count(headerLine, []byte(string(c))); n > bestCount {
+			best, bestCount = c, n
+		}
+	}
+	return best
+}
+
+// snippet renders the start of the received data for error messages – enough to
+// tell a changed CSV header from an HTML error page.
+func snippet(b []byte) string {
+	s := strings.TrimSpace(strings.ReplaceAll(string(b), "\r", ""))
+	if s == "" {
+		return "(leer)"
+	}
+	if len(s) > 200 {
+		s = strings.ToValidUTF8(s[:200], "") + "…"
+	}
+	return s
 }
 
 func clearCollection(db *sql.DB) error {
