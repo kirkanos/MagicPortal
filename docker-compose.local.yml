@@ -1,0 +1,76 @@
+# Lokale Test-Umgebung – bewusst getrennt von docker-compose.yml (Server).
+#
+#   docker compose -f docker-compose.local.yml up --build
+#   -> http://localhost:8088
+#
+# Absichtlich eigenständig statt Override-Datei: eine docker-compose.override.yml
+# würde auf dem Server automatisch mitgeladen. Diese Datei muss explizit über -f
+# angegeben werden und ist damit auf dem Server wirkungslos.
+#
+# Sicherheitsnetz gegen den Fall "lokal läuft aus Versehen die Produktionsconfig":
+# Die Container-Umgebung kommt ausschließlich aus .env.local (env_file), niemals
+# aus .env. Alles, was in der Nextcloud/Drive etwas verändern könnte, ist unten
+# fest verdrahtet – environment sticht env_file, lässt sich also auch mit einer
+# falschen .env.local nicht versehentlich einschalten.
+
+# Eigener Projektname -> eigene Volumes/Netze, keine Kollision mit dem Server-Stack.
+name: mtg-portal-local
+
+services:
+  backend:
+    build: ./backend
+    container_name: mtg-portal-local-backend
+    env_file:
+      - .env.local
+    environment:
+      - DB_PATH=/data/mtg.db
+      # --- nicht überschreibbar: kein Schreibzugriff auf fremde Ablagen ---
+      # Quelldatei nach dem Import NIE löschen (sonst klaut die lokale Instanz
+      # dem Server die CSV aus der Nextcloud).
+      - REMOTE_IMPORT_DELETE=false
+      # Keine Backup-Uploads: sonst überschreibt der lokale Stand das
+      # Server-Backup des Tages (gleicher Dateiname) bzw. löscht beim Prune.
+      - WEBDAV_BACKUP_DIR=
+      - GDRIVE_BACKUP_FOLDER_ID=
+    volumes:
+      - local-db:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    pids_limit: 256
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+    container_name: mtg-portal-local-web
+    depends_on:
+      - backend
+    # Nur auf localhost veröffentlichen, kein Traefik.
+    ports:
+      - "127.0.0.1:8088:80"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - NET_BIND_SERVICE
+    mem_limit: 128m
+    pids_limit: 128
+    restart: unless-stopped
+
+volumes:
+  local-db:
