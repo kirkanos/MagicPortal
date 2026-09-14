@@ -106,7 +106,9 @@ Der **Datenstand** (letzte Aktualisierung von Kartendaten/Preisen) steht oben re
 | `PORT` | Interner Port des `web`-Containers (nginx, 80) |
 | `UPLOAD_PASSWORD` | Passwort für Upload/Reset/Sync (leer = kein Schutz) |
 
-Optional: `SYNC_INTERVAL_MINUTES` (Standard 5) steuert das Hintergrund-Intervall.
+Optional: `SYNC_INTERVAL_MINUTES` (Standard 5) steuert das Hintergrund-Intervall,
+`METRICS_PORT` (Standard 9090, `off` = aus) und `METRICS_CACHE_SECONDS` (Standard 30) den
+Prometheus-Endpunkt.
 Die Datenbank liegt im benannten Volume `mtg-db`. Das Passwort wird via `X-Upload-Password`-Header
 übertragen (kein Browser-Login-Dialog).
 
@@ -196,6 +198,13 @@ nginx-Caps), `no-new-privileges` sowie Speicher-/PID-Limits. Das Backend läuft 
 Non-Root-User (uid 10001); sein Port ist nicht nach außen gemappt – erreichbar nur über den
 nginx-Proxy.
 
+## 📈 Monitoring (optional)
+
+Das Backend exponiert Prometheus-Metriken auf einem eigenen Port (`METRICS_PORT`, Standard `9090`),
+der bewusst **nicht** über nginx/Traefik veröffentlicht wird – die Werte zeigen Sammlungswert,
+Ordnernamen und Fehlerzustände. Fertiges Grafana-Dashboard, Scrape-Config und Alertregeln liegen
+unter `docs/grafana/`; Details in **[docs/monitoring.md](docs/monitoring.md)**.
+
 ## 🔌 API
 
 | Methode | Pfad | Zweck |
@@ -224,13 +233,17 @@ mtg-portal/
 │   ├── js/i18n.js · shared.js · grid.js · editions.js · binders.js · dashboard.js · deck-checker.js
 │   └── images/              # Logo & Favicons
 ├── backend/                 # Go-Backend (API + Sync-Jobs)
-│   ├── main.go · db.go · csvimport.go · scryfall.go
+│   ├── main.go · db.go · csvimport.go · scryfall.go · metrics.go
 │   └── Dockerfile
+├── docs/
+│   ├── monitoring.md        # Metriken, Scrape-Setup, Dashboard
+│   └── grafana/             # Dashboard-JSON, prometheus.yml-Ausschnitt, Alertregeln
 ├── nginx/default.conf       # statisch + Proxy /api → backend
 ├── .woodpecker/pipeline.yaml
 ├── template.service         # systemd-Unit (Vorlage, %SERVICE%)
 ├── Dockerfile               # web-Image
-├── docker-compose.yml
+├── docker-compose.yml       # Server-Stack
+├── docker-compose.local.yml # eigenständiger Stack für lokale Tests (.env.local)
 ├── .env.enc                 # SOPS-verschlüsselte Secrets (.env ist gitignored)
 └── LICENSE
 ```

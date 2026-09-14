@@ -1,0 +1,19 @@
+# Ausschnitt für die prometheus.yml des Grafana-Stacks.
+#
+# Voraussetzung: Prometheus erreicht den Backend-Container. Dafür hängt der
+# Service "backend" in docker-compose.yml zusätzlich im traefik-network, in dem
+# auch der Monitoring-Stack läuft.
+#
+# Der Metrics-Port ist bewusst nicht über nginx/Traefik veröffentlicht: die
+# Werte geben Sammlungswert und Fehlerzustände preis.
+
+scrape_configs:
+  - job_name: mtg-portal
+    # Die DB-Kennzahlen werden im Backend 30 s zwischengespeichert
+    # (METRICS_CACHE_SECONDS), häufigeres Scrapen bringt dort nichts Neues.
+    scrape_interval: 30s
+    static_configs:
+      # Containername aus docker-compose.yml: ${SERVICE}-backend
+      - targets: ["magic-portal-backend:9090"]
+        labels:
+          instance: mtg.kirkanos.net

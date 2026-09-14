@@ -17,6 +17,7 @@ var (
 
 func main() {
 	dbPath := envOr("DB_PATH", "/data/mtg.db")
+	dbFilePath = dbPath
 	uploadPassword = os.Getenv("UPLOAD_PASSWORD")
 	port := envOr("PORT", "8080")
 
@@ -31,6 +32,7 @@ func main() {
 	startScheduler()
 	startRemoteImportScheduler()
 	startBackupScheduler()
+	startMetricsServer()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/collection", handleCollection)
@@ -58,7 +60,7 @@ func main() {
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
 
 	log.Printf("mtg-portal backend läuft auf :%s (Passwortschutz: %v)", port, uploadPassword != "")
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	if err := http.ListenAndServe(":"+port, instrument(mux)); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -384,10 +386,13 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	res, err := importCSV(db, r.Body)
 	if err != nil {
+		metricImports.inc(labels("source", "upload", "result", "error"))
 		logActivity("error", "Upload", "CSV-Import fehlgeschlagen: "+err.Error())
 		http.Error(w, "Import fehlgeschlagen: "+err.Error(), 400)
 		return
 	}
+	metricImports.inc(labels("source", "upload", "result", "success"))
+	metricImportRows.add(labels("source", "upload"), float64(res.Total))
 	log.Printf("[upload] %d neu, %d aktualisiert", res.Added, res.Updated)
 	logActivity("info", "Upload", fmt.Sprintf("CSV hochgeladen: %d neu, %d aktualisiert (%d gesamt)", res.Added, res.Updated, res.Total))
 	// Pull any missing card metadata/prices in the background.

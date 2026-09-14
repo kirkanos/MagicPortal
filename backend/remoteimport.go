@@ -84,6 +84,9 @@ func checkRemoteImports() {
 			log.Printf("[remote-import] Nextcloud/WebDAV: %v", err)
 			metaSet(db, "remote_import_last_error", "WebDAV: "+err.Error())
 			logActivityDedup("error", "Import", "Nextcloud-Import fehlgeschlagen: "+err.Error())
+			metricRemoteChecks.inc(labels("source", "nextcloud", "result", "error"))
+		} else {
+			metricRemoteChecks.inc(labels("source", "nextcloud", "result", "ok"))
 		}
 	}
 	if gdriveConfigured() {
@@ -91,6 +94,9 @@ func checkRemoteImports() {
 			log.Printf("[remote-import] Google Drive: %v", err)
 			metaSet(db, "remote_import_last_error", "Google Drive: "+err.Error())
 			logActivityDedup("error", "Import", "Google-Drive-Import fehlgeschlagen: "+err.Error())
+			metricRemoteChecks.inc(labels("source", "gdrive", "result", "error"))
+		} else {
+			metricRemoteChecks.inc(labels("source", "gdrive", "result", "ok"))
 		}
 	}
 }
@@ -99,8 +105,11 @@ func checkRemoteImports() {
 func applyRemoteCSV(source string, body []byte, marker, markerKey string) error {
 	res, err := importCSV(db, bytes.NewReader(body))
 	if err != nil {
+		metricImports.inc(labels("source", sourceLabel(source), "result", "error"))
 		return err
 	}
+	metricImports.inc(labels("source", sourceLabel(source), "result", "success"))
+	metricImportRows.add(labels("source", sourceLabel(source)), float64(res.Total))
 	metaSet(db, markerKey, marker)
 	metaSet(db, "remote_import_last_at", time.Now().UTC().Format(time.RFC3339))
 	metaSet(db, "remote_import_last_source", source)
@@ -110,6 +119,15 @@ func applyRemoteCSV(source string, body []byte, marker, markerKey string) error 
 	// Fill metadata/prices for any new cards.
 	go startSync(false)
 	return nil
+}
+
+// sourceLabel maps the display name used in logs and meta ("Nextcloud",
+// "Google Drive") to a stable, lowercase metrics label.
+func sourceLabel(source string) string {
+	if strings.HasPrefix(strings.ToLower(source), "google") {
+		return "gdrive"
+	}
+	return strings.ToLower(source)
 }
 
 // ---- Nextcloud / WebDAV ----
@@ -199,6 +217,7 @@ func checkWebDAV() error {
 			log.Printf("[remote-import] Nextcloud: Quelldatei konnte nicht gelöscht werden: %v", err)
 		} else {
 			log.Printf("[remote-import] Nextcloud: Quelldatei nach Import gelöscht")
+			metricImportSourceDeleted.inc(labels("source", "nextcloud"))
 		}
 		// Clear the marker so a re-appearing file is always re-imported and a
 		// failed deletion is retried on the next round (import is idempotent).
@@ -350,6 +369,7 @@ func checkGDrive() error {
 			log.Printf("[remote-import] Google Drive: Quelldatei konnte nicht gelöscht werden: %v", err)
 		} else {
 			log.Printf("[remote-import] Google Drive: Quelldatei nach Import gelöscht")
+			metricImportSourceDeleted.inc(labels("source", "gdrive"))
 		}
 		metaSet(db, markerKey, "")
 	}

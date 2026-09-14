@@ -29,6 +29,12 @@ services:
       - WEBDAV_BACKUP_DIR=${WEBDAV_BACKUP_DIR:-}
       # -- Google Drive (Ziel-Ordner-ID, gleiches Service-Account wie oben) --
       - GDRIVE_BACKUP_FOLDER_ID=${GDRIVE_BACKUP_FOLDER_ID:-}
+      # Prometheus-Endpunkt auf eigenem Port (METRICS_PORT=off schaltet ihn ab).
+      # Bewusst NICHT hinter nginx/Traefik: die Metriken zeigen Sammlungswert und
+      # Fehlerzustaende. Prometheus erreicht sie ueber das traefik-network.
+      - METRICS_PORT=${METRICS_PORT:-9090}
+      # Wie lange DB-Kennzahlen zwischen Scrapes zwischengespeichert werden.
+      - METRICS_CACHE_SECONDS=${METRICS_CACHE_SECONDS:-30}
     volumes:
       - mtg-db:/data
     # --- Hardening ---
@@ -42,6 +48,19 @@ services:
     mem_limit: 512m
     pids_limit: 256
     restart: unless-stopped
+    # Beide Container haengen ausschliesslich im gemeinsamen traefik-network:
+    # so erreicht Prometheus aus dem Monitoring-Stack den Metrics-Port
+    # (Scrape-Ziel: ${SERVICE}-backend:9090). Traefik-Labels hat das Backend
+    # keine, es wird also nicht nach aussen geroutet.
+    #
+    # Der Alias ist bewusst eindeutig: in einem geteilten Netz vergibt jeder
+    # Stack die Aliase seiner Servicenamen, und ein zweiter Stack mit einem
+    # Service "backend" wuerde den Namen doppelt belegen - nginx landete dann
+    # zufaellig beim falschen Container. Darum proxyt nginx auf diesen Namen.
+    networks:
+      traefik-network:
+        aliases:
+          - mtg-portal-backend
 
   web:
     build:
@@ -68,7 +87,6 @@ services:
     pids_limit: 128
     restart: unless-stopped
     networks:
-      - default
       - traefik-network
     labels:
       - "traefik.enable=true"

@@ -102,8 +102,10 @@ func runBackup() {
 			log.Printf("[backup] WebDAV: %v", err)
 			metaSet(db, "backup_last_error", "WebDAV: "+err.Error())
 			logActivityDedup("error", "Backup", "Backup zu Nextcloud fehlgeschlagen: "+err.Error())
+			metricBackups.inc(labels("target", "nextcloud", "result", "error"))
 		} else {
 			ok = true
+			metricBackups.inc(labels("target", "nextcloud", "result", "success"))
 		}
 	}
 	if os.Getenv("GDRIVE_BACKUP_FOLDER_ID") != "" && os.Getenv("GDRIVE_SA_JSON") != "" {
@@ -111,11 +113,14 @@ func runBackup() {
 			log.Printf("[backup] Google Drive: %v", err)
 			metaSet(db, "backup_last_error", "Google Drive: "+err.Error())
 			logActivityDedup("error", "Backup", "Backup zu Google Drive fehlgeschlagen: "+err.Error())
+			metricBackups.inc(labels("target", "gdrive", "result", "error"))
 		} else {
 			ok = true
+			metricBackups.inc(labels("target", "gdrive", "result", "success"))
 		}
 	}
 	if ok {
+		metricBackupBytes.Store(int64(len(data)))
 		metaSet(db, "backup_last_at", time.Now().UTC().Format(time.RFC3339))
 		metaSet(db, "backup_last_file", name)
 		metaSet(db, "backup_last_error", "")

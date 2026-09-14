@@ -425,6 +425,11 @@ func startSync(force bool) bool {
 
 	go func() {
 		err := doSync(force)
+		if err != nil {
+			metricSyncs.inc(labels("result", "error"))
+		} else {
+			metricSyncs.inc(labels("result", "success"))
+		}
 		syncMu.Lock()
 		syncRunning = false
 		if err != nil {

@@ -32,6 +32,16 @@ services:
       # Server-Backup des Tages (gleicher Dateiname) bzw. löscht beim Prune.
       - WEBDAV_BACKUP_DIR=
       - GDRIVE_BACKUP_FOLDER_ID=
+    # Metrics-Port lokal veroeffentlichen, damit ein lokaler Prometheus oder ein
+    # blosses curl http://localhost:9091/metrics drankommt.
+    ports:
+      - "127.0.0.1:9091:9090"
+    # Gleicher Alias wie im Server-Stack, damit die nginx-Konfiguration aus dem
+    # Image unveraendert funktioniert.
+    networks:
+      default:
+        aliases:
+          - mtg-portal-backend
     volumes:
       - local-db:/data
     read_only: true
