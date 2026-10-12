@@ -29,10 +29,10 @@ server {
         proxy_pass https://cards.scryfall.io;
         proxy_set_header Host cards.scryfall.io;
         proxy_ssl_server_name on;
-        # Keine Besucher-Header an einen fremden CDN weiterreichen: Eine
-        # Authelia-Sitzung auf .kirkanos.net liegt auch an dieser Anfrage an,
-        # hat bei Scryfall nichts zu suchen - und deren CDN bricht Anfragen mit
-        # grossem Cookie sogar ab (sichtbar als 414 statt Bild).
+        # Keine Besucher-Header an einen fremden CDN weiterreichen: ein
+        # SSO-Cookie der eigenen Domain liegt auch an dieser Anfrage an und hat
+        # bei Scryfall nichts zu suchen - deren CDN bricht Anfragen mit grossem
+        # Cookie sogar ab (sichtbar als 414 statt Bild).
         proxy_set_header Cookie "";
         proxy_set_header Authorization "";
     }
@@ -50,10 +50,10 @@ server {
         proxy_pass https://svgs.scryfall.io;
         proxy_set_header Host svgs.scryfall.io;
         proxy_ssl_server_name on;
-        # Keine Besucher-Header an einen fremden CDN weiterreichen: Eine
-        # Authelia-Sitzung auf .kirkanos.net liegt auch an dieser Anfrage an,
-        # hat bei Scryfall nichts zu suchen - und deren CDN bricht Anfragen mit
-        # grossem Cookie sogar ab (sichtbar als 414 statt Bild).
+        # Keine Besucher-Header an einen fremden CDN weiterreichen: ein
+        # SSO-Cookie der eigenen Domain liegt auch an dieser Anfrage an und hat
+        # bei Scryfall nichts zu suchen - deren CDN bricht Anfragen mit grossem
+        # Cookie sogar ab (sichtbar als 414 statt Bild).
         proxy_set_header Cookie "";
         proxy_set_header Authorization "";
     }
@@ -62,48 +62,19 @@ server {
         proxy_pass https://svgs.scryfall.io;
         proxy_set_header Host svgs.scryfall.io;
         proxy_ssl_server_name on;
-        # Keine Besucher-Header an einen fremden CDN weiterreichen: Eine
-        # Authelia-Sitzung auf .kirkanos.net liegt auch an dieser Anfrage an,
-        # hat bei Scryfall nichts zu suchen - und deren CDN bricht Anfragen mit
-        # grossem Cookie sogar ab (sichtbar als 414 statt Bild).
+        # Keine Besucher-Header an einen fremden CDN weiterreichen: ein
+        # SSO-Cookie der eigenen Domain liegt auch an dieser Anfrage an und hat
+        # bei Scryfall nichts zu suchen - deren CDN bricht Anfragen mit grossem
+        # Cookie sogar ab (sichtbar als 414 statt Bild).
         proxy_set_header Cookie "";
         proxy_set_header Authorization "";
     }
 
-    # --- Reichweitenmessung (Umami) ueber die eigene Domain ---
-    # Skript und Ereignis-Endpunkt laufen first-party, weil Inhaltsblocker
-    # Anfragen an fremde Analytics-Hosts standardmaessig wegfiltern
-    # (ERR_BLOCKED_BY_CLIENT). Die Namen hier sind bewusst neutral.
-    #
-    # Der Tracker schickt seine Ereignisse an das Verzeichnis, aus dem er
-    # geladen wurde - bei /js/pl.js also an /js/api/send. Damit kommt er dem
-    # Backend unter /api/ nicht in die Quere.
-    location = /js/pl.js {
-        proxy_pass https://stats.kirkanos.net/pl.js;
-        proxy_set_header Host stats.kirkanos.net;
-        proxy_ssl_server_name on;
-        proxy_ssl_name stats.kirkanos.net;
-        proxy_set_header Cookie "";
-        proxy_set_header Authorization "";
-        # Antwort darf zwischengespeichert werden, das Skript aendert sich selten.
-        proxy_hide_header Cache-Control;
-        add_header Cache-Control "public, max-age=3600" always;
-    }
-
-    location = /js/api/send {
-        proxy_pass https://stats.kirkanos.net/api/send;
-        proxy_set_header Host stats.kirkanos.net;
-        proxy_ssl_server_name on;
-        proxy_ssl_name stats.kirkanos.net;
-        # Traefik vor Umami vertraut keinen X-Forwarded-*-Headern und setzt die
-        # IP dieses Proxys ein. Die Besucher-IP (von Traefik vor mtg-portal als
-        # X-Real-Ip gesetzt) geht deshalb in einem eigenen Header mit, den Umami
-        # ueber CLIENT_IP_HEADER liest. Ohne sie waeren alle Besucher eine Sitzung.
-        proxy_set_header X-Visitor-IP $http_x_real_ip;
-        # Die Authelia-Sitzung auf .kirkanos.net hat bei Umami nichts zu suchen.
-        proxy_set_header Cookie "";
-        proxy_set_header Authorization "";
-    }
+    # --- Reichweitenmessung (optional) ---
+    # Die beiden Proxy-Pfade erzeugt /docker-entrypoint.d/30-analytics.sh beim
+    # Start aus den ANALYTICS_*-Variablen. Ist nichts gesetzt, ist die Datei
+    # leer und es wird nichts geproxyt (siehe nginx/analytics.sh und README).
+    include /etc/nginx/conf.d/analytics/locations.conf;
 
     # API requests are proxied to the Go backend container.
     location /api/ {
@@ -122,13 +93,10 @@ server {
         # served stale from the browser cache (returns 304 when unchanged).
         add_header Cache-Control "no-cache" always;
 
-        # Umami-Website-ID aus der .env in die HTML-Seiten einsetzen. Die Datei
-        # ist ein Template: das nginx-Image ersetzt beim Start ${UMAMI_WEBSITE_ID}
-        # (NGINX_ENVSUBST_FILTER im Dockerfile). Leer = der Tracker sendet nichts.
-        # sub_filter verwirft das ETag der HTML-Seiten; Last-Modified bleibt,
-        # damit die Revalidierung (304) weiter klappt.
-        sub_filter '__UMAMI_WEBSITE_ID__' '${UMAMI_WEBSITE_ID}';
-        sub_filter_once on;
-        sub_filter_last_modified on;
+        # Setzt den Platzhalter <!--analytics--> in den HTML-Seiten durch das
+        # Tracker-Snippet. Auch diese Datei erzeugt 30-analytics.sh; ohne
+        # ANALYTICS_* bleibt sie leer, dann gibt es kein sub_filter und die
+        # Seiten behalten ihr ETag.
+        include /etc/nginx/conf.d/analytics/snippet.conf;
     }
 }

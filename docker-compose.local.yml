@@ -66,11 +66,16 @@ services:
     # Nur auf localhost veröffentlichen, kein Traefik.
     ports:
       - "127.0.0.1:8088:80"
+    env_file:
+      - .env.local
     read_only: true
     tmpfs:
       - /var/cache/nginx
       - /var/run
       - /tmp
+      # Hierhin schreibt das nginx-Image die Konfiguration aus dem Template und
+      # das Entrypoint-Skript die Schnipsel fuer die Reichweitenmessung.
+      - /etc/nginx/conf.d
     volumes:
       - local-images:/usr/share/nginx/html/img:ro
     security_opt:

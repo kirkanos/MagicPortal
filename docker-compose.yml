@@ -81,8 +81,13 @@ services:
     depends_on:
       - backend
     environment:
-      # Umami-Website-ID, nginx setzt sie in die HTML-Seiten ein. Leer = kein Tracking.
-      - UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID:-}
+      # Reichweitenmessung. Ohne Skript- und Ereignis-URL passiert gar nichts:
+      # kein Proxy, kein Skript in den Seiten. Siehe README.
+      - ANALYTICS_SCRIPT_URL=${ANALYTICS_SCRIPT_URL:-}
+      - ANALYTICS_EVENT_URL=${ANALYTICS_EVENT_URL:-}
+      - ANALYTICS_WEBSITE_ID=${ANALYTICS_WEBSITE_ID:-}
+      - ANALYTICS_ID_ATTRIBUTE=${ANALYTICS_ID_ATTRIBUTE:-data-website-id}
+      - ANALYTICS_EVENT_PATH=${ANALYTICS_EVENT_PATH:-/js/api/send}
     # --- Hardening ---
     read_only: true
     tmpfs:

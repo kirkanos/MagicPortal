@@ -55,33 +55,56 @@ Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection
 ## 🏗️ Architektur
 
 ```text
-        ┌── web (nginx) ───────┐   statische Oberfläche + Reverse-Proxy /api → backend
-Traefik │                      │
-  ──────▶  mtg.example.net     │
-        └──────────┬───────────┘
-                   │ /api
-        ┌──────────▼───────────┐   Go-Backend: REST-API + Background-Sync
-        │  backend (Go)        │   (SQLite im Volume "mtg-db")
-        └──────────────────────┘
+            ┌── web (nginx) ───────┐   statische Oberfläche, Reverse-Proxy /api
+ Port oder  │                      │   → backend, lokaler Bild-Spiegel
+ Traefik ───▶  mtg.example.com     │
+            └──────────┬───────────┘
+                       │ /api
+            ┌──────────▼───────────┐   Go-Backend: REST-API + Background-Jobs
+            │  backend (Go)        │   (SQLite im Volume "mtg-db")
+            └──────────────────────┘
 ```
+
+Zwei Container, mehr nicht. Ob davor ein Reverse Proxy steht oder schlicht ein Port
+veröffentlicht wird, entscheidet allein die gewählte Compose-Datei.
 
 - Metadaten, Bilder und **Preise** stammen aus **Scryfall Bulk Data** – einem täglich aktualisierten Komplettdump, den das Backend im Hintergrund lädt und in SQLite ablegt (statt tausender Einzel-API-Calls im Browser).
 - Der Hintergrundjob läuft **alle 5 Minuten**: er prüft günstig, ob ein neuer Dump vorliegt, und lädt die ~140 MB nur dann. Der Set-Index wird wöchentlich aktualisiert.
 
 ## 🚀 Schnellstart
 
+Ohne weitere Infrastruktur – nur Docker:
+
 ```bash
-cp .env.sample .env      # SERVICE / HOST / PORT / UPLOAD_PASSWORD anpassen
-docker compose up -d --build
+docker compose -f docker-compose.standalone.yml up -d --build
 ```
 
-Der Stack ist für den Betrieb hinter [Traefik](https://traefik.io) gedacht und wird unter
-`https://$HOST` veröffentlicht. Er startet mit **leerem Datenbestand** – lade deine ManaBox-CSV
-über das Menü hoch (siehe unten). Die Scryfall-Daten werden beim Start im Hintergrund geladen.
+Fertig: **http://localhost:8080**. Kein Traefik, kein externes Netzwerk, keine `.env` nötig.
+Der Stack startet mit **leerem Datenbestand** – lade deine ManaBox-CSV über das Menü hoch
+(siehe unten); die Scryfall-Daten holt sich das Backend beim Start selbst im Hintergrund.
 
-> **Lokaler Test:** Die `docker-compose.yml` erwartet das externe Traefik-Netzwerk. Ohne Traefik
-> vorweg einmalig `docker network create traefik-network` anlegen (bzw. für eine schnelle Vorschau
-> ein Port-Mapping auf den `web`-Dienst ergänzen).
+Der Port liegt bewusst nur auf `127.0.0.1`. Für den Zugriff aus dem Heimnetz:
+
+```bash
+BIND=0.0.0.0 HTTP_PORT=8080 UPLOAD_PASSWORD=geheim \
+  docker compose -f docker-compose.standalone.yml up -d --build
+```
+
+Dauerhaft gehört beides in eine `.env` neben der Compose-Datei (`cp .env.sample .env`); alle
+Variablen daraus gelten auch für den Standalone-Stack.
+
+### Welche Compose-Datei?
+
+| Datei | Wofür |
+|---|---|
+| `docker-compose.standalone.yml` | **Normalfall zum Selberbetreiben.** Veröffentlicht einen Port, sonst nichts. |
+| `docker-compose.yml` | Betrieb hinter [Traefik](https://traefik.io) unter `https://$HOST`, mit Metrik-Port im gemeinsamen `traefik-network`. Erwartet das externe Netz (`docker network create traefik-network`) und eine `.env` mit `SERVICE`/`HOST`/`PORT`. |
+| `docker-compose.local.yml` | Testinstanz neben einem laufenden Server-Stack: eigener Projektname, eigene Volumes, Port `127.0.0.1:8088`, Umgebung ausschließlich aus `.env.local`. Schreibzugriffe auf fremde Ablagen sind fest abgeschaltet. |
+
+> Alle drei bauen dieselben zwei Images und unterscheiden sich nur darin, wie sie erreichbar sind.
+> `docker compose` liest automatisch eine `.env` **neben der Compose-Datei** – wer den
+> Standalone-Stack im selben Verzeichnis wie eine Server-`.env` startet, erbt deren Einstellungen
+> (etwa den automatischen Import). Mit `--env-file /dev/null` startet er ohne jede Vorbelegung.
 
 ## 📥 Sammlung befüllen & aktualisieren
 
@@ -99,13 +122,22 @@ Der **Datenstand** (letzte Aktualisierung von Kartendaten/Preisen) steht oben re
 
 ## ⚙️ Konfiguration (`.env`)
 
+Alles ist optional – der Standalone-Stack läuft auch ganz ohne `.env`.
+Die ersten drei Werte braucht nur der Betrieb hinter Traefik:
+
 | Variable | Zweck |
 |---|---|
 | `SERVICE` | Dienstname (Container-Namen, Traefik-Router, systemd-Unit, `/services/$SERVICE`) |
 | `HOST` | Öffentliche Domain (Traefik-Routing + TLS) |
 | `PORT` | Interner Port des `web`-Containers (nginx, 80) |
 | `UPLOAD_PASSWORD` | Passwort für Upload/Reset/Sync (leer = kein Schutz) |
-| `UMAMI_WEBSITE_ID` | Website-ID in Umami (`stats.kirkanos.net`); leer = kein Tracking |
+
+Nur für den Standalone-Stack:
+
+| Variable | Zweck |
+|---|---|
+| `HTTP_PORT` | Veröffentlichter Port (Standard `8080`). Eigener Name, weil `PORT` oben den internen Port meint, auf den Traefik routet. |
+| `BIND` | Adresse, auf der er liegt (Standard `127.0.0.1`, `0.0.0.0` = im Netz erreichbar) |
 
 Optional: `IMAGE_MIRROR` (Standard `false`) spiegelt Kartenbilder und Symbole lokal –
 Details in **[docs/roadmap.md](docs/roadmap.md)**.
@@ -194,6 +226,53 @@ Die Zugangsdaten liegen **verschlüsselt** in [`.env.enc`](.env.enc); Klartext-`
 sops --encrypt --age <age-recipient> --input-type dotenv --output-type dotenv .env > .env.enc
 ```
 
+## 📊 Reichweitenmessung (optional)
+
+**Standard: aus.** Ohne Konfiguration lädt keine Seite eine Zeile fremden Code, nginx proxyt
+nichts, und die HTML-Antworten behalten ihr `ETag`.
+
+Eingeschaltet wird sie über drei Variablen in der `.env`; die beiden letzten braucht nur, wer
+einen Anbieter nutzt, der es anders macht. Erprobt mit selbst gehosteten Instanzen von
+[Umami](https://umami.is) und [Plausible](https://plausible.io):
+
+| Variable | Zweck |
+|---|---|
+| `ANALYTICS_SCRIPT_URL` | Upstream-URL des Tracker-Skripts. **Leer = alles aus.** |
+| `ANALYTICS_EVENT_URL` | Upstream-URL des Ereignis-Endpunkts. **Leer = alles aus.** |
+| `ANALYTICS_WEBSITE_ID` | Kennung der Website beim Anbieter |
+| `ANALYTICS_ID_ATTRIBUTE` | Attribut, in dem die Kennung steht (Standard `data-website-id`; Plausible: `data-domain`) |
+| `ANALYTICS_EVENT_PATH` | Lokaler Pfad für die Ereignisse (Standard `/js/api/send`; Plausible: `/api/event`) |
+
+```bash
+# Umami
+ANALYTICS_SCRIPT_URL=https://stats.example.com/script.js
+ANALYTICS_EVENT_URL=https://stats.example.com/api/send
+ANALYTICS_WEBSITE_ID=00000000-0000-0000-0000-000000000000
+
+# Plausible
+ANALYTICS_SCRIPT_URL=https://plausible.example.com/js/script.js
+ANALYTICS_EVENT_URL=https://plausible.example.com/api/event
+ANALYTICS_WEBSITE_ID=mtg.example.com
+ANALYTICS_ID_ATTRIBUTE=data-domain
+ANALYTICS_EVENT_PATH=/api/event
+```
+
+**Wie es funktioniert.** Jede HTML-Seite enthält nur den Platzhalter `<!--analytics-->`. Beim
+Start des `web`-Containers baut `nginx/analytics.sh` daraus zwei Konfigurationsschnipsel: eine
+`sub_filter`-Regel, die den Platzhalter durch das Skript-Tag ersetzt, und zwei Proxy-Pfade.
+Ausgeliefert wird der Tracker deshalb **first-party** unter `/js/pl.js` der eigenen Domain –
+Inhaltsblocker filtern Anfragen an bekannte Analytics-Hosts sonst standardmäßig weg
+(`ERR_BLOCKED_BY_CLIENT`). Cookies und `Authorization` gehen dabei bewusst nicht mit zum
+Anbieter. Stehen die Variablen nicht, bleiben beide Schnipsel leer und der Platzhalter einfach
+stehen.
+
+Ein Anführungszeichen in einem der Werte würde Konfiguration und HTML zerreißen; das Skript
+bricht dann beim Start ab, statt etwas Kaputtes auszuliefern.
+
+> Bis Oktober 2026 hieß die einzige Variable hier `UMAMI_WEBSITE_ID` und der Anbieter stand fest
+> in der nginx-Konfiguration. Wer von dort kommt, ersetzt sie durch `ANALYTICS_WEBSITE_ID` und
+> ergänzt die beiden URLs.
+
 ## 🛡️ Hardening
 
 Beide Container laufen mit `read_only`-Rootfs, `cap_drop: ALL` (web nur mit den nötigen
@@ -247,12 +326,15 @@ mtg-portal/
 │   ├── monitoring.md        # Metriken, Scrape-Setup, Dashboard
 │   ├── roadmap.md           # geplante Arbeiten (Suche, Bild-Spiegel, Kartenflip)
 │   └── grafana/             # Dashboard-JSON, prometheus.yml-Ausschnitt, Alertregeln
-├── nginx/default.conf.template # statisch + Proxy /api → backend (envsubst beim Start)
+├── nginx/
+│   ├── default.conf.template   # statisch + Proxy /api → backend + Bild-Spiegel
+│   └── analytics.sh            # baut beim Start die Schnipsel für die Reichweitenmessung
 ├── .woodpecker/pipeline.yaml
 ├── template.service         # systemd-Unit (Vorlage, %SERVICE%)
 ├── Dockerfile               # web-Image
-├── docker-compose.yml       # Server-Stack
-├── docker-compose.local.yml # eigenständiger Stack für lokale Tests (.env.local)
+├── docker-compose.standalone.yml # nur Docker, ein Port – der Normalfall
+├── docker-compose.yml       # Server-Stack hinter Traefik
+├── docker-compose.local.yml # Testinstanz neben dem Server-Stack (.env.local)
 ├── .env.enc                 # SOPS-verschlüsselte Secrets (.env ist gitignored)
 └── LICENSE
 ```

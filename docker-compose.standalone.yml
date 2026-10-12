@@ -1,0 +1,120 @@
+# MagicPortal ohne Drumherum – das Minimum, um es selbst laufen zu lassen.
+#
+#   docker compose -f docker-compose.standalone.yml up -d --build
+#   -> http://localhost:8080
+#
+# Unterschied zu docker-compose.yml: dort haengen beide Container in einem
+# externen traefik-network und werden ueber Traefik-Labels mit TLS nach aussen
+# geroutet; hier wird schlicht ein Port veroeffentlicht. Kein Traefik, kein
+# externes Netz, keine Metriken nach aussen, keine Reichweitenmessung.
+#
+# Es laeuft ohne jede Konfiguration. Alles Optionale kommt aus der Umgebung
+# oder einer .env neben dieser Datei – siehe .env.sample und README.
+#
+# Die Sammlung laedt man danach in der Oberflaeche unter "Verwaltung" als
+# ManaBox-CSV hoch; den Katalog holt sich das Backend selbst von Scryfall.
+
+name: mtg-portal
+
+services:
+  backend:
+    build: ./backend
+    environment:
+      # Leer = jeder darf hochladen, zuruecksetzen und synchronisieren. Das ist
+      # vertretbar, solange der Port nur auf 127.0.0.1 liegt (siehe unten);
+      # sobald das Portal im Netz erreichbar ist, hier etwas eintragen.
+      - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:-}
+      - DB_PATH=/data/mtg.db
+      # Abgleich mit dem Scryfall-Katalog (Minuten zwischen zwei Laeufen).
+      - SYNC_INTERVAL_MINUTES=${SYNC_INTERVAL_MINUTES:-}
+      # Automatischer Import aus Nextcloud/Google Drive: aus, bis gesetzt.
+      - REMOTE_IMPORT_INTERVAL_MINUTES=${REMOTE_IMPORT_INTERVAL_MINUTES:-}
+      - REMOTE_IMPORT_DELETE=${REMOTE_IMPORT_DELETE:-false}
+      - WEBDAV_URL=${WEBDAV_URL:-}
+      - WEBDAV_USER=${WEBDAV_USER:-}
+      - WEBDAV_PASSWORD=${WEBDAV_PASSWORD:-}
+      - GDRIVE_FILE_ID=${GDRIVE_FILE_ID:-}
+      - GDRIVE_SA_JSON=${GDRIVE_SA_JSON:-}
+      # Automatisches Backup der eigenen Daten: aus, bis ein Ziel gesetzt ist.
+      - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-}
+      - BACKUP_KEEP=${BACKUP_KEEP:-30}
+      - WEBDAV_BACKUP_DIR=${WEBDAV_BACKUP_DIR:-}
+      - GDRIVE_BACKUP_FOLDER_ID=${GDRIVE_BACKUP_FOLDER_ID:-}
+      # Lokaler Spiegel der Kartenbilder (~1,6 GB bei 14.000 Drucken).
+      - IMAGE_MIRROR=${IMAGE_MIRROR:-false}
+      - IMAGE_DIR=/images
+      - IMAGE_SYNC_HOUR=${IMAGE_SYNC_HOUR:-3}
+      - IMAGE_SIZES=${IMAGE_SIZES:-small,normal}
+      - IMAGE_RATE_PER_SECOND=${IMAGE_RATE_PER_SECOND:-10}
+      - IMAGE_MAX_BYTES=${IMAGE_MAX_BYTES:-3221225472}
+      # Prometheus-Endpunkt. Laeuft mit, wird aber nicht veroeffentlicht;
+      # METRICS_PORT=off schaltet ihn ganz ab.
+      - METRICS_PORT=${METRICS_PORT:-9090}
+      - METRICS_CACHE_SECONDS=${METRICS_CACHE_SECONDS:-30}
+    volumes:
+      - mtg-db:/data
+      - mtg-images:/images
+    # nginx proxyt /api/ auf diesen Namen – er steht so in der Konfiguration.
+    networks:
+      default:
+        aliases:
+          - mtg-portal-backend
+    # --- Hardening (identisch zum Server-Stack) ---
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    pids_limit: 256
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+    depends_on:
+      - backend
+    # Standardmaessig nur vom selben Rechner erreichbar. Fuer den Zugriff aus
+    # dem Heimnetz BIND=0.0.0.0 setzen – dann aber bitte auch UPLOAD_PASSWORD.
+    # Eigener Name statt PORT, weil PORT in docker-compose.yml den internen
+    # Port meint, auf den Traefik routet – eine gemeinsame .env soll nicht
+    # beides gleichzeitig bedeuten.
+    ports:
+      - "${BIND:-127.0.0.1}:${HTTP_PORT:-8080}:80"
+    environment:
+      # Reichweitenmessung – ohne diese Werte laedt keine Zeile fremder Code.
+      - ANALYTICS_SCRIPT_URL=${ANALYTICS_SCRIPT_URL:-}
+      - ANALYTICS_EVENT_URL=${ANALYTICS_EVENT_URL:-}
+      - ANALYTICS_WEBSITE_ID=${ANALYTICS_WEBSITE_ID:-}
+      - ANALYTICS_ID_ATTRIBUTE=${ANALYTICS_ID_ATTRIBUTE:-data-website-id}
+      - ANALYTICS_EVENT_PATH=${ANALYTICS_EVENT_PATH:-/js/api/send}
+    volumes:
+      # Nur lesend: nginx liefert gespiegelte Bilder direkt aus.
+      - mtg-images:/usr/share/nginx/html/img:ro
+    # --- Hardening (identisch zum Server-Stack) ---
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+      # Hierhin schreibt das nginx-Image die Konfiguration aus dem Template und
+      # das Entrypoint-Skript die Schnipsel fuer die Reichweitenmessung.
+      - /etc/nginx/conf.d
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - NET_BIND_SERVICE
+    mem_limit: 128m
+    pids_limit: 128
+    restart: unless-stopped
+
+volumes:
+  mtg-db:
+  mtg-images:
