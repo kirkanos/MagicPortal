@@ -43,6 +43,7 @@ func main() {
 	mux.HandleFunc("GET /api/subtypes", handleSubtypes)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/summary", handleSummary)
+	mux.HandleFunc("GET /api/dashboard", handleDashboard)
 	mux.HandleFunc("GET /api/config", handleConfigGet)
 	mux.HandleFunc("POST /api/config", handleConfigSet)
 	mux.HandleFunc("GET /api/reserved", handleReserved)
@@ -123,6 +124,10 @@ type cardOut struct {
 }
 
 func handleCollection(w http.ResponseWriter, r *http.Request) {
+	// Cheapest possible answer first: the browser already has this payload.
+	if notModified(w, r, collectionETag(db)) {
+		return
+	}
 	rows, err := db.Query(`
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
 		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type,
@@ -180,7 +185,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, c)
 	}
-	writeJSON(w, out)
+	writeJSONCacheable(w, out)
 }
 
 type setOut struct {
@@ -193,6 +198,9 @@ type setOut struct {
 }
 
 func handleSets(w http.ResponseWriter, r *http.Request) {
+	if notModified(w, r, setsETag(db)) {
+		return
+	}
 	rows, err := db.Query(`SELECT code, name, card_count, set_type, digital, released_at, icon_svg_uri FROM sets`)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -212,7 +220,7 @@ func handleSets(w http.ResponseWriter, r *http.Request) {
 		s.Digital = dig != 0
 		out[strings.ToLower(code)] = s
 	}
-	writeJSON(w, out)
+	writeJSONCacheable(w, out)
 }
 
 type setCardOut struct {

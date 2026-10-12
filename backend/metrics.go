@@ -135,6 +135,7 @@ var apiRoutes = map[string]string{
 	"collection": "/api/collection", "sets": "/api/sets", "prints": "/api/prints",
 	"binders": "/api/binders", "subtypes": "/api/subtypes", "status": "/api/status",
 	"summary": "/api/summary", "config": "/api/config", "reserved": "/api/reserved",
+	"dashboard":     "/api/dashboard",
 	"value-history": "/api/value-history", "value-movers": "/api/value-movers",
 	"activity": "/api/activity", "backup": "/api/backup", "auth-check": "/api/auth-check",
 	"upload": "/api/upload", "reset": "/api/reset", "sync": "/api/sync", "health": "/api/health",

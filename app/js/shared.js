@@ -7,14 +7,26 @@ const API = 'api';
 /* Full collection, already enriched with Scryfall metadata/prices by the backend.
    Shape per card matches what the pages expect (top-level fields + `scryfall`). */
 async function loadCollection() {
-  const res = await fetch(API + '/collection', { cache: 'no-store' });
+  // 'no-cache' statt 'no-store': der Browser behaelt die Antwort und fragt mit
+  // If-None-Match nach. Unveraendert antwortet das Backend mit 304 ohne Body -
+  // bei mehreren MB Sammlung der Unterschied zwischen Sekunden und sofort.
+  const res = await fetch(API + '/collection', { cache: 'no-cache' });
   if (!res.ok) throw new Error(t('Sammlung konnte nicht geladen werden', 'Could not load collection') + ' (HTTP ' + res.status + ')');
+  return res.json();
+}
+
+/* Fertige Kennzahlen fuer die Statistikseite. Das Backend aggregiert die
+   Sammlung, damit die Seite nicht die kompletten Kartendaten laden muss - aus
+   knapp 15 MB JSON werden so ein paar Dutzend KB. */
+async function loadDashboard() {
+  const res = await fetch(API + '/dashboard', { cache: 'no-cache' });
+  if (!res.ok) throw new Error(t('Statistik konnte nicht geladen werden', 'Could not load statistics') + ' (HTTP ' + res.status + ')');
   return res.json();
 }
 
 /* Set index: { code(lowercase): {name, cardCount, iconSvgUri, releasedAt, setType, digital} } */
 async function loadSetIndex() {
-  const res = await fetch(API + '/sets', { cache: 'no-store' });
+  const res = await fetch(API + '/sets', { cache: 'no-cache' });
   if (!res.ok) return {};
   return res.json();
 }

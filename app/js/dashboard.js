@@ -24,30 +24,25 @@ Chart.defaults.plugins.tooltip.callbacks.label = function (ctx) {
   return total ? `${valStr} · ${pct.toFixed(1)} %` : valStr;
 };
 
-function renderStats(cards) {
-  const totalUnique = cards.length;
-  // Same grouping key as the Cards grid: merges languages/foil/condition of the
-  // same printing into one, so this matches the grid's "Verschiedene Karten".
-  const distinctCards = new Set(
-    cards.map((c) => c.setCode + '|' + (c.collectorNumber ? 'n:' + c.collectorNumber : 'name:' + (c.name || '').toLowerCase()))
-  ).size;
-  const totalQty = cards.reduce((s, c) => s + c.quantity, 0);
-  const totalValue = cards.reduce((s, c) => s + c.purchasePrice * c.quantity, 0);
-  const marketValue = cards.reduce((s, c) => s + cardPrice(c) * c.quantity, 0);
+function renderStats(d) {
+  // Alle Kennzahlen kommen fertig aus /api/dashboard; das Gruppieren von
+  // "Verschiedene Karten" macht das Backend mit demselben Schluessel wie das
+  // Kartenraster.
+  const st = d.stats;
+  const totalUnique = st.entries;
+  const distinctCards = st.distinct;
+  const totalQty = st.totalQty;
+  const totalValue = st.purchaseValue;
+  const marketValue = st.marketValue;
   const avgValue = totalQty ? totalValue / totalQty : 0;
   const gain = marketValue - totalValue;
   const gainColor = gain >= 0 ? '#4dbb6a' : '#e05656';
   const gainStr = (gain >= 0 ? '+' : '') + formatCurrency(gain, 'EUR');
 
-  const foilQty = cards.reduce((s, c) => s + (c.foil && c.foil !== 'normal' ? c.quantity : 0), 0);
-  const foilPct = totalQty ? (foilQty / totalQty) * 100 : 0;
-  const setCount = new Set(cards.map((c) => c.setCode)).size;
-  const binderCount = new Set(cards.map((c) => c.binderName).filter(Boolean)).size;
-  let topCard = { p: 0, name: '–' };
-  cards.forEach((c) => {
-    const p = cardPrice(c);
-    if (p > topCard.p) topCard = { p, name: c.name };
-  });
+  const foilPct = totalQty ? (st.foilQty / totalQty) * 100 : 0;
+  const setCount = st.setCount;
+  const binderCount = st.binderCount;
+  const topCard = { p: st.topCardPrice, name: st.topCardName || '–' };
 
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat-tile" title="${countHint('entries')}"><div class="stat-value">${totalUnique}</div><div class="stat-label">${t('Einzelkarten', 'Card entries')}</div></div>
@@ -64,18 +59,31 @@ function renderStats(cards) {
   `;
 }
 
-function countBy(cards, fn) {
-  const map = {};
-  cards.forEach((c) => {
-    const key = fn(c);
-    const qty = c.quantity;
-    map[key] = (map[key] || 0) + qty;
-  });
-  return map;
+/* Die Reihen aus /api/dashboard kommen als [{key, qty}] bzw. [{key, value}].
+   Das Backend liefert bewusst nur Schluessel - Beschriftung und Uebersetzung
+   bleiben hier. */
+function keysOf(rows) {
+  return rows.map((r) => r.key);
 }
 
-function renderRarityChart(cards) {
-  const map = countBy(cards, (c) => c.rarity || t('unbekannt', 'unknown'));
+function qtyOf(rows) {
+  return rows.map((r) => r.qty);
+}
+
+/* Fasst Reihen zusammen, deren Beschriftung gleich ist (z.B. light_played und
+   lightly_played -> "Lightly Played"), und sortiert absteigend. */
+function groupByLabel(rows, labelFn) {
+  const map = new Map();
+  rows.forEach((r) => {
+    const label = labelFn(r.key);
+    map.set(label, (map.get(label) || 0) + r.qty);
+  });
+  return [...map.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+function renderRarityChart(d) {
+  const map = {};
+  d.rarity.forEach((r) => (map[r.key || t('unbekannt', 'unknown')] = r.qty));
   const labels = Object.keys(map);
   new Chart(document.getElementById('chart-rarity'), {
     type: 'doughnut',
@@ -84,15 +92,10 @@ function renderRarityChart(cards) {
   });
 }
 
-function renderColorChart(cards) {
-  const map = { W: 0, U: 0, B: 0, R: 0, G: 0, Mehrfarbig: 0, Farblos: 0 };
-  cards.forEach((c) => {
-    const colors = (c.scryfall && c.scryfall.colors) || [];
-    if (colors.length === 0) map['Farblos'] += c.quantity;
-    else if (colors.length > 1) map['Mehrfarbig'] += c.quantity;
-    else map[colors[0]] += c.quantity;
-  });
-  const labels = Object.keys(map).filter((l) => map[l] > 0);
+function renderColorChart(d) {
+  const map = {};
+  d.color.forEach((r) => (map[r.key] = r.qty));
+  const labels = COLOR_ORDER.filter((l) => map[l] > 0);
   new Chart(document.getElementById('chart-color'), {
     type: 'bar',
     data: {
@@ -103,16 +106,19 @@ function renderColorChart(cards) {
   });
 }
 
+/* Feste Reihenfolge der Farbgruppen, unabhaengig davon, wie sie in den Daten
+   zuerst auftauchen. Schluessel wie im Backend (colorGroup). */
+const COLOR_ORDER = ['W', 'U', 'B', 'R', 'G', 'multi', 'colorless'];
+
 function COLOR_NAME(code) {
   return {
     W: t('Weiß', 'White'), U: t('Blau', 'Blue'), B: t('Schwarz', 'Black'), R: t('Rot', 'Red'), G: t('Grün', 'Green'),
-    Mehrfarbig: t('Mehrfarbig', 'Multicolor'), Farblos: t('Farblos', 'Colorless'),
+    multi: t('Mehrfarbig', 'Multicolor'), colorless: t('Farblos', 'Colorless'),
   }[code] || code;
 }
 
-function renderSetsChart(cards) {
-  const map = countBy(cards, (c) => c.setCode);
-  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10);
+function renderSetsChart(d) {
+  const sorted = d.sets.map((r) => [r.key, r.qty]);
   new Chart(document.getElementById('chart-sets'), {
     type: 'bar',
     data: { labels: sorted.map((e) => e[0]), datasets: [{ label: t('Karten', 'Cards'), data: sorted.map((e) => e[1]), backgroundColor: '#c9a24d' }] },
@@ -120,20 +126,15 @@ function renderSetsChart(cards) {
   });
 }
 
-function renderSetValueChart(cards) {
-  const map = {};
+function renderSetValueChart(d) {
   const names = {};
-  cards.forEach((c) => {
-    const price = cardPrice(c);
-    map[c.setCode] = (map[c.setCode] || 0) + price * c.quantity;
-    if (!names[c.setCode]) names[c.setCode] = c.setName || c.setCode;
-  });
-  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  d.setValue.forEach((r) => (names[r.code] = r.name || r.code));
+  const sorted = d.setValue.map((r) => [r.code, r.value]);
   new Chart(document.getElementById('chart-set-value'), {
     type: 'bar',
     data: {
       labels: sorted.map((e) => names[e[0]] || e[0]),
-      datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: sorted.map((e) => Math.round(e[1] * 100) / 100), backgroundColor: '#4dbb6a' }],
+      datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: sorted.map((e) => e[1]), backgroundColor: '#4dbb6a' }],
     },
     options: {
       indexAxis: 'y',
@@ -145,8 +146,9 @@ function renderSetValueChart(cards) {
   });
 }
 
-function renderFoilChart(cards) {
-  const map = countBy(cards, (c) => c.foil);
+function renderFoilChart(d) {
+  const map = {};
+  d.foil.forEach((r) => (map[r.key] = r.qty));
   const labels = Object.keys(map);
   new Chart(document.getElementById('chart-foil'), {
     type: 'pie',
@@ -155,17 +157,10 @@ function renderFoilChart(cards) {
   });
 }
 
-function renderValueOverTimeChart(cards) {
-  const withDates = cards.filter((c) => c.added && c.added.length >= 7).slice();
-  withDates.sort((a, b) => a.added.localeCompare(b.added));
-  const monthly = {};
-  withDates.forEach((c) => {
-    const month = c.added.slice(0, 7);
-    monthly[month] = (monthly[month] || 0) + c.purchasePrice * c.quantity;
-  });
-  const months = Object.keys(monthly).sort();
+function renderValueOverTimeChart(d) {
+  const months = d.purchaseByMonth.map((r) => r.month);
   let cumulative = 0;
-  const data = months.map((m) => (cumulative += monthly[m]));
+  const data = d.purchaseByMonth.map((r) => (cumulative += r.value));
   new Chart(document.getElementById('chart-value-time'), {
     type: 'line',
     data: { labels: months, datasets: [{ label: t('Kumulativer Kaufwert (EUR)', 'Cumulative purchase value (EUR)'), data, borderColor: '#7b5cff', backgroundColor: 'rgba(123,92,255,0.15)', fill: true, tension: 0.25 }] },
@@ -189,29 +184,19 @@ function renderValueOverTimeChart(cards) {
   });
 }
 
-function renderTopValueChart(cards) {
-  const sorted = cards.slice().sort((a, b) => b.purchasePrice * b.quantity - a.purchasePrice * a.quantity).slice(0, 10);
+function renderTopValueChart(d) {
+  const sorted = d.topPurchase;
   new Chart(document.getElementById('chart-top-value'), {
     type: 'bar',
-    data: { labels: sorted.map((c) => c.name), datasets: [{ label: t('Kaufwert (EUR)', 'Purchase value (EUR)'), data: sorted.map((c) => c.purchasePrice * c.quantity), backgroundColor: '#e05656' }] },
+    data: { labels: sorted.map((c) => c.name), datasets: [{ label: t('Kaufwert (EUR)', 'Purchase value (EUR)'), data: sorted.map((c) => c.value), backgroundColor: '#e05656' }] },
     options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
   });
 }
 
 const CHART_COLORS = ['#7b5cff', '#4fa8e0', '#4dbb6a', '#e0743d', '#c9a24d', '#e05656', '#c9c9d4', '#8a8a94', '#f0e6c8', '#b57bff'];
 
-function cardPrice(c) {
-  // Foil-aware (shared helper): foil/etched copies use the foil price when known.
-  return variantMarketPrice(c) || 0;
-}
-
-function renderTopMarketChart(cards) {
-  const byName = {};
-  cards.forEach((c) => {
-    const p = cardPrice(c);
-    if (p > (byName[c.name] || 0)) byName[c.name] = p;
-  });
-  const sorted = Object.entries(byName).sort((a, b) => b[1] - a[1]).slice(0, 10);
+function renderTopMarketChart(d) {
+  const sorted = d.topMarket.map((r) => [r.name, r.value]);
   new Chart(document.getElementById('chart-top-market'), {
     type: 'bar',
     data: { labels: sorted.map((e) => e[0]), datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: sorted.map((e) => e[1]), backgroundColor: '#4dbb6a' }] },
@@ -223,10 +208,10 @@ function renderTopMarketChart(cards) {
   });
 }
 
-function renderTypesChart(cards) {
+function renderTypesChart(d) {
   const map = {};
-  cards.forEach((c) => cardTypes(c.scryfall && c.scryfall.typeLine).forEach((tp) => (map[tp] = (map[tp] || 0) + c.quantity)));
-  const labels = Object.keys(map).sort((a, b) => map[b] - map[a]);
+  d.types.forEach((r) => (map[r.key] = r.qty));
+  const labels = keysOf(d.types);
   new Chart(document.getElementById('chart-types'), {
     type: 'bar',
     data: { labels, datasets: [{ label: t('Karten', 'Cards'), data: labels.map((l) => map[l]), backgroundColor: '#7b5cff' }] },
@@ -234,9 +219,10 @@ function renderTypesChart(cards) {
   });
 }
 
-function renderLanguageChart(cards) {
-  const map = countBy(cards, (c) => (c.language || '?').toUpperCase());
-  const labels = Object.keys(map).sort((a, b) => map[b] - map[a]);
+function renderLanguageChart(d) {
+  const map = {};
+  d.language.forEach((r) => (map[r.key] = r.qty));
+  const labels = keysOf(d.language);
   new Chart(document.getElementById('chart-language'), {
     type: 'doughnut',
     data: { labels, datasets: [{ data: labels.map((l) => map[l]), backgroundColor: labels.map((l, i) => CHART_COLORS[i % CHART_COLORS.length]) }] },
@@ -244,24 +230,20 @@ function renderLanguageChart(cards) {
   });
 }
 
-function renderConditionChart(cards) {
-  const map = countBy(cards, (c) => conditionLabel(c.condition));
-  const labels = Object.keys(map).sort((a, b) => map[b] - map[a]);
+function renderConditionChart(d) {
+  // Zusammenfassen nach Beschriftung, damit z.B. light_played und
+  // lightly_played wie bisher in einem Balken landen.
+  const rows = groupByLabel(d.condition, conditionLabel);
   new Chart(document.getElementById('chart-condition'), {
     type: 'bar',
-    data: { labels, datasets: [{ label: t('Karten', 'Cards'), data: labels.map((l) => map[l]), backgroundColor: '#c9a24d' }] },
+    data: { labels: rows.map((r) => r[0]), datasets: [{ label: t('Karten', 'Cards'), data: rows.map((r) => r[1]), backgroundColor: '#c9a24d' }] },
     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
 }
 
-function renderCmcChart(cards) {
+function renderCmcChart(d) {
   const buckets = {};
-  cards.forEach((c) => {
-    const mv = manaValue(c.scryfall && c.scryfall.manaCost);
-    if (mv === null) return;
-    const key = mv >= 7 ? '7+' : String(mv);
-    buckets[key] = (buckets[key] || 0) + c.quantity;
-  });
+  d.cmc.forEach((r) => (buckets[r.key] = r.qty));
   const labels = ['0', '1', '2', '3', '4', '5', '6', '7+'].filter((k) => buckets[k]);
   new Chart(document.getElementById('chart-cmc'), {
     type: 'bar',
@@ -274,16 +256,9 @@ function el(id) {
   return document.getElementById(id);
 }
 
-function colorGroup(c) {
-  const cols = (c.scryfall && c.scryfall.colors) || [];
-  if (cols.length === 0) return 'Farblos';
-  if (cols.length > 1) return 'Mehrfarbig';
-  return cols[0];
-}
-
 function colorFor(key) {
-  if (key === 'Farblos') return PALETTE.C;
-  if (key === 'Mehrfarbig') return '#b57bff';
+  if (key === 'colorless') return PALETTE.C;
+  if (key === 'multi') return '#b57bff';
   return PALETTE[key] || '#7b5cff';
 }
 
@@ -298,14 +273,9 @@ const VALUE_BUCKETS = [
 ];
 
 /* Cards per single-card market-value bracket. */
-function renderValueDistChart(cards) {
-  const counts = VALUE_BUCKETS.map(() => 0);
-  cards.forEach((c) => {
-    const p = cardPrice(c);
-    let i = VALUE_BUCKETS.findIndex((b) => p < b.max);
-    if (i === -1) i = VALUE_BUCKETS.length - 1;
-    counts[i] += c.quantity;
-  });
+function renderValueDistChart(d) {
+  // Reihenfolge der Klassen ist zwischen Backend und VALUE_BUCKETS identisch.
+  const counts = d.valueDist;
   new Chart(el('chart-value-dist'), {
     type: 'bar',
     data: { labels: VALUE_BUCKETS.map((b) => b.label), datasets: [{ label: t('Karten', 'Cards'), data: counts, backgroundColor: '#7b5cff' }] },
@@ -314,52 +284,39 @@ function renderValueDistChart(cards) {
 }
 
 /* Market value grouped by color identity. */
-function renderValueByColorChart(cards) {
-  const order = ['W', 'U', 'B', 'R', 'G', 'Mehrfarbig', 'Farblos'];
+function renderValueByColorChart(d) {
   const map = {};
-  cards.forEach((c) => {
-    const g = colorGroup(c);
-    map[g] = (map[g] || 0) + cardPrice(c) * c.quantity;
-  });
-  const labels = order.filter((k) => map[k]);
+  d.valueByColor.forEach((r) => (map[r.key] = r.value));
+  const labels = COLOR_ORDER.filter((k) => map[k]);
   new Chart(el('chart-value-color'), {
     type: 'bar',
     data: {
       labels: labels.map(COLOR_NAME),
-      datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: labels.map((k) => Math.round(map[k] * 100) / 100), backgroundColor: labels.map(colorFor) }],
+      datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: labels.map((k) => map[k]), backgroundColor: labels.map(colorFor) }],
     },
     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
 }
 
 /* Market value grouped by rarity. */
-function renderValueByRarityChart(cards) {
+function renderValueByRarityChart(d) {
   const order = ['common', 'uncommon', 'rare', 'mythic', 'special'];
   const map = {};
-  cards.forEach((c) => {
-    const r = c.rarity || 'unbekannt';
-    map[r] = (map[r] || 0) + cardPrice(c) * c.quantity;
-  });
+  d.valueByRarity.forEach((r) => (map[r.key || t('unbekannt', 'unknown')] = r.value));
   const labels = order.filter((k) => map[k]).concat(Object.keys(map).filter((k) => !order.includes(k)));
   new Chart(el('chart-value-rarity'), {
     type: 'bar',
-    data: { labels, datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: labels.map((k) => Math.round(map[k] * 100) / 100), backgroundColor: labels.map((k) => PALETTE[k] || '#7b5cff') }] },
+    data: { labels, datasets: [{ label: t('Marktwert (EUR)', 'Market value (EUR)'), data: labels.map((k) => map[k]), backgroundColor: labels.map((k) => PALETTE[k] || '#7b5cff') }] },
     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
 }
 
 /* Cards added per month (non-cumulative). */
-function renderAddedPerMonthChart(cards) {
-  const monthly = {};
-  cards.forEach((c) => {
-    if (!c.added || c.added.length < 7) return;
-    const m = c.added.slice(0, 7);
-    monthly[m] = (monthly[m] || 0) + c.quantity;
-  });
-  const months = Object.keys(monthly).sort();
+function renderAddedPerMonthChart(d) {
+  const months = d.addedPerMonth.map((r) => r.month);
   new Chart(el('chart-added-month'), {
     type: 'bar',
-    data: { labels: months, datasets: [{ label: t('Zugänge', 'Added'), data: months.map((m) => monthly[m]), backgroundColor: '#4dbb6a' }] },
+    data: { labels: months, datasets: [{ label: t('Zugänge', 'Added'), data: d.addedPerMonth.map((r) => r.qty), backgroundColor: '#4dbb6a' }] },
     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
 }
@@ -375,17 +332,12 @@ function statTable(headers, rows) {
 }
 
 /* Detailed per-rarity breakdown: entries, copies, market value, avg, share. */
-function renderRarityTable(cards) {
+function renderRarityTable(d) {
   const agg = {};
   let totalMv = 0;
-  cards.forEach((c) => {
-    const r = c.rarity || '—';
-    const mv = cardPrice(c) * c.quantity;
-    const o = agg[r] || (agg[r] = { entries: 0, qty: 0, mv: 0 });
-    o.entries += 1;
-    o.qty += c.quantity;
-    o.mv += mv;
-    totalMv += mv;
+  d.rarityTable.forEach((r) => {
+    agg[r.key || '—'] = { entries: r.entries, qty: r.qty, mv: r.market };
+    totalMv += r.market;
   });
   const order = ['common', 'uncommon', 'rare', 'mythic', 'special'];
   const keys = order.filter((k) => agg[k]).concat(Object.keys(agg).filter((k) => !order.includes(k)));
@@ -417,15 +369,8 @@ function renderRarityTable(cards) {
 }
 
 /* Detailed per-edition breakdown (top 15 by market value). */
-function renderSetTable(cards) {
-  const agg = {};
-  cards.forEach((c) => {
-    const o = agg[c.setCode] || (agg[c.setCode] = { name: c.setName || c.setCode, code: c.setCode, entries: 0, qty: 0, mv: 0 });
-    o.entries += 1;
-    o.qty += c.quantity;
-    o.mv += cardPrice(c) * c.quantity;
-  });
-  const arr = Object.values(agg).sort((a, b) => b.mv - a.mv).slice(0, 15);
+function renderSetTable(d) {
+  const arr = d.setTable.map((r) => ({ name: r.name || r.code, code: r.code, entries: r.entries, qty: r.qty, mv: r.market }));
   const rows = arr.map((o) => [
     { html: `${escapeHTML(o.name)} <span class="edition-code">${escapeHTML(o.code)}</span>` },
     { html: o.entries, num: true },
@@ -606,35 +551,35 @@ function initMovers() {
 }
 
 async function init() {
-  showLoading(t('Lade Sammlung...', 'Loading collection...'));
-  let cards;
+  showLoading(t('Lade Statistik...', 'Loading statistics...'));
+  let d;
   try {
-    cards = await loadCollection(updateLoadingProgress);
+    d = await loadDashboard();
   } catch (e) {
     hideLoading();
     document.querySelector('main').innerHTML = `<p style="color:#e05656">${t('Fehler', 'Error')}: ${escapeHTML(e.message)}</p>`;
     return;
   }
   hideLoading();
-  renderStats(cards);
-  renderRarityChart(cards);
-  renderColorChart(cards);
-  renderSetsChart(cards);
-  renderSetValueChart(cards);
-  renderFoilChart(cards);
-  renderValueOverTimeChart(cards);
-  renderTopValueChart(cards);
-  renderTopMarketChart(cards);
-  renderTypesChart(cards);
-  renderLanguageChart(cards);
-  renderConditionChart(cards);
-  renderCmcChart(cards);
-  renderValueDistChart(cards);
-  renderValueByColorChart(cards);
-  renderValueByRarityChart(cards);
-  renderAddedPerMonthChart(cards);
-  renderRarityTable(cards);
-  renderSetTable(cards);
+  renderStats(d);
+  renderRarityChart(d);
+  renderColorChart(d);
+  renderSetsChart(d);
+  renderSetValueChart(d);
+  renderFoilChart(d);
+  renderValueOverTimeChart(d);
+  renderTopValueChart(d);
+  renderTopMarketChart(d);
+  renderTypesChart(d);
+  renderLanguageChart(d);
+  renderConditionChart(d);
+  renderCmcChart(d);
+  renderValueDistChart(d);
+  renderValueByColorChart(d);
+  renderValueByRarityChart(d);
+  renderAddedPerMonthChart(d);
+  renderRarityTable(d);
+  renderSetTable(d);
 
   // Value history + movers come from persisted snapshots (independent of `cards`).
   await loadValueHistory();
