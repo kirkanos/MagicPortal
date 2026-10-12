@@ -105,6 +105,7 @@ Der **Datenstand** (letzte Aktualisierung von Kartendaten/Preisen) steht oben re
 | `HOST` | Öffentliche Domain (Traefik-Routing + TLS) |
 | `PORT` | Interner Port des `web`-Containers (nginx, 80) |
 | `UPLOAD_PASSWORD` | Passwort für Upload/Reset/Sync (leer = kein Schutz) |
+| `UMAMI_WEBSITE_ID` | Website-ID in Umami (`stats.kirkanos.net`); leer = kein Tracking |
 
 Optional: `IMAGE_MIRROR` (Standard `false`) spiegelt Kartenbilder und Symbole lokal –
 Details in **[docs/roadmap.md](docs/roadmap.md)**.
@@ -246,7 +247,7 @@ mtg-portal/
 │   ├── monitoring.md        # Metriken, Scrape-Setup, Dashboard
 │   ├── roadmap.md           # geplante Arbeiten (Suche, Bild-Spiegel, Kartenflip)
 │   └── grafana/             # Dashboard-JSON, prometheus.yml-Ausschnitt, Alertregeln
-├── nginx/default.conf       # statisch + Proxy /api → backend
+├── nginx/default.conf.template # statisch + Proxy /api → backend (envsubst beim Start)
 ├── .woodpecker/pipeline.yaml
 ├── template.service         # systemd-Unit (Vorlage, %SERVICE%)
 ├── Dockerfile               # web-Image
