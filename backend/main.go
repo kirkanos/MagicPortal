@@ -88,19 +88,27 @@ func writeJSON(w http.ResponseWriter, v interface{}) {
 
 // ---- Handlers ----
 
+// scryfallOut carries the catalog data for one collection row.
+//
+// Image URLs are deliberately NOT included: they follow the scheme
+// cards.scryfall.io/<size>/<face>/<1st>/<2nd>/<id>.jpg and the frontend builds
+// them from the id (see scryfallImage() in shared.js). For a real collection
+// that is roughly 3.4 MB less JSON per request, without a single extra round
+// trip. Fields that usually repeat something the row already carries are only
+// sent when they actually differ.
 type scryfallOut struct {
-	Name           string   `json:"name"`
-	Image          string   `json:"image"`
-	ImageSmall     string   `json:"imageSmall"`
-	TypeLine       string   `json:"typeLine"`
-	Colors         []string `json:"colors"`
-	ManaCost       string   `json:"manaCost"`
-	OracleText     string   `json:"oracleText"`
-	ImageBack      string   `json:"imageBack"`
-	ImageBackSmall string   `json:"imageBackSmall"`
-	PriceEur       *float64 `json:"priceEur"`
-	PriceEurFoil   *float64 `json:"priceEurFoil"`
-	SetName        string   `json:"setName"`
+	// Only set when the catalog name differs from the name in the collection.
+	Name string `json:"name,omitempty"`
+	// Only set when the catalog row has a different Scryfall id than the
+	// collection row (ManaBox occasionally exports the id of another printing).
+	ImageID      string   `json:"imageId,omitempty"`
+	HasBack      bool     `json:"hasBack,omitempty"`
+	TypeLine     string   `json:"typeLine"`
+	Colors       []string `json:"colors"`
+	ManaCost     string   `json:"manaCost"`
+	OracleText   string   `json:"oracleText"`
+	PriceEur     *float64 `json:"priceEur"`
+	PriceEurFoil *float64 `json:"priceEurFoil"`
 }
 
 type cardOut struct {
@@ -131,8 +139,8 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
 		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type,
-		       s.name, s.type_line, s.colors, s.mana_cost, s.oracle_text, s.image_normal, s.image_small,
-		       s.image_back_normal, s.image_back_small, s.price_eur, s.price_eur_foil
+		       s.name, s.type_line, s.colors, s.mana_cost, s.oracle_text, s.scryfall_id,
+		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil
 		FROM collection c
 		LEFT JOIN scryfall_cards s
 		       ON s.set_code = c.set_code AND s.collector_number = c.collector_number
@@ -146,32 +154,33 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	out := []cardOut{}
 	for rows.Next() {
 		var (
-			c                                                   cardOut
-			setCode                                             string
-			sName, sType, sColors, sMana, sOracle, sImgN, sImgS sql.NullString
-			sImgBackN, sImgBackS                                sql.NullString
-			sPrice, sPriceFoil                                  sql.NullFloat64
+			c                                          cardOut
+			setCode                                    string
+			sName, sType, sColors, sMana, sOracle, sID sql.NullString
+			sHasBack                                   bool
+			sPrice, sPriceFoil                         sql.NullFloat64
 		)
 		if err := rows.Scan(&c.Key, &c.ScryfallID, &setCode, &c.SetName, &c.CollectorNumber, &c.Name,
 			&c.Foil, &c.Rarity, &c.Language, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Condition, &c.Added,
 			&c.BinderName, &c.BinderType,
-			&sName, &sType, &sColors, &sMana, &sOracle, &sImgN, &sImgS, &sImgBackN, &sImgBackS, &sPrice, &sPriceFoil); err != nil {
+			&sName, &sType, &sColors, &sMana, &sOracle, &sID, &sHasBack, &sPrice, &sPriceFoil); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
 		c.SetCode = strings.ToUpper(setCode)
-		if sName.Valid || sImgN.Valid {
+		if sName.Valid || sID.Valid {
 			so := &scryfallOut{
-				Name:           sName.String,
-				Image:          sImgN.String,
-				ImageSmall:     sImgS.String,
-				TypeLine:       sType.String,
-				Colors:         colorsFromJSON(sColors.String),
-				ManaCost:       sMana.String,
-				OracleText:     sOracle.String,
-				ImageBack:      sImgBackN.String,
-				ImageBackSmall: sImgBackS.String,
-				SetName:        c.SetName,
+				TypeLine:   sType.String,
+				Colors:     colorsFromJSON(sColors.String),
+				ManaCost:   sMana.String,
+				OracleText: sOracle.String,
+				HasBack:    sHasBack,
+			}
+			if sName.String != c.Name {
+				so.Name = sName.String
+			}
+			if sID.String != c.ScryfallID {
+				so.ImageID = sID.String
 			}
 			if sPrice.Valid {
 				p := sPrice.Float64

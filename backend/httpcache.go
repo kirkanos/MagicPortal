@@ -27,6 +27,13 @@ import (
 //
 // ETags are weak: nginx gzips the response, which makes it no longer
 // byte-identical to what the handler produced.
+//
+// payloadVersion is part of every validator. Without it a release that only
+// changes the SHAPE of a response (a renamed or dropped field) would keep
+// answering 304 to clients whose cached copy still has the old shape, because
+// the underlying rows did not change - they would render stale data until the
+// next import. Bump this whenever a cacheable response's JSON changes.
+const payloadVersion = "2"
 
 // collectionETag builds the validator for /api/collection.
 func collectionETag(db *sql.DB) string {
@@ -45,7 +52,7 @@ func setsETag(db *sql.DB) string {
 }
 
 func weakETag(prefix, input string) string {
-	return fmt.Sprintf(`W/"%s-%s"`, prefix, sha256hex([]byte(input))[:16])
+	return fmt.Sprintf(`W/"%s%s-%s"`, prefix, payloadVersion, sha256hex([]byte(payloadVersion + "|" + input))[:16])
 }
 
 // notModified sets the caching headers and reports whether the client's copy is

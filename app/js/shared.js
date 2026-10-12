@@ -113,11 +113,27 @@ async function resetCollectionCSV() {
   if (!res.ok) throw new Error(t('Leeren fehlgeschlagen', 'Clearing failed') + ' (HTTP ' + res.status + ')');
 }
 
+/* Scryfalls Bild-URLs folgen einem festen Schema:
+     cards.scryfall.io/<groesse>/<seite>/<1. Zeichen>/<2. Zeichen>/<id>.jpg
+   Deshalb uebertraegt das Backend sie nicht mehr, sondern nur die id - das
+   spart bei einer grossen Sammlung mehrere MB pro Abruf. Gebaut werden sie
+   ausschliesslich hier, damit ein spaeterer lokaler Bild-Spiegel nur diese
+   eine Funktion anfassen muss. */
+const SCRYFALL_IMAGE_BASE = 'https://cards.scryfall.io';
+
+function scryfallImageURL(card, size, face) {
+  const sc = card.scryfall;
+  if (!sc) return '';
+  // imageId steht nur dort, wo der Katalog eine andere id fuehrt als der
+  // Sammlungseintrag (abweichender Druck im ManaBox-Export).
+  const id = sc.imageId || card.scryfallId || '';
+  if (id.length < 2) return '';
+  if (face === 'back' && !sc.hasBack) return '';
+  return `${SCRYFALL_IMAGE_BASE}/${size}/${face || 'front'}/${id[0]}/${id[1]}/${id}.jpg`;
+}
+
 function cardImage(card, size) {
-  if (card.scryfall && card.scryfall.image) {
-    return size === 'small' && card.scryfall.imageSmall ? card.scryfall.imageSmall : card.scryfall.image;
-  }
-  return '';
+  return scryfallImageURL(card, size === 'small' ? 'small' : 'normal', 'front');
 }
 
 const LANGUAGE_FLAG = {
@@ -332,7 +348,7 @@ function variantMarketPrice(v) {
 function cardGroupModalHTML(group) {
   const rep = group.rep;
   const img = cardImage(rep, 'normal');
-  const backImg = (rep.scryfall && rep.scryfall.imageBack) || '';
+  const backImg = scryfallImageURL(rep, 'normal', 'back');
   const variants = group.variants
     .slice()
     .sort((a, b) => (a.language || '').localeCompare(b.language || '') || a.foil.localeCompare(b.foil));

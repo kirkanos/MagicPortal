@@ -18,8 +18,8 @@ function groupKey(c) {
 
 function pickRep(variants) {
   return (
-    variants.find((v) => v.scryfall && v.scryfall.image && (v.language || '').toLowerCase() === 'en') ||
-    variants.find((v) => v.scryfall && v.scryfall.image) ||
+    variants.find((v) => cardImage(v, 'small') && (v.language || '').toLowerCase() === 'en') ||
+    variants.find((v) => cardImage(v, 'small')) ||
     variants[0]
   );
 }
