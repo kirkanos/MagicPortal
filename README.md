@@ -238,6 +238,7 @@ mtg-portal/
 │   └── Dockerfile
 ├── docs/
 │   ├── monitoring.md        # Metriken, Scrape-Setup, Dashboard
+│   ├── roadmap.md           # geplante Arbeiten (Suche, Bild-Spiegel, Kartenflip)
 │   └── grafana/             # Dashboard-JSON, prometheus.yml-Ausschnitt, Alertregeln
 ├── nginx/default.conf       # statisch + Proxy /api → backend
 ├── .woodpecker/pipeline.yaml
