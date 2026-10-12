@@ -68,6 +68,16 @@ CREATE TABLE IF NOT EXISTS price_history (
 );
 CREATE INDEX IF NOT EXISTS idx_price_history_key ON price_history(scryfall_key);
 
+-- Index des lokalen Bild-Spiegels: welche Datei mit welchem Cache-Buster der
+-- Quelle bereits geholt wurde. Ohne den muesste jeder Lauf jede Datei neu
+-- laden oder per HEAD pruefen.
+CREATE TABLE IF NOT EXISTS image_files (
+  path       TEXT PRIMARY KEY,
+  ts         TEXT,
+  bytes      INTEGER,
+  fetched_at TEXT
+);
+
 -- Persistent activity log (tool actions + errors), shown in the UI.
 CREATE TABLE IF NOT EXISTS activity_log (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,

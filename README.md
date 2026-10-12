@@ -106,7 +106,9 @@ Der **Datenstand** (letzte Aktualisierung von Kartendaten/Preisen) steht oben re
 | `PORT` | Interner Port des `web`-Containers (nginx, 80) |
 | `UPLOAD_PASSWORD` | Passwort für Upload/Reset/Sync (leer = kein Schutz) |
 
-Optional: `SYNC_INTERVAL_MINUTES` (Standard 5) steuert das Hintergrund-Intervall,
+Optional: `IMAGE_MIRROR` (Standard `false`) spiegelt Kartenbilder und Symbole lokal –
+Details in **[docs/roadmap.md](docs/roadmap.md)**.
+`SYNC_INTERVAL_MINUTES` (Standard 5) steuert das Hintergrund-Intervall,
 `METRICS_PORT` (Standard 9090, `off` = aus) und `METRICS_CACHE_SECONDS` (Standard 30) den
 Prometheus-Endpunkt.
 Die Datenbank liegt im benannten Volume `mtg-db`. Das Passwort wird via `X-Upload-Password`-Header
@@ -223,6 +225,7 @@ unter `docs/grafana/`; Details in **[docs/monitoring.md](docs/monitoring.md)**.
 | `POST` | `/api/upload` | CSV hochladen (Upsert) |
 | `POST` | `/api/reset` | Sammlung leeren |
 | `POST` | `/api/sync` | Scryfall-Sync jetzt anstoßen |
+| `POST` | `/api/images/sync` | Bild-Spiegel jetzt abgleichen (nur wenn `IMAGE_MIRROR`) |
 
 ## 🗂️ Projektstruktur
 

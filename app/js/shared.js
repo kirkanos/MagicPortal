@@ -7,6 +7,7 @@ const API = 'api';
 /* Full collection, already enriched with Scryfall metadata/prices by the backend.
    Shape per card matches what the pages expect (top-level fields + `scryfall`). */
 async function loadCollection() {
+  await uiConfigReady; // legt fest, ob Bilder vom Spiegel oder von Scryfall kommen
   // 'no-cache' statt 'no-store': der Browser behaelt die Antwort und fragt mit
   // If-None-Match nach. Unveraendert antwortet das Backend mit 304 ohne Body -
   // bei mehreren MB Sammlung der Unterschied zwischen Sekunden und sofort.
@@ -19,6 +20,7 @@ async function loadCollection() {
    Sammlung, damit die Seite nicht die kompletten Kartendaten laden muss - aus
    knapp 15 MB JSON werden so ein paar Dutzend KB. */
 async function loadDashboard() {
+  await uiConfigReady; // legt fest, ob Bilder vom Spiegel oder von Scryfall kommen
   const res = await fetch(API + '/dashboard', { cache: 'no-cache' });
   if (!res.ok) throw new Error(t('Statistik konnte nicht geladen werden', 'Could not load statistics') + ' (HTTP ' + res.status + ')');
   return res.json();
@@ -26,6 +28,7 @@ async function loadDashboard() {
 
 /* Set index: { code(lowercase): {name, cardCount, iconSvgUri, releasedAt, setType, digital} } */
 async function loadSetIndex() {
+  await uiConfigReady; // legt fest, ob Bilder vom Spiegel oder von Scryfall kommen
   const res = await fetch(API + '/sets', { cache: 'no-cache' });
   if (!res.ok) return {};
   return res.json();
@@ -42,6 +45,7 @@ const setCardsCache = {};
 
 /* All cards of a set (owned or not), for the editions overlay. */
 async function fetchSetCards(code) {
+  await uiConfigReady;
   const key = String(code).toLowerCase();
   if (setCardsCache[key]) return setCardsCache[key];
   const res = await fetch(API + '/sets/' + encodeURIComponent(key) + '/cards', { cache: 'no-store' });
@@ -120,6 +124,21 @@ async function resetCollectionCSV() {
    ausschliesslich hier, damit ein spaeterer lokaler Bild-Spiegel nur diese
    eine Funktion anfassen muss. */
 const SCRYFALL_IMAGE_BASE = 'https://cards.scryfall.io';
+/* Ist der lokale Spiegel aktiv (IMAGE_MIRROR im Backend), laufen die Bilder
+   ueber die eigene Domain. Welche Datei dort tatsaechlich liegt und welche von
+   Scryfall nachgeladen wird, entscheidet nginx per try_files - der Browser
+   muss das nicht wissen und spart sich eine Pruefung je Karte. */
+let imageMirrorActive = false;
+
+function imageBase() {
+  return imageMirrorActive ? '/img/cards' : SCRYFALL_IMAGE_BASE;
+}
+
+function setSymbolURL(uri) {
+  if (!imageMirrorActive || !uri) return uri || '';
+  const code = uri.split('/').pop().split('?')[0];
+  return '/img/sets/' + code;
+}
 
 function scryfallImageURL(card, size, face) {
   const sc = card.scryfall;
@@ -129,11 +148,17 @@ function scryfallImageURL(card, size, face) {
   const id = sc.imageId || card.scryfallId || '';
   if (id.length < 2) return '';
   if (face === 'back' && !sc.hasBack) return '';
-  return `${SCRYFALL_IMAGE_BASE}/${size}/${face || 'front'}/${id[0]}/${id[1]}/${id}.jpg`;
+  return `${imageBase()}/${size}/${face || 'front'}/${id[0]}/${id[1]}/${id}.jpg`;
 }
 
 function cardImage(card, size) {
   return scryfallImageURL(card, size === 'small' ? 'small' : 'normal', 'front');
+}
+
+/* Karten aus /api/sets/{code}/cards sind flach aufgebaut (imageId/hasBack
+   direkt am Objekt), nutzen aber dieselbe Herleitung. */
+function setCardImage(card, size, face) {
+  return scryfallImageURL({ scryfallId: card.imageId, scryfall: { hasBack: card.hasBack } }, size, face || 'front');
 }
 
 const LANGUAGE_FLAG = {
@@ -312,7 +337,8 @@ function conditionLabel(c) {
 /* Renders a single mana/text symbol token (without braces) as a Scryfall SVG. */
 function manaSymbolImg(token) {
   const code = token.toUpperCase().replace(/\//g, '');
-  return `<img class="mana-symbol" src="https://svgs.scryfall.io/card-symbols/${encodeURIComponent(code)}.svg" alt="{${escapeHTML(token)}}" title="{${escapeHTML(token)}}" loading="lazy">`;
+  const base = imageMirrorActive ? '/img/symbols' : 'https://svgs.scryfall.io/card-symbols';
+  return `<img class="mana-symbol" src="${base}/${encodeURIComponent(code)}.svg" alt="{${escapeHTML(token)}}" title="{${escapeHTML(token)}}" loading="lazy">`;
 }
 
 /* A mana cost string like "{2}{R}{R}" → row of symbol images. */
@@ -591,6 +617,7 @@ async function loadUIConfig() {
   }
   if (!UI_CONFIG) UI_CONFIG = { randomEnabled: true, randomCount: 6, hiddenNav: [] };
   if (!Array.isArray(UI_CONFIG.hiddenNav)) UI_CONFIG.hiddenNav = [];
+  imageMirrorActive = UI_CONFIG.imageMirror === true;
   return UI_CONFIG;
 }
 // Kicked off immediately so pages can `await uiConfigReady`.

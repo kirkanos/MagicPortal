@@ -74,7 +74,13 @@ Vergleichslauf.
 
 ---
 
-## 2. Bilder und Symbole spiegeln
+## 2. Bilder und Symbole spiegeln — erledigt
+
+> Umgesetzt in `backend/images.go`, `nginx/default.conf` und `shared.js`.
+> Standard ist `IMAGE_MIRROR=false`; eingeschaltet laeuft der Abgleich taeglich
+> um `IMAGE_SYNC_HOUR`. `/api/sets/{code}/cards` liefert seitdem ebenfalls IDs
+> statt Bild-URLs, und das Editionen-Overlay nutzt denselben Flip wie der
+> Kartendialog.
 
 ### Ablage
 

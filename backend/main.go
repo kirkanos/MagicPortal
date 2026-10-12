@@ -32,6 +32,7 @@ func main() {
 	startScheduler()
 	startRemoteImportScheduler()
 	startBackupScheduler()
+	startImageScheduler()
 	startMetricsServer()
 
 	mux := http.NewServeMux()
@@ -51,6 +52,7 @@ func main() {
 	mux.HandleFunc("GET /api/value-movers", handleValueMovers)
 	mux.HandleFunc("GET /api/activity", handleActivity)
 	mux.HandleFunc("POST /api/activity/clear", handleActivityClear)
+	mux.HandleFunc("POST /api/images/sync", handleImageSyncNow)
 	mux.HandleFunc("POST /api/backup", handleBackupNow)
 	mux.HandleFunc("POST /api/backup/restore-latest", handleRestoreLatest)
 	mux.HandleFunc("POST /api/backup/restore-upload", handleRestoreUpload)
@@ -232,6 +234,9 @@ func handleSets(w http.ResponseWriter, r *http.Request) {
 	writeJSONCacheable(w, out)
 }
 
+// setCardOut is one card of an edition. Like the collection it ships the
+// Scryfall id instead of four image URLs - the frontend derives them, and with
+// the local mirror on they point at the own domain.
 type setCardOut struct {
 	CollectorNumber string   `json:"collectorNumber"`
 	Name            string   `json:"name"`
@@ -239,18 +244,16 @@ type setCardOut struct {
 	TypeLine        string   `json:"typeLine"`
 	PriceEur        *float64 `json:"priceEur"`
 	PriceEurFoil    *float64 `json:"priceEurFoil"`
-	Image           string   `json:"image"`
-	ImageSmall      string   `json:"imageSmall"`
-	ImageBack       string   `json:"imageBack"`
-	ImageBackSmall  string   `json:"imageBackSmall"`
+	ImageID         string   `json:"imageId"`
+	HasBack         bool     `json:"hasBack,omitempty"`
 	CardmarketURI   string   `json:"cardmarketUri"`
 }
 
 func handleSetCards(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToLower(r.PathValue("code"))
 	rows, err := db.Query(`
-		SELECT collector_number, name, rarity, type_line, price_eur, price_eur_foil, image_normal, image_small,
-		       image_back_normal, image_back_small, cardmarket_uri
+		SELECT collector_number, name, rarity, type_line, price_eur, price_eur_foil, scryfall_id,
+		       COALESCE(image_back_normal, '') <> '', cardmarket_uri
 		FROM scryfall_cards WHERE set_code = ?
 		ORDER BY CAST(collector_number AS INTEGER), collector_number`, code)
 	if err != nil {
@@ -263,8 +266,9 @@ func handleSetCards(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var c setCardOut
 		var price, priceFoil sql.NullFloat64
-		var back, backSmall, cardmarket sql.NullString
-		if err := rows.Scan(&c.CollectorNumber, &c.Name, &c.Rarity, &c.TypeLine, &price, &priceFoil, &c.Image, &c.ImageSmall, &back, &backSmall, &cardmarket); err != nil {
+		var cardmarket sql.NullString
+		if err := rows.Scan(&c.CollectorNumber, &c.Name, &c.Rarity, &c.TypeLine, &price, &priceFoil,
+			&c.ImageID, &c.HasBack, &cardmarket); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -276,8 +280,6 @@ func handleSetCards(w http.ResponseWriter, r *http.Request) {
 			p := priceFoil.Float64
 			c.PriceEurFoil = &p
 		}
-		c.ImageBack = back.String
-		c.ImageBackSmall = backSmall.String
 		c.CardmarketURI = cardmarket.String
 		out = append(out, c)
 	}
@@ -446,7 +448,8 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 			"lastSource": metaGet(db, "remote_import_last_source"),
 			"lastError":  metaGet(db, "remote_import_last_error"),
 		},
-		"backup": backupStatus(),
+		"backup":      backupStatus(),
+		"imageMirror": imageStatus(),
 	})
 }
 

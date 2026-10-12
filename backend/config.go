@@ -34,8 +34,18 @@ func loadUIConfig() uiConfig {
 	return cfg
 }
 
+// handleConfigGet serves the UI settings plus the deployment switches the
+// frontend has to know about. imageMirror is not stored in meta and not
+// editable here - it comes from the environment, because it depends on a
+// mounted volume.
 func handleConfigGet(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, loadUIConfig())
+	cfg := loadUIConfig()
+	writeJSON(w, map[string]interface{}{
+		"randomEnabled": cfg.RandomEnabled,
+		"randomCount":   cfg.RandomCount,
+		"hiddenNav":     cfg.HiddenNav,
+		"imageMirror":   imageMirrorEnabled(),
+	})
 }
 
 func handleConfigSet(w http.ResponseWriter, r *http.Request) {

@@ -88,6 +88,11 @@ Verschwindet die CSV in der Nextcloud, ohne dass dieser Zähler (und
 | `mtg_activity_errors_24h` | gauge | Fehler im Aktivitätsprotokoll (24 h) |
 | `mtg_catalog_cards`, `mtg_catalog_sets` | gauge | Umfang des Scryfall-Katalogs |
 | `mtg_db_size_bytes` | gauge | Größe der SQLite-Datei |
+| `mtg_image_mirror_enabled` | gauge | 1 wenn der lokale Bild-Spiegel aktiv ist |
+| `mtg_images_mirrored` | gauge | Anzahl lokal gespiegelter Dateien |
+| `mtg_images_bytes` | gauge | Belegter Platz des Spiegels |
+| `mtg_last_image_sync_timestamp_seconds` | gauge | Letzter Spiegel-Lauf |
+| `mtg_image_downloads_total{result}` | counter | Geladene Bilder nach Ergebnis |
 | `mtg_backup_last_size_bytes` | gauge | Größe des letzten Backups |
 
 ### HTTP und Laufzeit

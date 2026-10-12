@@ -105,7 +105,7 @@ function buildEditions(cards) {
     result.push({
       code: o ? o.code : lc.toUpperCase(),
       name: (info && info.name) || (o && o.name) || lc.toUpperCase(),
-      icon: (info && info.iconSvgUri) || '',
+      icon: setSymbolURL(info && info.iconSvgUri),
       setType: (info && info.setType) || '',
       released: (info && info.releasedAt) || '',
       owned: ownedCount,
@@ -416,7 +416,7 @@ function buildEoTile({ card: c, idx, ownedInfo, isOwned }) {
   const tile = document.createElement('div');
   tile.className = 'eo-card ' + (isOwned ? 'owned' : 'missing');
   tile.dataset.idx = idx;
-  const img = c.imageSmall || c.image;
+  const img = setCardImage(c, 'small');
   tile.innerHTML = `
     <div class="eo-thumb">
       ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(c.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
@@ -504,8 +504,8 @@ function closeEditionOverlay() {
 /* ---- Detail overlay for a single card (opened from the edition overlay) ---- */
 
 function editionCardDetailHTML(card, ownedInfo) {
-  const img = card.image || card.imageSmall;
-  const backImg = card.imageBack || card.imageBackSmall || '';
+  const img = setCardImage(card, 'normal');
+  const backImg = setCardImage(card, 'normal', 'back');
   const price = card.priceEur ? formatCurrency(parseFloat(card.priceEur), 'EUR') : '–';
   const foilPrice = card.priceEurFoil ? formatCurrency(parseFloat(card.priceEurFoil), 'EUR') : null;
 
@@ -534,8 +534,7 @@ function editionCardDetailHTML(card, ownedInfo) {
     <span class="modal-close eo-card-close">&times;</span>
     <div class="modal-card">
       <div class="modal-image">
-        ${img ? `<img src="${img}" alt="${escapeHTML(card.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
-        ${backImg ? `<img src="${backImg}" alt="${escapeHTML(card.name)} (${t('Rückseite', 'back')})">` : ''}
+        ${cardFaceHTML(card.name, img, backImg)}
       </div>
       <div class="modal-details">
         <h2>${escapeHTML(card.name)}</h2>
@@ -558,7 +557,9 @@ function editionCardDetailHTML(card, ownedInfo) {
 
 function openEditionCardOverlay(card, ownedInfo) {
   const overlay = document.getElementById('eo-card-overlay');
-  overlay.querySelector('.modal-body').innerHTML = editionCardDetailHTML(card, ownedInfo);
+  const body = overlay.querySelector('.modal-body');
+  body.innerHTML = editionCardDetailHTML(card, ownedInfo);
+  initCardFlip(body);
   overlay.classList.add('open');
 }
 

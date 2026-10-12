@@ -29,6 +29,14 @@ services:
       - WEBDAV_BACKUP_DIR=${WEBDAV_BACKUP_DIR:-}
       # -- Google Drive (Ziel-Ordner-ID, gleiches Service-Account wie oben) --
       - GDRIVE_BACKUP_FOLDER_ID=${GDRIVE_BACKUP_FOLDER_ID:-}
+      # Lokaler Spiegel der Kartenbilder und Symbole (Standard: aus).
+      # Braucht das Volume mtg-images; der Lauf passiert nachts.
+      - IMAGE_MIRROR=${IMAGE_MIRROR:-false}
+      - IMAGE_DIR=/images
+      - IMAGE_SYNC_HOUR=${IMAGE_SYNC_HOUR:-3}
+      - IMAGE_SIZES=${IMAGE_SIZES:-small,normal}
+      - IMAGE_RATE_PER_SECOND=${IMAGE_RATE_PER_SECOND:-10}
+      - IMAGE_MAX_BYTES=${IMAGE_MAX_BYTES:-3221225472}
       # Prometheus-Endpunkt auf eigenem Port (METRICS_PORT=off schaltet ihn ab).
       # Bewusst NICHT hinter nginx/Traefik: die Metriken zeigen Sammlungswert und
       # Fehlerzustaende. Prometheus erreicht sie ueber das traefik-network.
@@ -37,6 +45,10 @@ services:
       - METRICS_CACHE_SECONDS=${METRICS_CACHE_SECONDS:-30}
     volumes:
       - mtg-db:/data
+      # Einziger beschreibbarer Pfad neben /data; der Spiegel waechst auf
+      # ~1,6 GB und hat deshalb ein eigenes Volume, sonst landet er in jedem
+      # Backup.
+      - mtg-images:/images
     # --- Hardening ---
     read_only: true
     tmpfs:
@@ -74,6 +86,9 @@ services:
       - /var/cache/nginx
       - /var/run
       - /tmp
+    volumes:
+      # Nur lesend: nginx liefert gespiegelte Bilder direkt aus.
+      - mtg-images:/usr/share/nginx/html/img:ro
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -104,3 +119,4 @@ services:
 
 volumes:
   mtg-db:
+  mtg-images:

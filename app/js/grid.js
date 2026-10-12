@@ -65,7 +65,7 @@ function setSymHTML(icon) {
 
 function setIcon(code) {
   const info = setIndex[(code || '').toLowerCase()];
-  return (info && info.iconSvgUri) || '';
+  return setSymbolURL(info && info.iconSvgUri);
 }
 
 function updateSetLabel() {
@@ -304,7 +304,7 @@ function buildCardTile(g) {
 
   const info = setIndex[g.setCode.toLowerCase()] || null;
   const setName = (info && info.name) || g.setName || g.setCode;
-  const icon = info && info.iconSvgUri;
+  const icon = setSymbolURL(info && info.iconSvgUri);
   const rarity = (g.rarity || '').toLowerCase();
   const rarityCls = rarity ? ' rarity-' + rarity : '';
   const rarityLabel = RARITY_LABEL[rarity] || g.rarity || '';

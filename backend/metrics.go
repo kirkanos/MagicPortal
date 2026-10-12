@@ -117,6 +117,8 @@ var (
 
 	metricBackups = newCounterVec()
 	metricSyncs   = newCounterVec()
+	// Heruntergeladene Bilder des lokalen Spiegels nach Ergebnis.
+	metricImageDownloads = newCounterVec()
 
 	metricHTTPRequests = newCounterVec()
 	metricHTTPDuration = newHistogram([]float64{0.005, 0.025, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30})
@@ -136,6 +138,7 @@ var apiRoutes = map[string]string{
 	"binders": "/api/binders", "subtypes": "/api/subtypes", "status": "/api/status",
 	"summary": "/api/summary", "config": "/api/config", "reserved": "/api/reserved",
 	"dashboard":     "/api/dashboard",
+	"images":        "/api/images/sync",
 	"value-history": "/api/value-history", "value-movers": "/api/value-movers",
 	"activity": "/api/activity", "backup": "/api/backup", "auth-check": "/api/auth-check",
 	"upload": "/api/upload", "reset": "/api/reset", "sync": "/api/sync", "health": "/api/health",
@@ -217,6 +220,9 @@ type dbGauges struct {
 	lastSnapshot                   float64
 	importErr, syncErr, backupErr  float64
 	dbBytes                        float64
+	imageFiles                     int64
+	imageBytes                     int64
+	lastImageSync                  float64
 }
 
 type binderGauge struct {
@@ -289,6 +295,9 @@ func collectGauges() *dbGauges {
 		}
 		rows.Close()
 	}
+
+	_ = db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM image_files`).Scan(&g.imageFiles, &g.imageBytes)
+	g.lastImageSync = metaUnix("image_sync_last_at")
 
 	g.lastImport = metaUnix("remote_import_last_at")
 	g.lastSync = metaUnix("bulk_synced_at")
@@ -397,6 +406,10 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	simple(n("activity_errors_24h"), "Fehlereinträge im Aktivitätsprotokoll der letzten 24h", "gauge", float64(g.activityErrors24h))
 	simple(n("db_size_bytes"), "Größe der SQLite-Datei", "gauge", g.dbBytes)
 	simple(n("backup_last_size_bytes"), "Größe des zuletzt erzeugten Backups", "gauge", float64(metricBackupBytes.Load()))
+	simple(n("image_mirror_enabled"), "1 wenn der lokale Bild-Spiegel aktiv ist", "gauge", boolGauge(imageMirrorEnabled()))
+	simple(n("images_mirrored"), "Anzahl lokal gespiegelter Dateien", "gauge", float64(g.imageFiles))
+	simple(n("images_bytes"), "Belegter Platz des Bild-Spiegels", "gauge", float64(g.imageBytes))
+	simple(n("last_image_sync_timestamp_seconds"), "Zeitpunkt des letzten Bild-Spiegel-Laufs", "gauge", g.lastImageSync)
 
 	// --- process counters ---
 	vec(n("imports_total"), "Importläufe nach Quelle und Ergebnis", "counter", metricImports)
@@ -405,6 +418,7 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	vec(n("remote_import_checks_total"), "Prüfungen auf eine neue Quelldatei nach Quelle und Ergebnis", "counter", metricRemoteChecks)
 	vec(n("backups_total"), "Backupläufe nach Ziel und Ergebnis", "counter", metricBackups)
 	vec(n("syncs_total"), "Scryfall-Syncs nach Ergebnis", "counter", metricSyncs)
+	vec(n("image_downloads_total"), "Heruntergeladene Bilder des lokalen Spiegels", "counter", metricImageDownloads)
 
 	// --- HTTP ---
 	vec(n("http_requests_total"), "API-Requests nach Route, Methode und Status", "counter", metricHTTPRequests)

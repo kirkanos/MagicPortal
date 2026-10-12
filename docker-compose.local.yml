@@ -24,6 +24,7 @@ services:
       - .env.local
     environment:
       - DB_PATH=/data/mtg.db
+      - IMAGE_DIR=/images
       # --- nicht überschreibbar: kein Schreibzugriff auf fremde Ablagen ---
       # Quelldatei nach dem Import NIE löschen (sonst klaut die lokale Instanz
       # dem Server die CSV aus der Nextcloud).
@@ -44,6 +45,7 @@ services:
           - mtg-portal-backend
     volumes:
       - local-db:/data
+      - local-images:/images
     read_only: true
     tmpfs:
       - /tmp
@@ -69,6 +71,8 @@ services:
       - /var/cache/nginx
       - /var/run
       - /tmp
+    volumes:
+      - local-images:/usr/share/nginx/html/img:ro
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -84,3 +88,4 @@ services:
 
 volumes:
   local-db:
+  local-images:
