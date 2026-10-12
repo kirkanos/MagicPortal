@@ -17,7 +17,7 @@
 
 * { box-sizing: border-box; }
 
-/* Scrollbars im dunklen Theme (blendet sich auf allen Flächen ein) */
+/* Scrollbars in the dark theme (blends in on every surface) */
 html { scrollbar-color: #3a3c4d transparent; scrollbar-width: thin; }
 ::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -385,9 +385,9 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .modal-image img { width: 100%; border-radius: 12px; }
 .modal-image .no-image { width: 260px; aspect-ratio: 63/88; background: #0d0e14; display: flex; align-items: center; justify-content: center; color: var(--text-dim); border-radius: 12px; }
 
-/* Doppelseitige Karten: ein Bild, das sich umdrehen laesst, statt zweier
-   untereinander. Beide Seiten liegen deckungsgleich uebereinander, gedreht
-   wird der Behaelter. */
+/* Double-faced cards: one image that can be flipped, instead of two below
+   each other. Both faces sit exactly on top of one another; the container is
+   what rotates. */
 .card-flip { perspective: 1200px; cursor: pointer; }
 .card-flip-inner {
   position: relative; aspect-ratio: 63/88;
@@ -405,7 +405,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
   border-radius: 8px; cursor: pointer; font-size: 0.85rem;
 }
 .flip-btn:hover { border-color: var(--accent); }
-/* Wer Animationen abbestellt hat, bekommt den Wechsel ohne Drehung. */
+/* Anyone who opted out of animations gets the switch without the rotation. */
 @media (prefers-reduced-motion: reduce) {
   .card-flip-inner { transition: none; }
 }

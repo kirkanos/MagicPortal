@@ -96,15 +96,15 @@ func imageSyncHour() int {
 // of files, which belongs into the night and not into a deploy.
 func startImageScheduler() {
 	if !imageMirrorEnabled() {
-		log.Printf("[images] Spiegel deaktiviert (IMAGE_MIRROR)")
+		log.Printf("[images] mirror disabled (IMAGE_MIRROR)")
 		return
 	}
 	if err := os.MkdirAll(imageDir(), 0o755); err != nil {
-		log.Printf("[images] Verzeichnis %s nicht nutzbar: %v", imageDir(), err)
+		log.Printf("[images] directory %s not usable: %v", imageDir(), err)
 		return
 	}
 	hour := imageSyncHour()
-	log.Printf("[images] Spiegel aktiv in %s, taeglich um %02d:00 UTC", imageDir(), hour)
+	log.Printf("[images] mirror enabled in %s, daily at %02d:00 UTC", imageDir(), hour)
 	go func() {
 		for {
 			time.Sleep(time.Until(nextRunAt(time.Now().UTC(), hour)))
@@ -149,9 +149,9 @@ func runImageSync() {
 	started := time.Now()
 	targets, err := imageTargets()
 	if err != nil {
-		log.Printf("[images] Zielliste fehlgeschlagen: %v", err)
+		log.Printf("[images] building the target list failed: %v", err)
 		metaSet(db, "image_sync_last_error", err.Error())
-		logActivityDedup("error", "Bilder", "Bild-Spiegel fehlgeschlagen: "+err.Error())
+		logActivityDedup("error", "Images", "Image mirror failed: "+err.Error())
 		return
 	}
 
@@ -168,7 +168,7 @@ func runImageSync() {
 			continue
 		}
 		if total+bytes > imageMaxBytes() {
-			log.Printf("[images] Groessenlimit erreicht (%d Bytes), Abbruch", imageMaxBytes())
+			log.Printf("[images] size limit reached (%d bytes), aborting", imageMaxBytes())
 			metricImageDownloads.inc(labels("result", "limit"))
 			break
 		}
@@ -191,10 +191,10 @@ func runImageSync() {
 
 	metaSet(db, "image_sync_last_at", time.Now().UTC().Format(time.RFC3339))
 	metaSet(db, "image_sync_last_error", "")
-	log.Printf("[images] fertig: %d geladen, %d unveraendert, %d Fehler, %.1f MB in %s",
+	log.Printf("[images] done: %d downloaded, %d unchanged, %d errors, %.1f MB in %s",
 		fetched, skipped, failed, float64(bytes)/1e6, started.Format("15:04")+"–"+time.Now().Format("15:04"))
 	if fetched > 0 || failed > 0 {
-		logActivity("info", "Bilder", fmt.Sprintf("Bild-Spiegel: %d geladen, %d unveraendert, %d Fehler (%.0f MB)",
+		logActivity("info", "Images", fmt.Sprintf("Image mirror: %d downloaded, %d unchanged, %d errors (%.0f MB)",
 			fetched, skipped, failed, float64(bytes)/1e6))
 	}
 }
@@ -316,7 +316,7 @@ func cacheBuster(u string) string {
 // interrupted run never leaves a half file behind.
 func fetchImage(tgt imageTarget, abs string) (int64, error) {
 	if tgt.rel == "" {
-		return 0, fmt.Errorf("kein Zielpfad")
+		return 0, fmt.Errorf("no target path")
 	}
 	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
 		return 0, err
@@ -398,11 +398,11 @@ func mirroredFileCount() int {
 // like the other write endpoints.
 func handleImageSyncNow(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
-		http.Error(w, "Falsches oder fehlendes Passwort", 403)
+		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
 	if !imageMirrorEnabled() {
-		http.Error(w, "Bild-Spiegel ist nicht aktiviert", 400)
+		http.Error(w, "The image mirror is not enabled", 400)
 		return
 	}
 	go runImageSync()

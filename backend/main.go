@@ -24,7 +24,7 @@ func main() {
 	var err error
 	db, err = openDB(dbPath)
 	if err != nil {
-		log.Fatalf("DB konnte nicht geöffnet werden: %v", err)
+		log.Fatalf("could not open the database: %v", err)
 	}
 	defer db.Close()
 
@@ -65,7 +65,7 @@ func main() {
 	mux.HandleFunc("POST /api/sync", handleSync)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
 
-	log.Printf("mtg-portal backend läuft auf :%s (Passwortschutz: %v)", port, uploadPassword != "")
+	log.Printf("mtg-portal backend listening on :%s (password protection: %v)", port, uploadPassword != "")
 	if err := http.ListenAndServe(":"+port, instrument(mux)); err != nil {
 		log.Fatal(err)
 	}
@@ -107,17 +107,17 @@ type scryfallOut struct {
 	// Only set when the catalog row has a different Scryfall id than the
 	// collection row (ManaBox occasionally exports the id of another printing).
 	ImageID string `json:"imageId,omitempty"`
-	// NoImage markiert die wenigen Katalogeintraege ohne Bild (Art-Series und
-	// aehnliche Sonderdrucke). Ohne das Flag wuerde das Frontend aus der ID
-	// eine URL ableiten, die es bei Scryfall gar nicht gibt.
+	// NoImage marks the few catalog entries that have no image at all (art
+	// series and similar special printings). Without the flag the frontend
+	// would derive a URL from the id that does not exist at Scryfall.
 	NoImage  bool     `json:"noImage,omitempty"`
 	HasBack  bool     `json:"hasBack,omitempty"`
 	TypeLine string   `json:"typeLine"`
 	Colors   []string `json:"colors"`
 	ManaCost string   `json:"manaCost"`
-	// Der Regeltext steckt nicht mehr drin: das Kartenraster durchsucht ihn
-	// serverseitig (/api/cards) und bekommt ihn mit der Trefferseite, und die
-	// uebrigen Seiten zeigen ihn gar nicht an. Spart rund 2,2 MB je Abruf.
+	// The rules text is no longer included: the card grid searches it
+	// server-side (/api/cards) and receives it with the page of results, and
+	// the other pages do not show it at all. Saves roughly 2.2 MB per call.
 	PriceEur     *float64 `json:"priceEur"`
 	PriceEurFoil *float64 `json:"priceEurFoil"`
 }
@@ -303,8 +303,8 @@ type printOut struct {
 	IconSvgURI      string `json:"iconSvgUri"`
 	CollectorNumber string `json:"collectorNumber"`
 	Rarity          string `json:"rarity"`
-	// ImageID statt fertiger URLs: das Frontend leitet die Bildadresse daraus
-	// ab und kann sie damit ueber den lokalen Spiegel laufen lassen.
+	// ImageID instead of ready-made URLs: the frontend derives the image
+	// address from it and can therefore route it through the local mirror.
 	ImageID      string   `json:"imageId"`
 	PriceEur     *float64 `json:"priceEur"`
 	PriceEurFoil *float64 `json:"priceEurFoil"`
@@ -412,21 +412,21 @@ func handleAuthCheck(w http.ResponseWriter, r *http.Request) {
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
-		http.Error(w, "Falsches oder fehlendes Passwort", 403)
+		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
 	defer r.Body.Close()
 	res, err := importCSV(db, r.Body)
 	if err != nil {
 		metricImports.inc(labels("source", "upload", "result", "error"))
-		logActivity("error", "Upload", "CSV-Import fehlgeschlagen: "+err.Error())
-		http.Error(w, "Import fehlgeschlagen: "+err.Error(), 400)
+		logActivity("error", "Upload", "CSV import failed: "+err.Error())
+		http.Error(w, "Import failed: "+err.Error(), 400)
 		return
 	}
 	metricImports.inc(labels("source", "upload", "result", "success"))
 	metricImportRows.add(labels("source", "upload"), float64(res.Total))
-	log.Printf("[upload] %d neu, %d aktualisiert", res.Added, res.Updated)
-	logActivity("info", "Upload", fmt.Sprintf("CSV hochgeladen: %d neu, %d aktualisiert (%d gesamt)", res.Added, res.Updated, res.Total))
+	log.Printf("[upload] %d new, %d updated", res.Added, res.Updated)
+	logActivity("info", "Upload", fmt.Sprintf("CSV uploaded: %d new, %d updated (%d total)", res.Added, res.Updated, res.Total))
 	// Pull any missing card metadata/prices in the background.
 	go startSync(false)
 	writeJSON(w, res)
@@ -434,15 +434,15 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 func handleReset(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
-		http.Error(w, "Falsches oder fehlendes Passwort", 403)
+		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
 	if err := clearCollection(db); err != nil {
-		logActivity("error", "Reset", "Leeren fehlgeschlagen: "+err.Error())
+		logActivity("error", "Reset", "Clearing failed: "+err.Error())
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	logActivity("info", "Reset", "Sammlung geleert")
+	logActivity("info", "Reset", "Collection cleared")
 	writeJSON(w, map[string]string{"status": "reset"})
 }
 
@@ -468,7 +468,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 
 func handleSync(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
-		http.Error(w, "Falsches oder fehlendes Passwort", 403)
+		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
 	// If a remote source is configured, also look for a new CSV to import first.
@@ -479,9 +479,9 @@ func handleSync(w http.ResponseWriter, r *http.Request) {
 	}
 	started := startSync(true)
 	if started || remote {
-		msg := "Manuelle Aktualisierung gestartet"
+		msg := "Manual refresh started"
 		if remote {
-			msg += " (inkl. Prüfung auf neuen CSV-Import)"
+			msg += " (including a check for a new CSV import)"
 		}
 		logActivity("info", "Sync", msg)
 	}

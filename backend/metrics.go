@@ -117,7 +117,7 @@ var (
 
 	metricBackups = newCounterVec()
 	metricSyncs   = newCounterVec()
-	// Heruntergeladene Bilder des lokalen Spiegels nach Ergebnis.
+	// Images downloaded by the local mirror, by result.
 	metricImageDownloads = newCounterVec()
 
 	metricHTTPRequests = newCounterVec()
@@ -370,20 +370,20 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	n := func(s string) string { return metricsNamespace + "_" + s }
 
 	// --- collection ---
-	simple(n("collection_entries"), "Zeilen in der Sammlung (Karteneinträge)", "gauge", float64(g.entries))
-	simple(n("collection_cards"), "Physische Karten (Summe der Stückzahlen)", "gauge", float64(g.cards))
-	simple(n("collection_distinct_printings"), "Verschiedene Druckausgaben in der Sammlung", "gauge", float64(g.distinct))
-	simple(n("collection_market_value_eur"), "Marktwert der Sammlung in EUR (foil-bewusst)", "gauge", g.marketEUR)
-	simple(n("collection_purchase_value_eur"), "Einkaufswert der Sammlung in EUR", "gauge", g.purchaseEUR)
-	simple(n("collection_cards_without_price"), "Karten ohne Scryfall-Treffer (ohne Preis/Bild)", "gauge", float64(g.unpriced))
+	simple(n("collection_entries"), "Rows in the collection (card entries)", "gauge", float64(g.entries))
+	simple(n("collection_cards"), "Physical cards (sum of quantities)", "gauge", float64(g.cards))
+	simple(n("collection_distinct_printings"), "Distinct printings in the collection", "gauge", float64(g.distinct))
+	simple(n("collection_market_value_eur"), "Market value of the collection in EUR (foil-aware)", "gauge", g.marketEUR)
+	simple(n("collection_purchase_value_eur"), "Purchase value of the collection in EUR", "gauge", g.purchaseEUR)
+	simple(n("collection_cards_without_price"), "Cards with no Scryfall match (no price/image)", "gauge", float64(g.unpriced))
 
-	metric(n("binder_market_value_eur"), "Marktwert je Ordner/Liste in EUR", "gauge", func() {
+	metric(n("binder_market_value_eur"), "Market value per binder/list in EUR", "gauge", func() {
 		for _, bd := range g.binders {
 			fmt.Fprintf(&b, "%s{%s} %s\n", n("binder_market_value_eur"),
 				labels("binder", bd.name, "type", bd.binderType), formatFloat(bd.marketEUR))
 		}
 	})
-	metric(n("binder_cards"), "Karten je Ordner/Liste", "gauge", func() {
+	metric(n("binder_cards"), "Cards per binder/list", "gauge", func() {
 		for _, bd := range g.binders {
 			fmt.Fprintf(&b, "%s{%s} %s\n", n("binder_cards"),
 				labels("binder", bd.name, "type", bd.binderType), formatFloat(float64(bd.cards)))
@@ -391,53 +391,53 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// --- catalog ---
-	simple(n("catalog_cards"), "Karten im lokalen Scryfall-Katalog", "gauge", float64(g.catalogCards))
-	simple(n("catalog_sets"), "Editionen im lokalen Scryfall-Katalog", "gauge", float64(g.catalogSets))
+	simple(n("catalog_cards"), "Cards in the local Scryfall catalog", "gauge", float64(g.catalogCards))
+	simple(n("catalog_sets"), "Sets in the local Scryfall catalog", "gauge", float64(g.catalogSets))
 
 	// --- freshness: unix timestamps, alert via time() - metric ---
-	simple(n("last_remote_import_timestamp_seconds"), "Zeitpunkt des letzten erfolgreichen Remote-Imports", "gauge", g.lastImport)
-	simple(n("last_card_sync_timestamp_seconds"), "Zeitpunkt des letzten Scryfall-Bulk-Syncs", "gauge", g.lastSync)
-	simple(n("last_sets_sync_timestamp_seconds"), "Zeitpunkt des letzten Editions-Syncs", "gauge", g.lastSets)
-	simple(n("last_backup_timestamp_seconds"), "Zeitpunkt des letzten erfolgreichen Backups", "gauge", g.lastBackup)
-	simple(n("last_restore_timestamp_seconds"), "Zeitpunkt der letzten Wiederherstellung", "gauge", g.lastRestore)
-	simple(n("last_value_snapshot_timestamp_seconds"), "Zeitpunkt des letzten Wert-Snapshots", "gauge", g.lastSnapshot)
+	simple(n("last_remote_import_timestamp_seconds"), "Time of the last successful remote import", "gauge", g.lastImport)
+	simple(n("last_card_sync_timestamp_seconds"), "Time of the last Scryfall bulk sync", "gauge", g.lastSync)
+	simple(n("last_sets_sync_timestamp_seconds"), "Time of the last set sync", "gauge", g.lastSets)
+	simple(n("last_backup_timestamp_seconds"), "Time of the last successful backup", "gauge", g.lastBackup)
+	simple(n("last_restore_timestamp_seconds"), "Time of the last restore", "gauge", g.lastRestore)
+	simple(n("last_value_snapshot_timestamp_seconds"), "Time of the last value snapshot", "gauge", g.lastSnapshot)
 
 	// --- health ---
-	simple(n("sync_in_progress"), "1 während ein Sync läuft", "gauge", boolGauge(syncInProgress()))
-	simple(n("sync_last_failed"), "1 wenn der letzte Sync einen Fehler hinterlassen hat", "gauge", g.syncErr)
-	simple(n("remote_import_last_failed"), "1 wenn der letzte Remote-Import-Versuch fehlschlug", "gauge", g.importErr)
-	simple(n("backup_last_failed"), "1 wenn das letzte Backup fehlschlug", "gauge", g.backupErr)
-	simple(n("remote_import_enabled"), "1 wenn eine Import-Quelle konfiguriert ist", "gauge", boolGauge(webdavConfigured() || gdriveConfigured()))
-	simple(n("backup_enabled"), "1 wenn ein Backup-Ziel konfiguriert ist", "gauge", boolGauge(backupConfigured()))
-	simple(n("activity_errors_24h"), "Fehlereinträge im Aktivitätsprotokoll der letzten 24h", "gauge", float64(g.activityErrors24h))
-	simple(n("db_size_bytes"), "Größe der SQLite-Datei", "gauge", g.dbBytes)
-	simple(n("backup_last_size_bytes"), "Größe des zuletzt erzeugten Backups", "gauge", float64(metricBackupBytes.Load()))
-	simple(n("image_mirror_enabled"), "1 wenn der lokale Bild-Spiegel aktiv ist", "gauge", boolGauge(imageMirrorEnabled()))
-	simple(n("images_mirrored"), "Anzahl lokal gespiegelter Dateien", "gauge", float64(g.imageFiles))
-	simple(n("images_bytes"), "Belegter Platz des Bild-Spiegels", "gauge", float64(g.imageBytes))
-	simple(n("last_image_sync_timestamp_seconds"), "Zeitpunkt des letzten Bild-Spiegel-Laufs", "gauge", g.lastImageSync)
+	simple(n("sync_in_progress"), "1 while a sync is running", "gauge", boolGauge(syncInProgress()))
+	simple(n("sync_last_failed"), "1 if the last sync left an error behind", "gauge", g.syncErr)
+	simple(n("remote_import_last_failed"), "1 if the last remote import attempt failed", "gauge", g.importErr)
+	simple(n("backup_last_failed"), "1 if the last backup failed", "gauge", g.backupErr)
+	simple(n("remote_import_enabled"), "1 if an import source is configured", "gauge", boolGauge(webdavConfigured() || gdriveConfigured()))
+	simple(n("backup_enabled"), "1 if a backup target is configured", "gauge", boolGauge(backupConfigured()))
+	simple(n("activity_errors_24h"), "Error entries in the activity log over the last 24h", "gauge", float64(g.activityErrors24h))
+	simple(n("db_size_bytes"), "Size of the SQLite file", "gauge", g.dbBytes)
+	simple(n("backup_last_size_bytes"), "Size of the most recently created backup", "gauge", float64(metricBackupBytes.Load()))
+	simple(n("image_mirror_enabled"), "1 if the local image mirror is active", "gauge", boolGauge(imageMirrorEnabled()))
+	simple(n("images_mirrored"), "Number of locally mirrored files", "gauge", float64(g.imageFiles))
+	simple(n("images_bytes"), "Disk space occupied by the image mirror", "gauge", float64(g.imageBytes))
+	simple(n("last_image_sync_timestamp_seconds"), "Time of the last image mirror run", "gauge", g.lastImageSync)
 
 	// --- process counters ---
-	vec(n("imports_total"), "Importläufe nach Quelle und Ergebnis", "counter", metricImports)
-	vec(n("import_rows_total"), "Importierte CSV-Zeilen nach Quelle", "counter", metricImportRows)
-	vec(n("import_source_deleted_total"), "Nach dem Import gelöschte Quelldateien", "counter", metricImportSourceDeleted)
-	vec(n("remote_import_checks_total"), "Prüfungen auf eine neue Quelldatei nach Quelle und Ergebnis", "counter", metricRemoteChecks)
-	vec(n("backups_total"), "Backupläufe nach Ziel und Ergebnis", "counter", metricBackups)
-	vec(n("syncs_total"), "Scryfall-Syncs nach Ergebnis", "counter", metricSyncs)
-	vec(n("image_downloads_total"), "Heruntergeladene Bilder des lokalen Spiegels", "counter", metricImageDownloads)
+	vec(n("imports_total"), "Import runs by source and result", "counter", metricImports)
+	vec(n("import_rows_total"), "Imported CSV rows by source", "counter", metricImportRows)
+	vec(n("import_source_deleted_total"), "Source files deleted after an import", "counter", metricImportSourceDeleted)
+	vec(n("remote_import_checks_total"), "Checks for a new source file by source and result", "counter", metricRemoteChecks)
+	vec(n("backups_total"), "Backup runs by target and result", "counter", metricBackups)
+	vec(n("syncs_total"), "Scryfall syncs by result", "counter", metricSyncs)
+	vec(n("image_downloads_total"), "Images downloaded by the local mirror", "counter", metricImageDownloads)
 
 	// --- HTTP ---
-	vec(n("http_requests_total"), "API-Requests nach Route, Methode und Status", "counter", metricHTTPRequests)
-	writeHistogram(&b, n("http_request_duration_seconds"), "Dauer der API-Requests", metricHTTPDuration)
+	vec(n("http_requests_total"), "API requests by route, method and status", "counter", metricHTTPRequests)
+	writeHistogram(&b, n("http_request_duration_seconds"), "Duration of the API requests", metricHTTPDuration)
 
 	// --- runtime (standard names so generic Grafana panels work) ---
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
-	simple("go_goroutines", "Laufende Goroutinen", "gauge", float64(runtime.NumGoroutine()))
-	simple("go_memstats_heap_alloc_bytes", "Belegter Heap", "gauge", float64(ms.HeapAlloc))
-	simple("go_memstats_sys_bytes", "Vom Betriebssystem geholter Speicher", "gauge", float64(ms.Sys))
-	simple("go_gc_cycles_total", "Abgeschlossene GC-Zyklen", "counter", float64(ms.NumGC))
-	simple("process_start_time_seconds", "Startzeit des Prozesses (Unix)", "gauge", float64(processStart.Unix()))
+	simple("go_goroutines", "Running goroutines", "gauge", float64(runtime.NumGoroutine()))
+	simple("go_memstats_heap_alloc_bytes", "Allocated heap", "gauge", float64(ms.HeapAlloc))
+	simple("go_memstats_sys_bytes", "Memory obtained from the operating system", "gauge", float64(ms.Sys))
+	simple("go_gc_cycles_total", "Completed GC cycles", "counter", float64(ms.NumGC))
+	simple("process_start_time_seconds", "Process start time (Unix)", "gauge", float64(processStart.Unix()))
 
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	_, _ = w.Write([]byte(b.String()))
@@ -496,7 +496,7 @@ func formatFloat(f float64) string {
 func startMetricsServer() {
 	port := envOr("METRICS_PORT", "9090")
 	if port == "off" {
-		log.Printf("[metrics] deaktiviert")
+		log.Printf("[metrics] disabled")
 		return
 	}
 	mux := http.NewServeMux()
@@ -509,10 +509,10 @@ func startMetricsServer() {
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	log.Printf("[metrics] Prometheus-Endpunkt auf :%s/metrics", port)
+	log.Printf("[metrics] Prometheus endpoint on :%s/metrics", port)
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
-			log.Printf("[metrics] Listener beendet: %v", err)
+			log.Printf("[metrics] listener stopped: %v", err)
 		}
 	}()
 }

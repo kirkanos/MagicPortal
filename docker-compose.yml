@@ -7,47 +7,47 @@ services:
     build: ./backend
     container_name: ${SERVICE}-backend
     environment:
-      # Passwort fuer Upload/Reset/Sync (aus .env; leer = kein Passwortschutz).
+      # Password for upload/reset/sync (from .env; empty = no protection).
       - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:-}
       - DB_PATH=/data/mtg.db
-      # Automatischer Remote-Import (alle Felder optional; leer = deaktiviert).
+      # Automatic remote import (all fields optional; empty = disabled).
       - REMOTE_IMPORT_INTERVAL_MINUTES=${REMOTE_IMPORT_INTERVAL_MINUTES:-15}
-      # Quelldatei nach erfolgreichem Import löschen (Standard: true).
+      # Delete the source file after a successful import (default: true).
       - REMOTE_IMPORT_DELETE=${REMOTE_IMPORT_DELETE:-true}
       # -- Nextcloud / WebDAV --
       - WEBDAV_URL=${WEBDAV_URL:-}
       - WEBDAV_USER=${WEBDAV_USER:-}
       - WEBDAV_PASSWORD=${WEBDAV_PASSWORD:-}
-      # -- Google Drive (Service-Account) --
+      # -- Google Drive (service account) --
       - GDRIVE_FILE_ID=${GDRIVE_FILE_ID:-}
-      # Service-Account-JSON: inline, base64-kodiert oder Pfad zu gemounteter Datei.
+      # Service account JSON: inline, base64-encoded or a path to a mounted file.
       - GDRIVE_SA_JSON=${GDRIVE_SA_JSON:-}
-      # Automatisches Backup der eigenen Daten (Historie + Sammlung).
+      # Automatic backup of your own data (history + collection).
       - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-24}
       - BACKUP_KEEP=${BACKUP_KEEP:-30}
-      # -- Nextcloud / WebDAV (Ziel-Ordner, gleiche Zugangsdaten wie oben) --
+      # -- Nextcloud / WebDAV (target folder, same credentials as above) --
       - WEBDAV_BACKUP_DIR=${WEBDAV_BACKUP_DIR:-}
-      # -- Google Drive (Ziel-Ordner-ID, gleiches Service-Account wie oben) --
+      # -- Google Drive (target folder ID, same service account as above) --
       - GDRIVE_BACKUP_FOLDER_ID=${GDRIVE_BACKUP_FOLDER_ID:-}
-      # Lokaler Spiegel der Kartenbilder und Symbole (Standard: aus).
-      # Braucht das Volume mtg-images; der Lauf passiert nachts.
+      # Local mirror of the card images and symbols (default: off).
+      # Needs the mtg-images volume; the run happens at night.
       - IMAGE_MIRROR=${IMAGE_MIRROR:-false}
       - IMAGE_DIR=/images
       - IMAGE_SYNC_HOUR=${IMAGE_SYNC_HOUR:-3}
       - IMAGE_SIZES=${IMAGE_SIZES:-small,normal}
       - IMAGE_RATE_PER_SECOND=${IMAGE_RATE_PER_SECOND:-10}
       - IMAGE_MAX_BYTES=${IMAGE_MAX_BYTES:-3221225472}
-      # Prometheus-Endpunkt auf eigenem Port (METRICS_PORT=off schaltet ihn ab).
-      # Bewusst NICHT hinter nginx/Traefik: die Metriken zeigen Sammlungswert und
-      # Fehlerzustaende. Prometheus erreicht sie ueber das traefik-network.
+      # Prometheus endpoint on a separate port (METRICS_PORT=off disables it).
+      # Deliberately NOT behind nginx/Traefik: the metrics reveal collection
+      # value and error states. Prometheus reaches them via the traefik-network.
       - METRICS_PORT=${METRICS_PORT:-9090}
-      # Wie lange DB-Kennzahlen zwischen Scrapes zwischengespeichert werden.
+      # How long the database figures are cached between scrapes.
       - METRICS_CACHE_SECONDS=${METRICS_CACHE_SECONDS:-30}
     volumes:
       - mtg-db:/data
-      # Einziger beschreibbarer Pfad neben /data; der Spiegel waechst auf
-      # ~1,6 GB und hat deshalb ein eigenes Volume, sonst landet er in jedem
-      # Backup.
+      # The only writable path besides /data; the mirror grows to ~1.6 GB and
+      # therefore gets a volume of its own, otherwise it would end up in every
+      # backup.
       - mtg-images:/images
     # --- Hardening ---
     read_only: true
@@ -60,15 +60,15 @@ services:
     mem_limit: 512m
     pids_limit: 256
     restart: unless-stopped
-    # Beide Container haengen ausschliesslich im gemeinsamen traefik-network:
-    # so erreicht Prometheus aus dem Monitoring-Stack den Metrics-Port
-    # (Scrape-Ziel: ${SERVICE}-backend:9090). Traefik-Labels hat das Backend
-    # keine, es wird also nicht nach aussen geroutet.
+    # Both containers sit exclusively in the shared traefik-network: that is
+    # how Prometheus from the monitoring stack reaches the metrics port
+    # (scrape target: ${SERVICE}-backend:9090). The backend carries no Traefik
+    # labels, so it is not routed to the outside.
     #
-    # Der Alias ist bewusst eindeutig: in einem geteilten Netz vergibt jeder
-    # Stack die Aliase seiner Servicenamen, und ein zweiter Stack mit einem
-    # Service "backend" wuerde den Namen doppelt belegen - nginx landete dann
-    # zufaellig beim falschen Container. Darum proxyt nginx auf diesen Namen.
+    # The alias is deliberately unique: in a shared network every stack
+    # registers aliases for its service names, and a second stack with a
+    # service called "backend" would claim the name twice - nginx would then
+    # randomly end up at the wrong container. Hence nginx proxies to this name.
     networks:
       traefik-network:
         aliases:
@@ -81,8 +81,8 @@ services:
     depends_on:
       - backend
     environment:
-      # Reichweitenmessung. Ohne Skript- und Ereignis-URL passiert gar nichts:
-      # kein Proxy, kein Skript in den Seiten. Siehe README.
+      # Analytics. Without a script and event URL nothing happens at all:
+      # no proxy, no script in the pages. See the README.
       - ANALYTICS_SCRIPT_URL=${ANALYTICS_SCRIPT_URL:-}
       - ANALYTICS_EVENT_URL=${ANALYTICS_EVENT_URL:-}
       - ANALYTICS_WEBSITE_ID=${ANALYTICS_WEBSITE_ID:-}
@@ -94,10 +94,10 @@ services:
       - /var/cache/nginx
       - /var/run
       - /tmp
-      # Hierhin schreibt das nginx-Image die aus dem Template erzeugte Konfiguration.
+      # The nginx image writes the configuration generated from the template here.
       - /etc/nginx/conf.d
     volumes:
-      # Nur lesend: nginx liefert gespiegelte Bilder direkt aus.
+      # Read-only: nginx serves mirrored images directly.
       - mtg-images:/usr/share/nginx/html/img:ro
     security_opt:
       - no-new-privileges:true

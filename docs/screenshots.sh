@@ -42,4 +42,4 @@ shot "editions.html"  "editions.png"
 shot "reserved.html"  "reserved.png"
 shot "dashboard.html" "dashboard.png"
 
-echo "Fertig. Bilder in: $OUT_DIR"
+echo "Done. Images in: $OUT_DIR"

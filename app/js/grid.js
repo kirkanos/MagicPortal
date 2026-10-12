@@ -1,27 +1,27 @@
-/* Die Seite haelt keine Sammlung mehr im Speicher: Suche, Filter, Gruppierung
-   und Sortierung macht /api/cards, hier liegt nur die jeweils sichtbare Seite.
-   Das spart beim Aufruf rund 10 MB JSON und macht die Seite auf dem Handy
-   benutzbar; dafuer kostet jeder Filterwechsel eine Abfrage (~60 ms). */
-let facets = null;        // Werte fuer die Filterfelder, von /api/cards/facets
+/* The page no longer keeps a collection in memory: search, filters, grouping
+   and sorting are done by /api/cards, and only the currently visible page
+   lives here. That saves around 10 MB of JSON on load and makes the page
+   usable on a phone; in exchange every filter change costs a query (~60 ms). */
+let facets = null;        // values for the filter fields, from /api/cards/facets
 let setIndex = {};
-let selectedSet = '';     // Set-Code im eigenen Dropdown ('' = alle)
-let pageOffset = 0;       // naechster Startindex
+let selectedSet = '';     // set code in the custom dropdown ('' = all)
+let pageOffset = 0;       // next start index
 let pageHasMore = false;
 let loadingPage = false;
-let queryToken = 0;       // verwirft Antworten ueberholter Abfragen
+let queryToken = 0;       // discards responses of superseded queries
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic', special: 'Special' };
 const COLOR_LABEL = {
   W: t('Weiß', 'White'), U: t('Blau', 'Blue'), B: t('Schwarz', 'Black'), R: t('Rot', 'Red'), G: t('Grün', 'Green'),
 };
 
-/* Das Backend liefert flache Gruppen; Kacheln und Detaildialog erwarten die
-   gewachsene Form mit `rep` und `variants[].scryfall`. Der Adapter stellt sie
-   her, damit an der Darstellung nichts geaendert werden muss.
+/* The backend returns flat groups; the tiles and the detail dialog expect the
+   shape that grew over time, with `rep` and `variants[].scryfall`. The adapter
+   restores it so nothing about the rendering has to change.
 
-   variants[].marketPrice ist bereits foil-bewusst berechnet. Als priceEur
-   eingesetzt liefert variantMarketPrice() in shared.js denselben Wert - es
-   greift erst auf priceEurFoil zurueck, wenn es gesetzt ist. */
+   variants[].marketPrice is already computed foil-aware. Put in as priceEur it
+   makes variantMarketPrice() in shared.js return the same value - that one
+   only falls back to priceEurFoil when it is set. */
 function adaptGroup(g) {
   const sc = {
     typeLine: g.typeLine, manaCost: g.manaCost, oracleText: g.oracleText,
@@ -148,8 +148,8 @@ function populateFilters() {
 function populateSubtypes(type) {
   const sel = document.getElementById('filter-subtype');
   if (!sel) return;
-  // Das Backend liefert die Untertypen je Typ; offiziell gefiltert wird dort
-  // nicht, das macht wie bisher der Katalog aus /api/subtypes.
+  // The backend returns the subtypes per type; it does not filter them down
+  // to the official ones - the catalog from /api/subtypes still does that.
   let subs = (type && facets.subtypesByType && facets.subtypesByType[type]) || [];
   if (officialSubtypes && officialSubtypes.size) subs = subs.filter((x) => officialSubtypes.has(x));
   sel.innerHTML =
@@ -168,7 +168,7 @@ function renderStats() {
   `;
 }
 
-/* Aktuelle Filterwerte als Abfrageparameter. */
+/* The current filter values as query parameters. */
 function currentParams() {
   const p = new URLSearchParams();
   const q = document.getElementById('search').value.trim();
@@ -188,12 +188,12 @@ function currentParams() {
   return p;
 }
 
-/* Holt eine Seite Treffer. append=false ersetzt das Raster (neue Filter),
-   append=true haengt die naechste Seite an (Scrollen). */
+/* Fetches one page of results. append=false replaces the grid (new filters),
+   append=true appends the next page (scrolling). */
 async function runQuery(append = false) {
-  // Nur das Nachladen beim Scrollen darf sich selbst blockieren. Eine neue
-  // Filterabfrage darf nie verworfen werden, sonst zeigt die Seite stumm das
-  // vorherige Ergebnis; ueberholte Antworten faengt queryToken ab.
+  // Only the scroll-driven loading may block itself. A new filter query must
+  // never be dropped, otherwise the page silently keeps the previous result;
+  // superseded responses are caught by queryToken.
   if (append && loadingPage) return;
   loadingPage = true;
   const token = ++queryToken;
@@ -214,7 +214,7 @@ async function runQuery(append = false) {
     return;
   }
   loadingPage = false;
-  // Eine zwischenzeitlich gestartete Abfrage hat Vorrang.
+  // A query started in the meantime takes precedence.
   if (token !== queryToken) return;
 
   const groups = (data.groups || []).map(adaptGroup);
@@ -235,7 +235,7 @@ async function runQuery(append = false) {
   armLoadMore();
 }
 
-/* Sentinel am Ende des Rasters: kommt er in Sicht, wird nachgeladen. */
+/* Sentinel at the end of the grid: once it comes into view, more is loaded. */
 let loadMoreObserver = null;
 function armLoadMore() {
   const grid = document.getElementById('card-grid');
@@ -302,8 +302,8 @@ function renderGrid(groups) {
   renderIncremental(document.getElementById('card-grid'), groups, buildCardTile);
 }
 
-/* Zufallsstreifen ueber den Filtern. Die Auswahl trifft das Backend, damit
-   dafuer nicht die ganze Sammlung im Browser liegen muss. */
+/* The random strip above the filters. The backend picks the cards, so the
+   whole collection does not have to sit in the browser for it. */
 async function renderRandomStrip() {
   const el = document.getElementById('random-strip');
   if (!el) return;
@@ -318,7 +318,7 @@ async function renderRandomStrip() {
     const res = await fetch(API + '/cards/random?count=' + encodeURIComponent(cfg.randomCount || 6), { cache: 'no-store' });
     if (res.ok) picks = (await res.json()).map(adaptGroup);
   } catch (e) {
-    /* Der Streifen ist Beiwerk - faellt er aus, bleibt die Seite benutzbar. */
+    /* The strip is decoration - if it fails, the page stays usable. */
   }
   if (!picks.length) {
     el.style.display = 'none';
@@ -372,8 +372,8 @@ async function init() {
   await uiConfigReady;
   renderRandomStrip();
 
-  // Tippen loest eine Abfrage aus - entprellt, damit nicht jeder Tastendruck
-  // eine Anfrage wird.
+  // Typing triggers a query - debounced, so not every keystroke becomes a
+  // request.
   document.getElementById('search').addEventListener('input', debounce(() => runQuery(), 250));
   ['filter-rarity', 'filter-color', 'filter-foil', 'filter-binder', 'filter-subtype', 'sort-by'].forEach((id) => {
     document.getElementById(id).addEventListener('change', () => runQuery());

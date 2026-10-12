@@ -1,70 +1,70 @@
 #!/usr/bin/env bash
 #
-# Prueft nach einem Deploy, ob der Dienst wirklich laeuft.
+# Checks after a deploy whether the service is really running.
 #
-# "systemctl start" kehrt zurueck, sobald der Startbefehl abgesetzt ist - nicht,
-# wenn die Container laufen. Ohne diese Pruefung meldet die Pipeline auch dann
-# Erfolg, wenn ein Image fehlt oder ein Container sofort wieder abstuerzt.
+# "systemctl start" returns as soon as the start command has been issued - not
+# when the containers are up. Without this check the pipeline reports success
+# even if an image is missing or a container crashes right away.
 #
-# Laeuft auf dem Server, die Pipeline reicht es per ssh durch:
+# Runs on the server; the pipeline pipes it in over ssh:
 #
-#   ssh server "bash -s -- <service> [sekunden]" < scripts/verify-deploy.sh
+#   ssh server "bash -s -- <service> [seconds]" < scripts/verify-deploy.sh
 #
-# Erfolg heisst: die systemd-Unit ist aktiv, alle Container laufen, und wer
-# einen Healthcheck hat, meldet "healthy" - mehrmals hintereinander, damit ein
-# Container in der Neustart-Schleife nicht zufaellig durchrutscht.
+# Success means: the systemd unit is active, all containers are running, and
+# any container with a healthcheck reports "healthy" - several times in a row,
+# so a container stuck in a restart loop cannot slip through by chance.
 set -uo pipefail
 
-SERVICE=${1:?Aufruf: verify-deploy.sh <service> [sekunden]}
+SERVICE=${1:?Usage: verify-deploy.sh <service> [seconds]}
 TIMEOUT=${2:-300}
 INTERVAL=5
-STABIL=3
+STABLE=3
 
 cd "/services/$SERVICE" || exit 1
 
-zustand() {
+state() {
   docker compose ps --all --format '{{.Service}}|{{.State}}|{{.Health}}' 2>/dev/null
 }
 
-bericht() {
+report() {
   echo "--- systemd ---" >&2
   systemctl status --no-pager --lines 0 "$SERVICE" >&2 || true
   journalctl -u "$SERVICE" --no-pager -n 20 >&2 || true
-  echo "--- Container ---" >&2
-  zustand >&2 || true
-  echo "--- Letzte Protokollzeilen ---" >&2
+  echo "--- containers ---" >&2
+  state >&2 || true
+  echo "--- last log lines ---" >&2
   docker compose logs --tail 30 2>&1 | tail -60 >&2 || true
 }
 
-echo "== Warte auf $SERVICE (bis zu ${TIMEOUT}s)"
-ende=$((SECONDS + TIMEOUT))
-gut=0
+echo "== Waiting for $SERVICE (up to ${TIMEOUT}s)"
+deadline=$((SECONDS + TIMEOUT))
+good=0
 while :; do
-  aktiv=$(systemctl is-active "$SERVICE" 2>/dev/null)
-  ausgabe=$(zustand)
+  active=$(systemctl is-active "$SERVICE" 2>/dev/null)
+  output=$(state)
 
-  # Container ohne eigenen Healthcheck melden ein leeres Feld; fuer die zaehlt
-  # allein, dass sie laufen.
-  offen=$(awk -F'|' '$2 != "running" || ($3 != "" && $3 != "healthy") { printf "%s(%s%s) ", $1, $2, ($3 != "" ? "," $3 : "") }' <<< "$ausgabe")
-  [[ -z $ausgabe ]] && offen="(keine Container) "
-  [[ $aktiv != active ]] && offen="systemd:$aktiv $offen"
+  # Containers without a healthcheck of their own report an empty field; for
+  # those all that counts is that they are running.
+  pending=$(awk -F'|' '$2 != "running" || ($3 != "" && $3 != "healthy") { printf "%s(%s%s) ", $1, $2, ($3 != "" ? "," $3 : "") }' <<< "$output")
+  [[ -z $output ]] && pending="(no containers) "
+  [[ $active != active ]] && pending="systemd:$active $pending"
 
-  if [[ -z $offen ]]; then
-    gut=$((gut + 1))
-    if (( gut >= STABIL )); then
-      echo "   systemd aktiv, alle Container laufen:"
-      tr "|" " " <<< "$ausgabe" | sed "s/^/     /"
-      echo "== Deploy bestaetigt"
+  if [[ -z $pending ]]; then
+    good=$((good + 1))
+    if (( good >= STABLE )); then
+      echo "   systemd active, all containers running:"
+      tr "|" " " <<< "$output" | sed "s/^/     /"
+      echo "== Deploy confirmed"
       exit 0
     fi
   else
-    gut=0
-    echo "   noch nicht bereit: $offen"
+    good=0
+    echo "   not ready yet: $pending"
   fi
 
-  if (( SECONDS >= ende )); then
-    echo "Zeitueberschreitung nach ${TIMEOUT}s. Nicht bereit: $offen" >&2
-    bericht
+  if (( SECONDS >= deadline )); then
+    echo "Timed out after ${TIMEOUT}s. Not ready: $pending" >&2
+    report
     exit 1
   fi
 

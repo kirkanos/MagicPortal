@@ -126,8 +126,8 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 		c.PriceEur, c.PriceEurFoil = priceEur, priceFoil
 		if sID != nil {
 			c.HasCatalog = true
-			// Ohne Katalogbild bleibt die ID leer: aus ihr liesse sich sonst
-			// eine URL ableiten, die es bei Scryfall nicht gibt.
+			// With no catalog image the id stays empty: a URL derived from
+			// it would not exist at Scryfall.
 			if hasImage {
 				c.ImageID = *sID
 			}
@@ -180,17 +180,17 @@ func cardSubtypesOf(typeLine string) []string {
 	return out
 }
 
-// ---- Sortierung wie im Browser ----
+// ---- Sorting the way the browser did ----
 //
-// Die Oberflaeche sortierte mit localeCompare, also nach Unicode-Collation:
-// Gross-/Kleinschreibung und Akzente zaehlen erst nachrangig, und Satzzeichen
-// haben eine eigene Reihenfolge, in der das Komma vor dem Apostroph kommt -
-// bytweise ist es genau umgekehrt. Ohne das stehen rund 4 % der Namen an einer
-// anderen Stelle als bisher.
+// The interface sorted with localeCompare, i.e. by Unicode collation: case and
+// accents only count as a tie-breaker, and punctuation has an order of its own
+// in which the comma comes before the apostrophe - byte-wise it is exactly the
+// other way round. Without this, around 4 % of the names end up in a different
+// place than before.
 //
-// Statt dafuer eine Collation-Bibliothek einzubinden, bildet die Tabelle die
-// paar Zeichen ab, um die es geht. Gegen die 9.920 Namen der Sammlung liefert
-// das dieselbe Reihenfolge wie localeCompare.
+// Rather than pulling in a collation library, the table below covers the
+// handful of characters that actually occur. Against the 9,920 names in the
+// collection it produces the same order as localeCompare.
 
 var collateFold = map[rune]string{
 	'á': "a", 'à': "a", 'â': "a", 'ä': "a", 'ã': "a", 'å': "a",
@@ -202,7 +202,7 @@ var collateFold = map[rune]string{
 	'ß': "ss", 'æ': "ae", 'œ': "oe",
 }
 
-// collatePunct ist die Reihenfolge der Satzzeichen nach DUCET.
+// collatePunct is the order of the punctuation characters per DUCET.
 const collatePunct = " _-–—,;:!?.…'\"()[]{}@*/\\&#%+<=>~$€"
 
 var collateWeight = func() map[rune]rune {

@@ -29,8 +29,8 @@ steps:
         from_secret: ssh_host_local
     commands:
       - set -a && . ./.env && set +a
-      - test -n "$SERVICE" || (echo "SERVICE ist leer" && exit 1)
-      - test -n "$SSH_HOST_LOCAL" || (echo "SSH_HOST_LOCAL ist leer" && exit 1)
+      - test -n "$SERVICE" || (echo "SERVICE is empty" && exit 1)
+      - test -n "$SSH_HOST_LOCAL" || (echo "SSH_HOST_LOCAL is empty" && exit 1)
       - echo "Deploy target host=$SSH_HOST_LOCAL service=$SERVICE"
       - export SSH_OPTS='-o BatchMode=yes -o RequestTTY=no -o ConnectTimeout=30 -o ConnectionAttempts=1 -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -p822'
       - export SCP_OPTS='-o BatchMode=yes -o ConnectTimeout=30 -o ConnectionAttempts=1 -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -P822'
@@ -58,18 +58,18 @@ steps:
         from_secret: ssh_host_local
     commands:
       - set -a && . ./.env && set +a
-      - test -n "$SERVICE" || (echo "SERVICE ist leer" && exit 1)
-      - test -n "$SSH_HOST_LOCAL" || (echo "SSH_HOST_LOCAL ist leer" && exit 1)
+      - test -n "$SERVICE" || (echo "SERVICE is empty" && exit 1)
+      - test -n "$SSH_HOST_LOCAL" || (echo "SSH_HOST_LOCAL is empty" && exit 1)
       - export SSH_OPTS='-o BatchMode=yes -o RequestTTY=no -o ConnectTimeout=30 -o ConnectionAttempts=1 -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -p822'
       - timeout 60 sh -c "ssh -n -T $SSH_OPTS \"$SSH_HOST_LOCAL\" \"systemctl stop $SERVICE\" || true"
       - timeout 120 sh -c "ssh -n -T $SSH_OPTS \"$SSH_HOST_LOCAL\" \"systemctl start $SERVICE\""
-      - echo "Service restart done (Build laeuft im Hintergrund via systemd)"
+      - echo "Service restart done (build runs in the background via systemd)"
     when:
       - event: push
 
-  # systemctl start kehrt zurueck, sobald der Startbefehl abgesetzt ist - nicht,
-  # wenn die Container laufen. Ohne diesen Schritt meldet die Pipeline auch dann
-  # Erfolg, wenn ein Image fehlt oder ein Container gleich wieder abstuerzt.
+  # systemctl start returns as soon as the start command has been issued - not
+  # when the containers are up. Without this step the pipeline reports success
+  # even if an image is missing or a container crashes right away.
   - name: verify deploy
     image: registry.kirkanos.net/images/ci-build:alpine
     volumes: [ "/services/common/.ssh:/root/.ssh" ]
@@ -78,7 +78,7 @@ steps:
         from_secret: ssh_host_local
     commands:
       - . ./.env
-      - test -n "$SERVICE" || (echo "SERVICE ist leer" && exit 1)
+      - test -n "$SERVICE" || (echo "SERVICE is empty" && exit 1)
       - timeout 660 sh -c "ssh -T -o BatchMode=yes -o ConnectTimeout=30 -p822 \"$SSH_HOST_LOCAL\" 'bash -s -- $SERVICE 600' < scripts/verify-deploy.sh"
     when:
       - event: push

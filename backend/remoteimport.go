@@ -43,7 +43,7 @@ var (
 // source is configured. Interval defaults to 15 min (REMOTE_IMPORT_INTERVAL_MINUTES).
 func startRemoteImportScheduler() {
 	if !webdavConfigured() && !gdriveConfigured() {
-		log.Printf("[remote-import] deaktiviert (keine Quelle konfiguriert)")
+		log.Printf("[remote-import] disabled (no source configured)")
 		return
 	}
 	interval := 15 * time.Minute
@@ -59,7 +59,7 @@ func startRemoteImportScheduler() {
 	if gdriveConfigured() {
 		sources = append(sources, "Google Drive")
 	}
-	log.Printf("[remote-import] aktiv (%s), Intervall: %s", strings.Join(sources, " + "), interval)
+	log.Printf("[remote-import] enabled (%s), interval: %s", strings.Join(sources, " + "), interval)
 
 	go func() {
 		checkRemoteImports()
@@ -83,7 +83,7 @@ func checkRemoteImports() {
 		if err := checkWebDAV(); err != nil {
 			log.Printf("[remote-import] Nextcloud/WebDAV: %v", err)
 			metaSet(db, "remote_import_last_error", "WebDAV: "+err.Error())
-			logActivityDedup("error", "Import", "Nextcloud-Import fehlgeschlagen: "+err.Error())
+			logActivityDedup("error", "Import", "Nextcloud import failed: "+err.Error())
 			metricRemoteChecks.inc(labels("source", "nextcloud", "result", "error"))
 		} else {
 			metricRemoteChecks.inc(labels("source", "nextcloud", "result", "ok"))
@@ -93,7 +93,7 @@ func checkRemoteImports() {
 		if err := checkGDrive(); err != nil {
 			log.Printf("[remote-import] Google Drive: %v", err)
 			metaSet(db, "remote_import_last_error", "Google Drive: "+err.Error())
-			logActivityDedup("error", "Import", "Google-Drive-Import fehlgeschlagen: "+err.Error())
+			logActivityDedup("error", "Import", "Google Drive import failed: "+err.Error())
 			metricRemoteChecks.inc(labels("source", "gdrive", "result", "error"))
 		} else {
 			metricRemoteChecks.inc(labels("source", "gdrive", "result", "ok"))
@@ -114,8 +114,8 @@ func applyRemoteCSV(source string, body []byte, marker, markerKey string) error 
 	metaSet(db, "remote_import_last_at", time.Now().UTC().Format(time.RFC3339))
 	metaSet(db, "remote_import_last_source", source)
 	metaSet(db, "remote_import_last_error", "")
-	log.Printf("[remote-import] %s: %d neu, %d aktualisiert (%d gesamt)", source, res.Added, res.Updated, res.Total)
-	logActivity("info", "Import", fmt.Sprintf("Automatischer Import aus %s: %d neu, %d aktualisiert (%d gesamt)", source, res.Added, res.Updated, res.Total))
+	log.Printf("[remote-import] %s: %d new, %d updated (%d total)", source, res.Added, res.Updated, res.Total)
+	logActivity("info", "Import", fmt.Sprintf("Automatic import from %s: %d new, %d updated (%d total)", source, res.Added, res.Updated, res.Total))
 	// Fill metadata/prices for any new cards.
 	go startSync(false)
 	return nil
@@ -193,13 +193,13 @@ func checkWebDAV() error {
 		return nil // file vanished between HEAD and GET
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP %d beim Download", resp.StatusCode)
+		return fmt.Errorf("HTTP %d while downloading", resp.StatusCode)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	log.Printf("[remote-import] Nextcloud: %d Bytes geladen (Content-Type: %s)", len(body), resp.Header.Get("Content-Type"))
+	log.Printf("[remote-import] Nextcloud: %d bytes downloaded (content type: %s)", len(body), resp.Header.Get("Content-Type"))
 
 	marker := tag
 	if marker == "" {
@@ -214,9 +214,9 @@ func checkWebDAV() error {
 
 	if remoteImportDelete() {
 		if err := webdavDelete(rawURL, user, pass); err != nil {
-			log.Printf("[remote-import] Nextcloud: Quelldatei konnte nicht gelöscht werden: %v", err)
+			log.Printf("[remote-import] Nextcloud: could not delete the source file: %v", err)
 		} else {
-			log.Printf("[remote-import] Nextcloud: Quelldatei nach Import gelöscht")
+			log.Printf("[remote-import] Nextcloud: source file deleted after the import")
 			metricImportSourceDeleted.inc(labels("source", "nextcloud"))
 		}
 		// Clear the marker so a re-appearing file is always re-imported and a
@@ -267,16 +267,16 @@ func loadGDriveSA() (*gdriveSA, error) {
 	} else {
 		f, err := os.ReadFile(v) // path to mounted JSON file
 		if err != nil {
-			return nil, fmt.Errorf("Service-Account nicht lesbar: %w", err)
+			return nil, fmt.Errorf("service account not readable: %w", err)
 		}
 		raw = f
 	}
 	var sa gdriveSA
 	if err := json.Unmarshal(raw, &sa); err != nil {
-		return nil, fmt.Errorf("Service-Account JSON ungültig: %w", err)
+		return nil, fmt.Errorf("service account JSON invalid: %w", err)
 	}
 	if sa.ClientEmail == "" || sa.PrivateKey == "" {
-		return nil, errors.New("Service-Account JSON unvollständig (client_email/private_key)")
+		return nil, errors.New("service account JSON incomplete (client_email/private_key)")
 	}
 	if sa.TokenURI == "" {
 		sa.TokenURI = "https://oauth2.googleapis.com/token"
@@ -366,9 +366,9 @@ func checkGDrive() error {
 
 	if remoteImportDelete() {
 		if err := gdriveDeleteFile(fileID, token); err != nil {
-			log.Printf("[remote-import] Google Drive: Quelldatei konnte nicht gelöscht werden: %v", err)
+			log.Printf("[remote-import] Google Drive: could not delete the source file: %v", err)
 		} else {
-			log.Printf("[remote-import] Google Drive: Quelldatei nach Import gelöscht")
+			log.Printf("[remote-import] Google Drive: source file deleted after the import")
 			metricImportSourceDeleted.inc(labels("source", "gdrive"))
 		}
 		metaSet(db, markerKey, "")
@@ -451,7 +451,7 @@ func gdriveAccessToken(sa *gdriveSA, scope string) (string, error) {
 		AccessToken string `json:"access_token"`
 	}
 	if err := json.Unmarshal(b, &tok); err != nil || tok.AccessToken == "" {
-		return "", fmt.Errorf("Token-Antwort ungültig: %s", strings.TrimSpace(string(b)))
+		return "", fmt.Errorf("invalid token response: %s", strings.TrimSpace(string(b)))
 	}
 	return tok.AccessToken, nil
 }
@@ -461,13 +461,13 @@ func parseRSAPrivateKey(pemStr string) (*rsa.PrivateKey, error) {
 	pemStr = strings.ReplaceAll(pemStr, `\n`, "\n")
 	block, _ := pem.Decode([]byte(pemStr))
 	if block == nil {
-		return nil, errors.New("private_key: kein gültiger PEM-Block")
+		return nil, errors.New("private_key: not a valid PEM block")
 	}
 	if k, err := x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
 		if rk, ok := k.(*rsa.PrivateKey); ok {
 			return rk, nil
 		}
-		return nil, errors.New("private_key: kein RSA-Schlüssel")
+		return nil, errors.New("private_key: not an RSA key")
 	}
 	return x509.ParsePKCS1PrivateKey(block.Bytes)
 }

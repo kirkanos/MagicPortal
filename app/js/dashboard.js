@@ -25,9 +25,8 @@ Chart.defaults.plugins.tooltip.callbacks.label = function (ctx) {
 };
 
 function renderStats(d) {
-  // Alle Kennzahlen kommen fertig aus /api/dashboard; das Gruppieren von
-  // "Verschiedene Karten" macht das Backend mit demselben Schluessel wie das
-  // Kartenraster.
+  // Every figure arrives ready-made from /api/dashboard; the backend groups
+  // "distinct cards" with the same key the card grid uses.
   const st = d.stats;
   const totalUnique = st.entries;
   const distinctCards = st.distinct;
@@ -59,9 +58,9 @@ function renderStats(d) {
   `;
 }
 
-/* Die Reihen aus /api/dashboard kommen als [{key, qty}] bzw. [{key, value}].
-   Das Backend liefert bewusst nur Schluessel - Beschriftung und Uebersetzung
-   bleiben hier. */
+/* The series from /api/dashboard arrive as [{key, qty}] or [{key, value}].
+   The backend deliberately returns keys only - labelling and translation stay
+   here. */
 function keysOf(rows) {
   return rows.map((r) => r.key);
 }
@@ -70,8 +69,8 @@ function qtyOf(rows) {
   return rows.map((r) => r.qty);
 }
 
-/* Fasst Reihen zusammen, deren Beschriftung gleich ist (z.B. light_played und
-   lightly_played -> "Lightly Played"), und sortiert absteigend. */
+/* Merges series that share a label (e.g. light_played and lightly_played ->
+   "Lightly Played") and sorts them descending. */
 function groupByLabel(rows, labelFn) {
   const map = new Map();
   rows.forEach((r) => {
@@ -106,8 +105,8 @@ function renderColorChart(d) {
   });
 }
 
-/* Feste Reihenfolge der Farbgruppen, unabhaengig davon, wie sie in den Daten
-   zuerst auftauchen. Schluessel wie im Backend (colorGroup). */
+/* A fixed order for the color groups, independent of the order they first
+   appear in the data. Keys as in the backend (colorGroup). */
 const COLOR_ORDER = ['W', 'U', 'B', 'R', 'G', 'multi', 'colorless'];
 
 function COLOR_NAME(code) {
@@ -231,8 +230,8 @@ function renderLanguageChart(d) {
 }
 
 function renderConditionChart(d) {
-  // Zusammenfassen nach Beschriftung, damit z.B. light_played und
-  // lightly_played wie bisher in einem Balken landen.
+  // Merge by label so that light_played and lightly_played end up in one bar,
+  // as before.
   const rows = groupByLabel(d.condition, conditionLabel);
   new Chart(document.getElementById('chart-condition'), {
     type: 'bar',
@@ -274,7 +273,7 @@ const VALUE_BUCKETS = [
 
 /* Cards per single-card market-value bracket. */
 function renderValueDistChart(d) {
-  // Reihenfolge der Klassen ist zwischen Backend und VALUE_BUCKETS identisch.
+  // The bracket order is identical between the backend and VALUE_BUCKETS.
   const counts = d.valueDist;
   new Chart(el('chart-value-dist'), {
     type: 'bar',

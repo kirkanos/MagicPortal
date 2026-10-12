@@ -68,9 +68,9 @@ CREATE TABLE IF NOT EXISTS price_history (
 );
 CREATE INDEX IF NOT EXISTS idx_price_history_key ON price_history(scryfall_key);
 
--- Index des lokalen Bild-Spiegels: welche Datei mit welchem Cache-Buster der
--- Quelle bereits geholt wurde. Ohne den muesste jeder Lauf jede Datei neu
--- laden oder per HEAD pruefen.
+-- Index of the local image mirror: which file has already been fetched, with
+-- which cache buster from the source. Without it every run would have to
+-- re-download each file or check it with a HEAD request.
 CREATE TABLE IF NOT EXISTS image_files (
   path       TEXT PRIMARY KEY,
   ts         TEXT,

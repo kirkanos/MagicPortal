@@ -1,100 +1,100 @@
 # Roadmap
 
-Drei geplante Arbeiten, in dieser Reihenfolge. Die Zahlen stammen aus Messungen
-an der echten Sammlung (Stand 12.10.2026: 15.674 Einträge, 13.749 verschiedene
-Drucke, 31.721 Karten).
+Three pieces of work, planned in this order. The numbers come from measurements
+against the real collection (as of 2026-10-12: 15,674 entries, 13,749 distinct
+printings, 31,721 cards).
 
-Was bereits erledigt ist und warum, steht in der Git-Historie – kurz:
-`/api/dashboard` aggregiert serverseitig (2,4 MB → 1,8 KB), `/api/collection`
-und `/api/sets` beantworten bedingte Anfragen mit 304, und die Bild-URLs werden
-im Browser aus der Scryfall-ID gebaut statt übertragen (14,8 → 10,0 MB).
+What is already done and why is in the git history – in short: `/api/dashboard`
+aggregates server-side (2.4 MB → 1.8 KB), `/api/collection` and `/api/sets`
+answer conditional requests with a 304, and image URLs are derived in the
+browser from the Scryfall ID instead of being transferred (14.8 → 10.0 MB).
 
 ---
 
-## 1. Suche ins Backend — erledigt
+## 1. Move the search into the backend — done
 
-> Umgesetzt in `backend/cards.go` und `app/js/grid.js`. Das Kartenraster lädt
-> die Sammlung nicht mehr; der Erstaufbau fiel von 2,36 MB auf rund 46 KB.
-> `oracleText` ist aus `/api/collection` verschwunden (2,36 → 1,32 MB gzip),
-> die Seite nutzen nur noch `editions.js` und `deck-checker.js`.
+> Implemented in `backend/cards.go` and `app/js/grid.js`. The card grid no
+> longer loads the collection; the initial payload dropped from 2.36 MB to
+> roughly 46 KB. `oracleText` is gone from `/api/collection` (2.36 → 1.32 MB
+> gzip), which now only `editions.js` and `deck-checker.js` still use.
 >
-> Nachgezogen: `/api/prints` und `/api/reserved` liefern ebenfalls nur noch die
-> Scryfall-ID statt fertiger Bild-URLs, laufen damit über den Spiegel und sind
-> die letzten beiden Endpunkte gewesen, die ihn umgangen haben.
+> Followed up: `/api/prints` and `/api/reserved` also return nothing but the
+> Scryfall ID instead of ready-made image URLs, so they go through the mirror
+> as well – they were the last two endpoints bypassing it.
 
-### Warum
+### Why
 
-Der Oracle-Text ist mit 2,24 MB der letzte große Posten in `/api/collection`.
-Streichen lässt er sich nicht, weil `grid.js` ihn durchsucht:
+At 2.24 MB the Oracle text is the last big item in `/api/collection`. It cannot
+simply be dropped, because `grid.js` searches it:
 
 ```js
 const hay = (c.name + ' ' + (sc.oracleText || '') + ' ' +
              String(sc.manaCost || '').replace(/[{}\/]/g, '')).toLowerCase();
 ```
 
-Der eigentliche Gewinn ist größer als die 2,24 MB: Läuft die Suche im Backend,
-lädt `index.html` die Sammlung gar nicht mehr, sondern eine Seite Treffer.
+The real gain is bigger than those 2.24 MB: with the search in the backend,
+`index.html` stops loading the collection at all and fetches one page of
+results instead.
 
-### Endpunkt
+### Endpoint
 
-`GET /api/cards` mit genau den Möglichkeiten, die die Oberfläche heute hat:
+`GET /api/cards` with exactly the capabilities the interface has today:
 
-| Parameter | entspricht |
+| Parameter | Corresponds to |
 | --- | --- |
-| `q` | Suchfeld: Name + Oracle-Text + Manakosten ohne `{}` und `/`, mehrere Begriffe UND-verknüpft |
-| `set`, `rarity`, `color`, `foil`, `binder`, `type`, `subtype` | die sieben Filter-Auswahlen |
-| `sort` | Name, Preis, Anzahl, Hinzugefügt, Edition |
-| `cursor`, `limit` | Keyset-Paging, passend zum inkrementellen Rendern aus `f5f3632` |
+| `q` | Search field: name + Oracle text + mana cost without `{}` and `/`, multiple terms ANDed |
+| `set`, `rarity`, `color`, `foil`, `binder`, `type`, `subtype` | The seven filter dropdowns |
+| `sort` | Name, price, quantity, added, edition |
+| `cursor`, `limit` | Keyset paging, matching the incremental rendering from `f5f3632` |
 
-Die Antwort enthält bereits **gruppierte** Zeilen – ein Eintrag je Druck mit
-Sprachen, Gesamtanzahl, Preis und Repräsentant, also dieselbe Gruppierung, die
-`grid.js` heute im Browser bildet – dazu `total` und `totalGroups` für die
-Zähler über dem Raster.
+The response already contains **grouped** rows – one entry per printing with
+languages, total quantity, price and a representative, i.e. the same grouping
+`grid.js` builds in the browser today – plus `total` and `totalGroups` for the
+counters above the grid.
 
-### Schritte
+### Steps
 
-1. Gruppierung und Filter als SQL, zunächst mit `LIKE`. Gegen 110.000
-   Katalogzeilen messen; erst wenn das nicht reicht, FTS5 (in
-   `modernc.org/sqlite` enthalten) über Name, Oracle-Text und Typzeile.
-2. Normalisierte Spalte für die Manakosten (`{1}{R}` → `1r`), sonst läuft bei
-   jeder Abfrage ein `replace()` über alle Zeilen.
-3. `grid.js` auf den Endpunkt umstellen: Eingabe entprellen (250 ms),
-   Filterwechsel = eine Abfrage, Scrollen = nächster Cursor.
-4. Erst danach `oracleText` aus `/api/collection` entfernen und
-   `payloadVersion` in `httpcache.go` hochzählen.
+1. Grouping and filters as SQL, starting with `LIKE`. Measure against 110,000
+   catalog rows; only if that is not enough, FTS5 (included in
+   `modernc.org/sqlite`) over name, Oracle text and type line.
+2. A normalised column for the mana cost (`{1}{R}` → `1r`), otherwise every
+   query runs a `replace()` across all rows.
+3. Move `grid.js` onto the endpoint: debounce the input (250 ms), a filter
+   change is one query, scrolling fetches the next cursor.
+4. Only then remove `oracleText` from `/api/collection` and bump
+   `payloadVersion` in `httpcache.go`.
 
-### Absicherung
+### Safety net
 
-Wie beim Dashboard: die heutige JS-Filterlogik als Referenz über den echten
-Datenbestand laufen lassen und die Trefferlisten von rund 30
-Parameterkombinationen gegen die SQL-Variante diffen. Dort fallen die
-Feinheiten auf – Groß-/Kleinschreibung, Umlaute, leere Felder, `//`-Namen bei
-doppelseitigen Karten.
+Same as for the dashboard: run today's JS filter logic as a reference over the
+real data and diff the result lists of around 30 parameter combinations against
+the SQL variant. That is where the subtleties show up – case sensitivity,
+umlauts, empty fields, `//` names on double-faced cards.
 
-### Preis
+### The price
 
-Filtern ist heute instant, weil alles lokal liegt. Danach kostet jeder
-Filterwechsel einen Roundtrip, gemessen **~60 ms** bei offener Verbindung.
-Dafür fällt der Erstaufbau von mehreren Sekunden auf Millisekunden, und auf dem
-Handy verschwindet der Speicherbedarf für 15.000 Kartenobjekte.
+Filtering is instant today because everything is local. Afterwards every filter
+change costs a round trip, measured at **~60 ms** on an open connection. In
+exchange the initial load drops from several seconds to milliseconds, and on a
+phone the memory for 15,000 card objects disappears.
 
-Aufwand: Backend ~300 Zeilen, `grid.js` ~200 geänderte Zeilen, plus
-Vergleichslauf.
+Effort: backend ~300 lines, `grid.js` ~200 changed lines, plus the comparison
+run.
 
 ---
 
-## 2. Bilder und Symbole spiegeln — erledigt
+## 2. Mirror images and symbols — done
 
-> Umgesetzt in `backend/images.go`, `nginx/default.conf.template` und `shared.js`.
-> Standard ist `IMAGE_MIRROR=false`; eingeschaltet laeuft der Abgleich taeglich
-> um `IMAGE_SYNC_HOUR`. `/api/sets/{code}/cards` liefert seitdem ebenfalls IDs
-> statt Bild-URLs, und das Editionen-Overlay nutzt denselben Flip wie der
-> Kartendialog.
+> Implemented in `backend/images.go`, `nginx/default.conf` and `shared.js`.
+> The default is `IMAGE_MIRROR=false`; when enabled the sync runs daily at
+> `IMAGE_SYNC_HOUR`. `/api/sets/{code}/cards` has returned IDs instead of image
+> URLs ever since, and the editions overlay uses the same flip as the card
+> dialog.
 
-### Ablage
+### Storage
 
-Eigenes Volume `mtg-images:/images`, **nicht** im DB-Volume – sonst wandern
-1,6 GB in jedes Backup. Struktur wie bei Scryfall:
+Its own volume `mtg-images:/images`, **not** in the database volume – otherwise
+1.6 GB end up in every backup. Structure as at Scryfall:
 
 ```
 /images/cards/<size>/<face>/<1>/<2>/<id>.jpg
@@ -102,103 +102,103 @@ Eigenes Volume `mtg-images:/images`, **nicht** im DB-Volume – sonst wandern
 /images/symbols/<code>.svg
 ```
 
-Größe, gerechnet auf die aktuelle Sammlung: 13.749 Drucke × (~100 KB `normal` +
-~20 KB `small`) ≈ **1,6 GB**. Dazu 1.056 Editionssymbole und ~90 Mana-Symbole
-als SVG, zusammen unter 10 MB. Die 80 Rückseiten fallen nicht ins Gewicht.
+Size, calculated for the current collection: 13,749 printings × (~100 KB
+`normal` + ~20 KB `small`) ≈ **1.6 GB**. Plus 1,056 set symbols and ~90 mana
+symbols as SVG, under 10 MB together. The 80 back faces are negligible.
 
-### Ausliefern: lokal zuerst, sonst Scryfall
+### Serving: local first, Scryfall otherwise
 
-Eine Existenzprüfung je Bild im Browser hieße ein zusätzlicher Request pro
-Karte – das kostet mehr, als der Spiegel spart. Die Entscheidung fällt deshalb
-pro Datei in nginx, ohne dass die Oberfläche etwas davon merkt:
+An existence check per image in the browser would mean one extra request per
+card – costing more than the mirror saves. The decision is therefore made per
+file in nginx, without the interface noticing:
 
 ```nginx
 location /img/ {
     root /srv/images;
-    try_files $uri @scryfall;   # lokal vorhanden -> direkt ausliefern
+    try_files $uri @scryfall;   # mirrored locally -> serve directly
     expires 30d;
 }
-location @scryfall {            # sonst transparent von Scryfall
+location @scryfall {            # otherwise transparently from Scryfall
     proxy_pass https://cards.scryfall.io;
     proxy_cache images;
 }
 ```
 
-Die Oberfläche fragt immer `/img/...`. Der **Schalter** liegt in `/api/config`
-(`imageMirror: true|false`) und steuert nur, welche Basis-URL
-`scryfallImageURL()` in `shared.js` baut – bei `false` geht alles wie heute
-direkt an Scryfall. Damit ist der Spiegel jederzeit abschaltbar, ohne
-Datenverlust und ohne Deploy.
+The interface always asks for `/img/...`. The **switch** lives in `/api/config`
+(`imageMirror: true|false`) and only controls which base URL
+`scryfallImageURL()` builds in `shared.js` – at `false` everything goes
+straight to Scryfall as before. That makes the mirror switchable off at any
+time, without data loss and without a deploy.
 
-### Hintergrund-Sync
+### Background sync
 
-Ein eigener Scheduler neben Sync, Import und Backup.
+Its own scheduler next to sync, import and backup.
 
-| Variable | Standard | Zweck |
+| Variable | Default | Purpose |
 | --- | --- | --- |
-| `IMAGE_MIRROR` | `false` | Schalter; aus = alles wie bisher |
-| `IMAGE_SYNC_HOUR` | `3` | Startzeit, einmal täglich |
-| `IMAGE_SIZES` | `small,normal` | welche Größen gespiegelt werden |
-| `IMAGE_RATE_PER_SECOND` | `10` | Schonung für Scryfall |
-| `IMAGE_MAX_BYTES` | `3221225472` | Notbremse gegen eine volle Platte |
+| `IMAGE_MIRROR` | `false` | The switch; off = everything as before |
+| `IMAGE_SYNC_HOUR` | `3` | Start time, once per day |
+| `IMAGE_SIZES` | `small,normal` | Which sizes get mirrored |
+| `IMAGE_RATE_PER_SECOND` | `10` | Being gentle on Scryfall |
+| `IMAGE_MAX_BYTES` | `3221225472` | Emergency brake against a full disk |
 
-Ablauf: alle besessenen Drucke ermitteln, je Größe und Seite prüfen, was fehlt,
-den Rest mit Ratenbegrenzung laden – erst nach `.tmp`, dann umbenennen, damit
-ein Abbruch keine halben Dateien hinterlässt. Eine Tabelle
-`image_files (id, face, size, ts, bytes, fetched_at)` merkt sich den
-Cache-Buster aus der Katalog-URL; ändert Scryfall ein Artwork, wird genau diese
-Datei neu geholt. Erster Lauf: ~27.500 Dateien, bei 10/s rund 45 Minuten –
-nachts unkritisch, danach nur noch Neuzugänge.
+How it runs: determine every owned printing, check per size and face what is
+missing, fetch the rest rate-limited – writing to `.tmp` first, then renaming,
+so an abort leaves no half files behind. A table
+`image_files (id, face, size, ts, bytes, fetched_at)` remembers the cache
+buster from the catalog URL; if Scryfall changes an artwork, exactly that file
+is fetched again. First run: ~27,500 files, about 45 minutes at 10/s –
+unproblematic overnight, only new additions afterwards.
 
-### Damit es nicht still kaputtgeht
+### So that it does not break silently
 
-Die Lehre aus dem Import-Vorfall im September:
+The lesson from the import incident in September:
 
-- Metriken über den vorhandenen Exporter: `mtg_images_mirrored`,
+- Metrics through the existing exporter: `mtg_images_mirrored`,
   `mtg_images_bytes`, `mtg_image_sync_last_timestamp_seconds`,
-  `mtg_image_downloads_total{result}` – plus Panel und Alert im Grafana-Repo.
-- Einträge im Aktivitätsprotokoll wie bei Sync und Backup.
-- Manueller Anstoß über `POST /api/images/sync` (passwortgeschützt).
-- Aufräumen nicht mehr besessener Bilder standardmäßig **aus**: Ein Import
-  ersetzt die Sammlung komplett, ein Fehlimport würde sonst den halben Spiegel
-  löschen.
+  `mtg_image_downloads_total{result}` – plus a panel and an alert in the
+  Grafana repo.
+- Entries in the activity log, as for sync and backup.
+- A manual trigger via `POST /api/images/sync` (password protected).
+- Cleaning up images no longer owned is **off** by default: an import replaces
+  the collection entirely, so a bad import would otherwise wipe half the
+  mirror.
 
-### Reihenfolge
+### Order
 
-Schalter, nginx-Fallback und Ausliefern zuerst – damit kann man bei leerem
-Volume schon live gehen, es passiert schlicht nichts. Danach der Sync-Job,
-zuletzt Symbole und Metriken.
+Switch, nginx fallback and serving first – that way you can go live with an
+empty volume and simply nothing happens. Then the sync job, finally symbols and
+metrics.
 
-Scryfall erlaubt das Zwischenspeichern der Bilder ausdrücklich, bittet aber um
-moderate Abrufraten (daher die Ratenbegrenzung) und um Namensnennung, die im
-Footer bereits steht.
+Scryfall explicitly permits caching the images but asks for moderate request
+rates (hence the rate limit) and for attribution, which the footer already
+carries.
 
 ---
 
-## 3. Doppelseitige Karten umdrehen — erledigt
+## 3. Flip double-faced cards — done
 
-> Umgesetzt in `shared.js` (`cardFaceHTML`, `initCardFlip`) und `style.css`.
-> Das Editionen-Overlay zeigt die Rückseite weiterhin als zweites Bild; es
-> wird mit Punkt 2 nachgezogen, wenn `/api/sets/{code}/cards` ohnehin auf
-> abgeleitete URLs umgestellt wird.
+> Implemented in `shared.js` (`cardFaceHTML`, `initCardFlip`) and `style.css`.
+> The editions overlay still shows the back as a second image; it is picked up
+> with point 2, when `/api/sets/{code}/cards` moves to derived URLs anyway.
 
-### Vorher
+### Before
 
-`cardGroupModalHTML()` in `shared.js` rendert bei einer doppelseitigen Karte
-beide Bilder untereinander in dieselbe Spalte. Das ist unübersichtlich, kostet
-viel Höhe und zeigt die Karte nicht so, wie man sie in der Hand hält. Betroffen
-sind aktuell 80 Einträge – Transformer-Karten, Modal-DFCs, Sagas mit Rückseite.
+`cardGroupModalHTML()` in `shared.js` renders both images below each other in
+the same column for a double-faced card. That is hard to read, costs a lot of
+height and does not show the card the way you hold it. 80 entries are affected
+at the moment – transform cards, modal DFCs, sagas with a back face.
 
-### Ziel
+### Goal
 
-Ein Kartenbild, das sich umdrehen lässt: Klick auf das Bild oder auf eine
-kleine Schaltfläche („↻ Umdrehen" / „↻ Flip") dreht es mit einer kurzen
-3D-Animation auf die Rückseite und zurück.
+One card image that can be flipped: clicking the image or a small button
+("↻ Umdrehen" / "↻ Flip") turns it to the back and back again with a short 3D
+animation.
 
-### Umsetzung
+### Implementation
 
-Rein im Frontend, kein Backend-Anteil – das Flag `hasBack` und die ableitbare
-Rückseiten-URL gibt es seit dem Umbau der Nutzlast schon.
+Purely frontend, no backend part – the `hasBack` flag and the derivable back
+URL have existed since the payload rework.
 
 ```html
 <div class="card-flip" data-flipped="false">
@@ -215,21 +215,21 @@ Rückseiten-URL gibt es seit dem Umbau der Nutzlast schon.
 .card-flip[data-flipped="true"] .back  { transform: rotateY(360deg); }
 ```
 
-Details, die den Unterschied machen:
+The details that make the difference:
 
-- **Nur wo es eine Rückseite gibt.** Ohne `hasBack` bleibt es beim heutigen
-  einfachen `<img>`, ohne Schaltfläche und ohne Klickverhalten.
-- **Rückseite erst bei Bedarf laden** (`loading="lazy"` reicht nicht, weil das
-  Bild im DOM sichtbar ist): `src` erst beim ersten Umdrehen setzen. Spart bei
-  jedem Öffnen einer solchen Karte ~100 KB.
-- **Tastatur und Vorlesen:** Die Schaltfläche ist ein echter `<button>` mit
-  `aria-pressed`, das Bild bekommt ein sprechendes `alt` je Seite.
-- **Bewegung respektieren:** bei `prefers-reduced-motion: reduce` ohne
-  Animation umschalten.
-- **Zweisprachig** über das vorhandene `t()`, wie der Rest der Oberfläche.
-- **Auch im Editionen-Overlay** (`editions.js` zeigt über
-  `/api/sets/{code}/cards` ebenfalls Rückseiten) dieselbe Komponente nutzen,
-  damit es nur eine Stelle gibt.
+- **Only where there is a back face.** Without `hasBack` it stays the simple
+  `<img>` of today, with no button and no click behaviour.
+- **Load the back only when needed** (`loading="lazy"` is not enough, because
+  the image is visible in the DOM): set `src` on the first flip. Saves ~100 KB
+  every time such a card is opened.
+- **Keyboard and screen readers:** the button is a real `<button>` with
+  `aria-pressed`, and the image gets a meaningful `alt` per face.
+- **Respect motion preferences:** switch without animation under
+  `prefers-reduced-motion: reduce`.
+- **Bilingual** through the existing `t()`, like the rest of the interface.
+- **In the editions overlay too** (`editions.js` shows back faces via
+  `/api/sets/{code}/cards` as well), using the same component, so there is only
+  one place for it.
 
-Aufwand: überschaubar, ~60 Zeilen JS und ~20 Zeilen CSS. Gut geeignet als
-Zwischenstück zwischen den beiden größeren Punkten.
+Effort: modest, ~60 lines of JS and ~20 lines of CSS. A good interlude between
+the two bigger items.

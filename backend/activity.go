@@ -43,7 +43,7 @@ type activityOut struct {
 
 func handleActivity(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
-		http.Error(w, "Falsches oder fehlendes Passwort", 403)
+		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
 	rows, err := db.Query(`SELECT ts, level, source, message FROM activity_log ORDER BY id DESC LIMIT ?`, activityMax)
@@ -66,13 +66,13 @@ func handleActivity(w http.ResponseWriter, r *http.Request) {
 
 func handleActivityClear(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
-		http.Error(w, "Falsches oder fehlendes Passwort", 403)
+		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
 	if _, err := db.Exec(`DELETE FROM activity_log`); err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	logActivity("info", "Aktivität", "Protokoll geleert")
+	logActivity("info", "Activity", "Log cleared")
 	writeJSON(w, map[string]bool{"cleared": true})
 }

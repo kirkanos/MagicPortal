@@ -1,19 +1,19 @@
-# Lokale Test-Umgebung – bewusst getrennt von docker-compose.yml (Server).
+# Local test environment - deliberately separate from docker-compose.yml (server).
 #
 #   docker compose -f docker-compose.local.yml up --build
 #   -> http://localhost:8088
 #
-# Absichtlich eigenständig statt Override-Datei: eine docker-compose.override.yml
-# würde auf dem Server automatisch mitgeladen. Diese Datei muss explizit über -f
-# angegeben werden und ist damit auf dem Server wirkungslos.
+# Intentionally standalone rather than an override file: a
+# docker-compose.override.yml would be loaded automatically on the server.
+# This file has to be passed explicitly with -f and is therefore inert there.
 #
-# Sicherheitsnetz gegen den Fall "lokal läuft aus Versehen die Produktionsconfig":
-# Die Container-Umgebung kommt ausschließlich aus .env.local (env_file), niemals
-# aus .env. Alles, was in der Nextcloud/Drive etwas verändern könnte, ist unten
-# fest verdrahtet – environment sticht env_file, lässt sich also auch mit einer
-# falschen .env.local nicht versehentlich einschalten.
+# A safety net against "the production config accidentally runs locally": the
+# container environment comes exclusively from .env.local (env_file), never
+# from .env. Everything that could modify something in Nextcloud/Drive is
+# hard-wired below - environment beats env_file, so even a wrong .env.local
+# cannot switch it on by accident.
 
-# Eigener Projektname -> eigene Volumes/Netze, keine Kollision mit dem Server-Stack.
+# Own project name -> own volumes/networks, no collision with the server stack.
 name: mtg-portal-local
 
 services:
@@ -25,20 +25,20 @@ services:
     environment:
       - DB_PATH=/data/mtg.db
       - IMAGE_DIR=/images
-      # --- nicht überschreibbar: kein Schreibzugriff auf fremde Ablagen ---
-      # Quelldatei nach dem Import NIE löschen (sonst klaut die lokale Instanz
-      # dem Server die CSV aus der Nextcloud).
+      # --- not overridable: no write access to remote storage ---
+      # NEVER delete the source file after an import (otherwise the local
+      # instance steals the server's CSV from Nextcloud).
       - REMOTE_IMPORT_DELETE=false
-      # Keine Backup-Uploads: sonst überschreibt der lokale Stand das
-      # Server-Backup des Tages (gleicher Dateiname) bzw. löscht beim Prune.
+      # No backup uploads: the local state would otherwise overwrite the
+      # server's backup of the day (same filename) or delete it when pruning.
       - WEBDAV_BACKUP_DIR=
       - GDRIVE_BACKUP_FOLDER_ID=
-    # Metrics-Port lokal veroeffentlichen, damit ein lokaler Prometheus oder ein
-    # blosses curl http://localhost:9091/metrics drankommt.
+    # Publish the metrics port locally so a local Prometheus - or a plain
+    # curl http://localhost:9091/metrics - can reach it.
     ports:
       - "127.0.0.1:9091:9090"
-    # Gleicher Alias wie im Server-Stack, damit die nginx-Konfiguration aus dem
-    # Image unveraendert funktioniert.
+    # Same alias as in the server stack, so the nginx configuration baked into
+    # the image works unchanged.
     networks:
       default:
         aliases:
@@ -63,7 +63,7 @@ services:
     container_name: mtg-portal-local-web
     depends_on:
       - backend
-    # Nur auf localhost veröffentlichen, kein Traefik.
+    # Published on localhost only, no Traefik.
     ports:
       - "127.0.0.1:8088:80"
     env_file:
@@ -73,8 +73,8 @@ services:
       - /var/cache/nginx
       - /var/run
       - /tmp
-      # Hierhin schreibt das nginx-Image die Konfiguration aus dem Template und
-      # das Entrypoint-Skript die Schnipsel fuer die Reichweitenmessung.
+      # The nginx image writes the configuration from the template here, and
+      # the entrypoint script writes the analytics snippets.
       - /etc/nginx/conf.d
     volumes:
       - local-images:/usr/share/nginx/html/img:ro

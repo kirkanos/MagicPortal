@@ -1,123 +1,121 @@
 # Monitoring
 
-Das Backend exponiert Prometheus-Metriken auf einem **eigenen Port** (Standard
-`9090`, `METRICS_PORT`), der bewusst nicht über nginx/Traefik nach außen geht –
-die Werte geben Sammlungswert, Ordnernamen und Fehlerzustände preis. Prometheus
-erreicht den Endpunkt über das `traefik-network`, in dem beide Stacks liegen.
+The backend exposes Prometheus metrics on a **separate port** (default `9090`,
+`METRICS_PORT`) that deliberately does not go out through nginx/Traefik – the
+values reveal collection value, binder names and error states. Prometheus
+reaches the endpoint over the `traefik-network` both stacks share.
 
-Kein zusätzliches Go-Modul: das Textformat wird in `backend/metrics.go` von Hand
-geschrieben.
+No extra Go module: the text format is written by hand in `backend/metrics.go`.
 
-## Einrichtung
+## Setup
 
-1. Der Service `backend` hängt in `docker-compose.yml` zusätzlich im
-   `traefik-network` – in diesem Netz läuft auch der Monitoring-Stack, und
-   Prometheus erreicht Container dort über ihren Namen. Traefik-Labels hat das
-   Backend keine, es wird also nicht nach außen geroutet.
-2. `docs/grafana/prometheus-scrape.yml` in die `prometheus.yml` übernehmen
-   (Ziel: `magic-portal-backend:9090`).
-3. `docs/grafana/alerts.yml` als Regeldatei einbinden.
-4. `docs/grafana/mtg-portal-dashboard.json` in Grafana importieren und beim
-   Import die Prometheus-Datenquelle wählen (Dashboard-UID `mtg-portal`).
+1. The `backend` service additionally joins the `traefik-network` in
+   `docker-compose.yml` – the monitoring stack lives in that network too, and
+   Prometheus reaches containers there by name. The backend carries no Traefik
+   labels, so it is not routed to the outside.
+2. Copy `docs/grafana/prometheus-scrape.yml` into your `prometheus.yml`
+   (target: `magic-portal-backend:9090`).
+3. Wire up `docs/grafana/alerts.yml` as a rule file.
+4. Import `docs/grafana/mtg-portal-dashboard.json` into Grafana and pick the
+   Prometheus data source during the import (dashboard UID `mtg-portal`).
 
-Lokal testen: `docker compose -f docker-compose.local.yml up -d --build`, danach
-`curl http://localhost:9091/metrics`.
+Testing locally: `docker compose -f docker-compose.local.yml up -d --build`,
+then `curl http://localhost:9091/metrics`.
 
-## Konfiguration
+## Configuration
 
-| Variable | Standard | Bedeutung |
+| Variable | Default | Meaning |
 | --- | --- | --- |
-| `METRICS_PORT` | `9090` | Port des Endpunkts; `off` schaltet ihn ab |
-| `METRICS_CACHE_SECONDS` | `30` | Zwischenspeicher für die DB-Kennzahlen |
+| `METRICS_PORT` | `9090` | Port of the endpoint; `off` disables it |
+| `METRICS_CACHE_SECONDS` | `30` | Cache for the database figures |
 
-Der Cache ist kein Detail: der SQLite-Pool ist auf **eine** Verbindung begrenzt
-(`openDB`), ein ungecachter Scrape würde sich die Verbindung mit dem
-Hintergrund-Sync teilen. Scrape-Intervalle unter 30 s bringen entsprechend keine
-neueren Werte.
+That cache is not a detail: the SQLite pool is limited to **one** connection
+(`openDB`), so an uncached scrape would share that connection with the
+background sync. Scrape intervals below 30 s therefore yield no fresher values.
 
-## Metriken
+## Metrics
 
-### Sammlung
-| Metrik | Typ | Bedeutung |
+### Collection
+| Metric | Type | Meaning |
 | --- | --- | --- |
-| `mtg_collection_entries` | gauge | Zeilen in der Sammlung |
-| `mtg_collection_cards` | gauge | Physische Karten (Summe Stückzahlen) |
-| `mtg_collection_distinct_printings` | gauge | Verschiedene Druckausgaben |
-| `mtg_collection_market_value_eur` | gauge | Marktwert, foil-bewusst wie im Dashboard |
-| `mtg_collection_purchase_value_eur` | gauge | Einkaufswert |
-| `mtg_collection_cards_without_price` | gauge | Karten ohne Scryfall-Treffer |
-| `mtg_binder_market_value_eur{binder,type}` | gauge | Wert je Ordner/Liste |
-| `mtg_binder_cards{binder,type}` | gauge | Karten je Ordner/Liste |
+| `mtg_collection_entries` | gauge | Rows in the collection |
+| `mtg_collection_cards` | gauge | Physical cards (sum of quantities) |
+| `mtg_collection_distinct_printings` | gauge | Distinct printings |
+| `mtg_collection_market_value_eur` | gauge | Market value, foil-aware as in the dashboard |
+| `mtg_collection_purchase_value_eur` | gauge | Purchase value |
+| `mtg_collection_cards_without_price` | gauge | Cards with no Scryfall match |
+| `mtg_binder_market_value_eur{binder,type}` | gauge | Value per binder/list |
+| `mtg_binder_cards{binder,type}` | gauge | Cards per binder/list |
 
-Ordnernamen sind Nutzerdaten: eine Umbenennung erzeugt eine neue Zeitreihe. Bei
-sehr vielen Ordnern/Listen lohnt ein Blick auf die Serienzahl.
+Binder names are user data: renaming one creates a new time series. With a lot
+of binders/lists it is worth keeping an eye on the series count.
 
-### Import, Sync, Backup
-| Metrik | Typ | Bedeutung |
+### Import, sync, backup
+| Metric | Type | Meaning |
 | --- | --- | --- |
-| `mtg_imports_total{source,result}` | counter | Importläufe (`nextcloud`, `gdrive`, `upload`) |
-| `mtg_import_rows_total{source}` | counter | Importierte CSV-Zeilen |
-| `mtg_import_source_deleted_total{source}` | counter | Nach Import gelöschte Quelldateien |
-| `mtg_remote_import_checks_total{source,result}` | counter | Prüfungen auf eine neue Quelldatei |
-| `mtg_syncs_total{result}` | counter | Scryfall-Syncs |
-| `mtg_backups_total{target,result}` | counter | Backupläufe |
-| `mtg_last_remote_import_timestamp_seconds` | gauge | Zeitpunkt des letzten Imports (Unix) |
-| `mtg_last_card_sync_timestamp_seconds` | gauge | Letzter Bulk-Sync |
-| `mtg_last_sets_sync_timestamp_seconds` | gauge | Letzter Editions-Sync |
-| `mtg_last_backup_timestamp_seconds` | gauge | Letztes Backup |
-| `mtg_last_restore_timestamp_seconds` | gauge | Letzte Wiederherstellung |
-| `mtg_last_value_snapshot_timestamp_seconds` | gauge | Letzter Wert-Snapshot |
+| `mtg_imports_total{source,result}` | counter | Import runs (`nextcloud`, `gdrive`, `upload`) |
+| `mtg_import_rows_total{source}` | counter | Imported CSV rows |
+| `mtg_import_source_deleted_total{source}` | counter | Source files deleted after an import |
+| `mtg_remote_import_checks_total{source,result}` | counter | Checks for a new source file |
+| `mtg_syncs_total{result}` | counter | Scryfall syncs |
+| `mtg_backups_total{target,result}` | counter | Backup runs |
+| `mtg_last_remote_import_timestamp_seconds` | gauge | Time of the last import (Unix) |
+| `mtg_last_card_sync_timestamp_seconds` | gauge | Last bulk sync |
+| `mtg_last_sets_sync_timestamp_seconds` | gauge | Last set sync |
+| `mtg_last_backup_timestamp_seconds` | gauge | Last backup |
+| `mtg_last_restore_timestamp_seconds` | gauge | Last restore |
+| `mtg_last_value_snapshot_timestamp_seconds` | gauge | Last value snapshot |
 
-Zeitstempel sind Unix-Sekunden; das Alter ist `time() - <metrik>`. Ein Wert von
-`0` heißt „noch nie passiert" – in Alerts entsprechend abfangen.
+Timestamps are Unix seconds; the age is `time() - <metric>`. A value of `0`
+means "never happened" – catch that in alerts accordingly.
 
-`mtg_import_source_deleted_total` ist die Metrik für den Fall, der den Anlass
-gab: Die Quelldatei wird **ausschließlich nach erfolgreichem Import** gelöscht.
-Verschwindet die CSV in der Nextcloud, ohne dass dieser Zähler (und
-`mtg_imports_total`) steigt, hat eine andere Instanz sie konsumiert.
+`mtg_import_source_deleted_total` is the metric for the incident that prompted
+all this: the source file is deleted **only after a successful import**. If the
+CSV disappears from Nextcloud without this counter (and `mtg_imports_total`)
+going up, another instance has consumed it.
 
-### Zustand
-| Metrik | Typ | Bedeutung |
+### State
+| Metric | Type | Meaning |
 | --- | --- | --- |
-| `mtg_sync_in_progress` | gauge | 1 während ein Sync läuft |
-| `mtg_sync_last_failed` | gauge | 1 nach fehlgeschlagenem Sync |
-| `mtg_remote_import_last_failed` | gauge | 1 nach fehlgeschlagenem Import |
-| `mtg_backup_last_failed` | gauge | 1 nach fehlgeschlagenem Backup |
-| `mtg_remote_import_enabled` | gauge | 1 wenn eine Quelle konfiguriert ist |
-| `mtg_backup_enabled` | gauge | 1 wenn ein Ziel konfiguriert ist |
-| `mtg_activity_errors_24h` | gauge | Fehler im Aktivitätsprotokoll (24 h) |
-| `mtg_catalog_cards`, `mtg_catalog_sets` | gauge | Umfang des Scryfall-Katalogs |
-| `mtg_db_size_bytes` | gauge | Größe der SQLite-Datei |
-| `mtg_image_mirror_enabled` | gauge | 1 wenn der lokale Bild-Spiegel aktiv ist |
-| `mtg_images_mirrored` | gauge | Anzahl lokal gespiegelter Dateien |
-| `mtg_images_bytes` | gauge | Belegter Platz des Spiegels |
-| `mtg_last_image_sync_timestamp_seconds` | gauge | Letzter Spiegel-Lauf |
-| `mtg_image_downloads_total{result}` | counter | Geladene Bilder nach Ergebnis |
-| `mtg_backup_last_size_bytes` | gauge | Größe des letzten Backups |
+| `mtg_sync_in_progress` | gauge | 1 while a sync is running |
+| `mtg_sync_last_failed` | gauge | 1 after a failed sync |
+| `mtg_remote_import_last_failed` | gauge | 1 after a failed import |
+| `mtg_backup_last_failed` | gauge | 1 after a failed backup |
+| `mtg_remote_import_enabled` | gauge | 1 when a source is configured |
+| `mtg_backup_enabled` | gauge | 1 when a target is configured |
+| `mtg_activity_errors_24h` | gauge | Errors in the activity log (24 h) |
+| `mtg_catalog_cards`, `mtg_catalog_sets` | gauge | Size of the Scryfall catalog |
+| `mtg_db_size_bytes` | gauge | Size of the SQLite file |
+| `mtg_image_mirror_enabled` | gauge | 1 when the local image mirror is active |
+| `mtg_images_mirrored` | gauge | Number of locally mirrored files |
+| `mtg_images_bytes` | gauge | Disk space the mirror occupies |
+| `mtg_last_image_sync_timestamp_seconds` | gauge | Last mirror run |
+| `mtg_image_downloads_total{result}` | counter | Downloaded images by result |
+| `mtg_backup_last_size_bytes` | gauge | Size of the last backup |
 
-### HTTP und Laufzeit
-| Metrik | Typ | Bedeutung |
+### HTTP and runtime
+| Metric | Type | Meaning |
 | --- | --- | --- |
-| `mtg_http_requests_total{route,method,status}` | counter | API-Requests |
-| `mtg_http_request_duration_seconds{route}` | histogram | Antwortzeiten |
-| `go_goroutines`, `go_memstats_*`, `go_gc_cycles_total` | – | Go-Laufzeit |
-| `process_start_time_seconds` | gauge | Startzeit, für die Uptime |
+| `mtg_http_requests_total{route,method,status}` | counter | API requests |
+| `mtg_http_request_duration_seconds{route}` | histogram | Response times |
+| `go_goroutines`, `go_memstats_*`, `go_gc_cycles_total` | – | Go runtime |
+| `process_start_time_seconds` | gauge | Start time, for uptime |
 
-Das Label `route` ist auf die bekannten API-Pfade begrenzt, Set-Codes werden zu
-`/api/sets/{code}/cards` zusammengefasst und alles Unbekannte zu `other` – ein
-Scanner auf zufälligen Pfaden kann die Kardinalität also nicht aufblähen.
+The `route` label is restricted to the known API paths, set codes are folded
+into `/api/sets/{code}/cards` and anything unknown becomes `other` – so a
+scanner hitting random paths cannot inflate the cardinality.
 
 ## Dashboard
 
-`docs/grafana/mtg-portal-dashboard.json`, vier Bereiche:
+`docs/grafana/mtg-portal-dashboard.json`, four sections:
 
-- **Sammlung** – Markt-/Einkaufswert, Differenz, Kartenzahl, Wertverlauf, Top-10
-  der Ordner nach Wert.
-- **Import, Sync & Backup** – Alter der letzten Läufe, Importe gegen gelöschte
-  Quelldateien, importierte Zeilen, Prüfraten, Fehlerzustände.
-- **API** – Requests/s je Route, p95-Antwortzeit, Fehlerantworten.
-- **System** – Laufzeit, Katalogumfang, DB-/Backup-Größe, Heap und Goroutinen.
+- **Collection** – market/purchase value, difference, card count, value over
+  time, top 10 binders by value.
+- **Import, sync & backup** – age of the last runs, imports against deleted
+  source files, imported rows, check rates, error states.
+- **API** – requests/s per route, p95 response time, error responses.
+- **System** – uptime, catalog size, database/backup size, heap and goroutines.
 
-Die Wertreihen stammen aus dem Scrape, nicht aus `value_snapshots`; die Historie
-beginnt also mit dem ersten Scrape. Die langfristige Wertentwicklung bleibt im
-Portal selbst (Dashboard-Seite), das aus den täglichen Snapshots zeichnet.
+The value series come from the scrape, not from `value_snapshots`, so their
+history starts with the first scrape. Long-term value development stays in the
+portal itself (the statistics page), which draws from the daily snapshots.

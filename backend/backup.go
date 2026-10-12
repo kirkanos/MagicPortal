@@ -61,7 +61,7 @@ func backupKeep() int {
 
 func startBackupScheduler() {
 	if !backupConfigured() {
-		log.Printf("[backup] deaktiviert (kein Ziel konfiguriert)")
+		log.Printf("[backup] disabled (no target configured)")
 		return
 	}
 	interval := 24 * time.Hour
@@ -70,7 +70,7 @@ func startBackupScheduler() {
 			interval = time.Duration(n) * time.Hour
 		}
 	}
-	log.Printf("[backup] aktiv, Intervall: %s", interval)
+	log.Printf("[backup] enabled, interval: %s", interval)
 	go func() {
 		runBackup()
 		ticker := time.NewTicker(interval)
@@ -89,9 +89,9 @@ func runBackup() {
 	}
 	data, err := buildBackup()
 	if err != nil {
-		log.Printf("[backup] Erstellung fehlgeschlagen: %v", err)
+		log.Printf("[backup] creation failed: %v", err)
 		metaSet(db, "backup_last_error", err.Error())
-		logActivityDedup("error", "Backup", "Backup-Erstellung fehlgeschlagen: "+err.Error())
+		logActivityDedup("error", "Backup", "Creating the backup failed: "+err.Error())
 		return
 	}
 	name := backupPrefix + time.Now().UTC().Format(dateLayout) + backupSuffix
@@ -101,7 +101,7 @@ func runBackup() {
 		if err := webdavBackup(name, data); err != nil {
 			log.Printf("[backup] WebDAV: %v", err)
 			metaSet(db, "backup_last_error", "WebDAV: "+err.Error())
-			logActivityDedup("error", "Backup", "Backup zu Nextcloud fehlgeschlagen: "+err.Error())
+			logActivityDedup("error", "Backup", "Backup to Nextcloud failed: "+err.Error())
 			metricBackups.inc(labels("target", "nextcloud", "result", "error"))
 		} else {
 			ok = true
@@ -112,7 +112,7 @@ func runBackup() {
 		if err := gdriveBackup(name, data); err != nil {
 			log.Printf("[backup] Google Drive: %v", err)
 			metaSet(db, "backup_last_error", "Google Drive: "+err.Error())
-			logActivityDedup("error", "Backup", "Backup zu Google Drive fehlgeschlagen: "+err.Error())
+			logActivityDedup("error", "Backup", "Backup to Google Drive failed: "+err.Error())
 			metricBackups.inc(labels("target", "gdrive", "result", "error"))
 		} else {
 			ok = true
@@ -124,8 +124,8 @@ func runBackup() {
 		metaSet(db, "backup_last_at", time.Now().UTC().Format(time.RFC3339))
 		metaSet(db, "backup_last_file", name)
 		metaSet(db, "backup_last_error", "")
-		log.Printf("[backup] gespeichert: %s (%d Bytes)", name, len(data))
-		logActivity("info", "Backup", fmt.Sprintf("Backup gespeichert: %s (%d KB)", name, len(data)/1024))
+		log.Printf("[backup] stored: %s (%d bytes)", name, len(data))
+		logActivity("info", "Backup", fmt.Sprintf("Backup stored: %s (%d KB)", name, len(data)/1024))
 	}
 }
 
@@ -178,7 +178,7 @@ func buildBackup() ([]byte, error) {
 func restoreFromGz(gzData []byte) error {
 	gr, err := gzip.NewReader(bytes.NewReader(gzData))
 	if err != nil {
-		return fmt.Errorf("kein gültiges gzip: %w", err)
+		return fmt.Errorf("not valid gzip: %w", err)
 	}
 	raw, err := io.ReadAll(gr)
 	gr.Close()
@@ -233,12 +233,12 @@ func maybeAutoRestore() {
 		return
 	}
 	if err := restoreFromGz(data); err != nil {
-		log.Printf("[backup] Auto-Restore (%s) fehlgeschlagen: %v", src, err)
+		log.Printf("[backup] auto restore (%s) failed: %v", src, err)
 		return
 	}
-	log.Printf("[backup] Auto-Restore aus %s: %d Einträge, %d Wert-Snapshots wiederhergestellt",
+	log.Printf("[backup] auto restore from %s: %d entries, %d value snapshots restored",
 		src, countRows(db, "collection"), countRows(db, "value_snapshots"))
-	logActivity("info", "Restore", fmt.Sprintf("Auto-Wiederherstellung aus %s (%d Einträge)", src, countRows(db, "collection")))
+	logActivity("info", "Restore", fmt.Sprintf("Automatic restore from %s (%d entries)", src, countRows(db, "collection")))
 	metaSet(db, "backup_last_restore_at", time.Now().UTC().Format(time.RFC3339))
 }
 
@@ -246,14 +246,14 @@ func maybeAutoRestore() {
 func fetchLatestBackup() ([]byte, string) {
 	if os.Getenv("WEBDAV_BACKUP_DIR") != "" {
 		if data, err := webdavFetchLatest(); err != nil {
-			log.Printf("[backup] WebDAV Restore-Suche: %v", err)
+			log.Printf("[backup] WebDAV restore lookup: %v", err)
 		} else if data != nil {
 			return data, "Nextcloud"
 		}
 	}
 	if os.Getenv("GDRIVE_BACKUP_FOLDER_ID") != "" && os.Getenv("GDRIVE_SA_JSON") != "" {
 		if data, err := gdriveFetchLatest(); err != nil {
-			log.Printf("[backup] Google Drive Restore-Suche: %v", err)
+			log.Printf("[backup] Google Drive restore lookup: %v", err)
 		} else if data != nil {
 			return data, "Google Drive"
 		}
@@ -545,11 +545,11 @@ func pruneGDrive(token string) {
 
 func handleBackupNow(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
-		http.Error(w, "Falsches oder fehlendes Passwort", 403)
+		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
 	if !backupConfigured() {
-		http.Error(w, "Kein Backup-Ziel konfiguriert", 400)
+		http.Error(w, "No backup target configured", 400)
 		return
 	}
 	go runBackup()
@@ -560,20 +560,20 @@ func handleBackupNow(w http.ResponseWriter, r *http.Request) {
 // the current user data). Password-protected.
 func handleRestoreLatest(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
-		http.Error(w, "Falsches oder fehlendes Passwort", 403)
+		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
 	data, src := fetchLatestBackup()
 	if data == nil {
-		http.Error(w, "Kein Backup gefunden", 404)
+		http.Error(w, "No backup found", 404)
 		return
 	}
 	if err := restoreFromGz(data); err != nil {
-		http.Error(w, "Restore fehlgeschlagen: "+err.Error(), 500)
+		http.Error(w, "Restore failed: "+err.Error(), 500)
 		return
 	}
 	metaSet(db, "backup_last_restore_at", time.Now().UTC().Format(time.RFC3339))
-	logActivity("info", "Restore", fmt.Sprintf("Backup wiederhergestellt aus %s (%d Einträge)", src, countRows(db, "collection")))
+	logActivity("info", "Restore", fmt.Sprintf("Backup restored from %s (%d entries)", src, countRows(db, "collection")))
 	go startSync(false)
 	writeJSON(w, map[string]interface{}{
 		"restored": true, "source": src,
@@ -585,7 +585,7 @@ func handleRestoreLatest(w http.ResponseWriter, r *http.Request) {
 // handleRestoreUpload restores from a gzipped backup file uploaded in the body.
 func handleRestoreUpload(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
-		http.Error(w, "Falsches oder fehlendes Passwort", 403)
+		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
 	defer r.Body.Close()
@@ -595,11 +595,11 @@ func handleRestoreUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := restoreFromGz(data); err != nil {
-		http.Error(w, "Restore fehlgeschlagen: "+err.Error(), 400)
+		http.Error(w, "Restore failed: "+err.Error(), 400)
 		return
 	}
 	metaSet(db, "backup_last_restore_at", time.Now().UTC().Format(time.RFC3339))
-	logActivity("info", "Restore", fmt.Sprintf("Backup aus Datei wiederhergestellt (%d Einträge)", countRows(db, "collection")))
+	logActivity("info", "Restore", fmt.Sprintf("Backup restored from an uploaded file (%d entries)", countRows(db, "collection")))
 	go startSync(false)
 	writeJSON(w, map[string]interface{}{
 		"restored":        true,

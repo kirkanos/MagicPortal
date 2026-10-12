@@ -7,20 +7,21 @@ const API = 'api';
 /* Full collection, already enriched with Scryfall metadata/prices by the backend.
    Shape per card matches what the pages expect (top-level fields + `scryfall`). */
 async function loadCollection() {
-  await uiConfigReady; // legt fest, ob Bilder vom Spiegel oder von Scryfall kommen
-  // 'no-cache' statt 'no-store': der Browser behaelt die Antwort und fragt mit
-  // If-None-Match nach. Unveraendert antwortet das Backend mit 304 ohne Body -
-  // bei mehreren MB Sammlung der Unterschied zwischen Sekunden und sofort.
+  await uiConfigReady; // decides whether images come from the mirror or Scryfall
+  // 'no-cache' rather than 'no-store': the browser keeps the response and
+  // revalidates with If-None-Match. Unchanged, the backend answers 304 with no
+  // body - with a collection of several MB that is the difference between
+  // seconds and instant.
   const res = await fetch(API + '/collection', { cache: 'no-cache' });
   if (!res.ok) throw new Error(t('Sammlung konnte nicht geladen werden', 'Could not load collection') + ' (HTTP ' + res.status + ')');
   return res.json();
 }
 
-/* Fertige Kennzahlen fuer die Statistikseite. Das Backend aggregiert die
-   Sammlung, damit die Seite nicht die kompletten Kartendaten laden muss - aus
-   knapp 15 MB JSON werden so ein paar Dutzend KB. */
+/* Ready-made figures for the statistics page. The backend aggregates the
+   collection so the page does not have to load the full card data - just under
+   15 MB of JSON become a few dozen KB. */
 async function loadDashboard() {
-  await uiConfigReady; // legt fest, ob Bilder vom Spiegel oder von Scryfall kommen
+  await uiConfigReady; // decides whether images come from the mirror or Scryfall
   const res = await fetch(API + '/dashboard', { cache: 'no-cache' });
   if (!res.ok) throw new Error(t('Statistik konnte nicht geladen werden', 'Could not load statistics') + ' (HTTP ' + res.status + ')');
   return res.json();
@@ -28,7 +29,7 @@ async function loadDashboard() {
 
 /* Set index: { code(lowercase): {name, cardCount, iconSvgUri, releasedAt, setType, digital} } */
 async function loadSetIndex() {
-  await uiConfigReady; // legt fest, ob Bilder vom Spiegel oder von Scryfall kommen
+  await uiConfigReady; // decides whether images come from the mirror or Scryfall
   const res = await fetch(API + '/sets', { cache: 'no-cache' });
   if (!res.ok) return {};
   return res.json();
@@ -117,17 +118,16 @@ async function resetCollectionCSV() {
   if (!res.ok) throw new Error(t('Leeren fehlgeschlagen', 'Clearing failed') + ' (HTTP ' + res.status + ')');
 }
 
-/* Scryfalls Bild-URLs folgen einem festen Schema:
-     cards.scryfall.io/<groesse>/<seite>/<1. Zeichen>/<2. Zeichen>/<id>.jpg
-   Deshalb uebertraegt das Backend sie nicht mehr, sondern nur die id - das
-   spart bei einer grossen Sammlung mehrere MB pro Abruf. Gebaut werden sie
-   ausschliesslich hier, damit ein spaeterer lokaler Bild-Spiegel nur diese
-   eine Funktion anfassen muss. */
+/* Scryfall's image URLs follow a fixed scheme:
+     cards.scryfall.io/<size>/<face>/<1st char>/<2nd char>/<id>.jpg
+   So the backend no longer transfers them, only the id - which saves several
+   MB per call on a large collection. They are built here and nowhere else, so
+   that a later local image mirror only has to touch this one function. */
 const SCRYFALL_IMAGE_BASE = 'https://cards.scryfall.io';
-/* Ist der lokale Spiegel aktiv (IMAGE_MIRROR im Backend), laufen die Bilder
-   ueber die eigene Domain. Welche Datei dort tatsaechlich liegt und welche von
-   Scryfall nachgeladen wird, entscheidet nginx per try_files - der Browser
-   muss das nicht wissen und spart sich eine Pruefung je Karte. */
+/* When the local mirror is active (IMAGE_MIRROR in the backend), the images
+   go through our own domain. Which file actually exists there and which is
+   fetched from Scryfall is decided by nginx via try_files - the browser does
+   not need to know and saves itself a check per card. */
 let imageMirrorActive = false;
 
 function imageBase() {
@@ -143,12 +143,11 @@ function setSymbolURL(uri) {
 function scryfallImageURL(card, size, face) {
   const sc = card.scryfall;
   if (!sc) return '';
-  // Ein paar Sonderdrucke (Art Series) haben im Katalog gar kein Bild - aus
-  // ihrer id laesst sich keine gueltige URL bauen, also bleibt es beim
-  // Platzhalter.
+  // A few special printings (art series) have no image in the catalog at all -
+  // no valid URL can be built from their id, so it stays the placeholder.
   if (sc.noImage) return '';
-  // imageId steht nur dort, wo der Katalog eine andere id fuehrt als der
-  // Sammlungseintrag (abweichender Druck im ManaBox-Export).
+  // imageId is only present where the catalog carries a different id than the
+  // collection row (a diverging printing in the ManaBox export).
   const id = sc.imageId || card.scryfallId || '';
   if (id.length < 2) return '';
   if (face === 'back' && !sc.hasBack) return '';
@@ -159,8 +158,8 @@ function cardImage(card, size) {
   return scryfallImageURL(card, size === 'small' ? 'small' : 'normal', 'front');
 }
 
-/* Karten aus /api/sets/{code}/cards sind flach aufgebaut (imageId/hasBack
-   direkt am Objekt), nutzen aber dieselbe Herleitung. */
+/* Cards from /api/sets/{code}/cards are flat (imageId/hasBack directly on the
+   object) but use the same derivation. */
 function setCardImage(card, size, face) {
   return scryfallImageURL({ scryfallId: card.imageId, scryfall: { hasBack: card.hasBack } }, size, face || 'front');
 }
@@ -305,7 +304,7 @@ function showLoading(message) {
   if (!el) return;
   el.style.display = 'flex';
   const text = el.querySelector('.loading-text');
-  if (text) text.textContent = message || 'Lade Sammlung...';
+  if (text) text.textContent = message || t('Lade Sammlung…', 'Loading collection…');
 }
 
 function updateLoadingProgress() {
@@ -462,8 +461,8 @@ async function loadCardVariants(group) {
           : p.priceEurFoil != null
           ? formatCurrency(p.priceEurFoil, 'EUR') + ' (Foil)'
           : '–';
-      // Bild und Editionssymbol werden abgeleitet, damit auch die Varianten
-      // ueber den lokalen Spiegel laufen, wenn er aktiv ist.
+      // Image and set symbol are derived so the printings go through the
+      // local mirror as well when it is active.
       const img = setCardImage({ imageId: p.imageId }, 'small');
       const iconURL = setSymbolURL(p.iconSvgUri);
       const icon = iconURL
@@ -496,13 +495,13 @@ function initModal() {
   });
 }
 
-/* Kartenbild im Detaildialog. Doppelseitige Karten (Transform, modale DFCs,
-   Sagas) wurden frueher als zwei Bilder untereinander gezeigt; stattdessen
-   gibt es jetzt ein Bild, das sich umdrehen laesst.
+/* The card image in the detail dialog. Double-faced cards (transform, modal
+   DFCs, sagas) used to be shown as two images below each other; instead there
+   is now one image that can be flipped.
 
-   Die Rueckseite haengt nur mit data-src im Markup und wird erst beim ersten
-   Umdrehen geladen - das spart bei jedem Oeffnen rund 100 KB, denn meistens
-   will man sie gar nicht sehen. */
+   The back face only sits in the markup as data-src and is loaded on the first
+   flip - saving around 100 KB every time such a card is opened, because most
+   of the time nobody wants to see it. */
 function cardFaceHTML(name, frontURL, backURL) {
   if (!frontURL) return `<div class="no-image">${t('Kein Bild', 'No image')}</div>`;
   if (!backURL) return `<img src="${frontURL}" alt="${escapeHTML(name)}">`;
@@ -519,7 +518,7 @@ function cardFaceHTML(name, frontURL, backURL) {
     </button>`;
 }
 
-/* Klick auf das Bild oder die Schaltflaeche dreht die Karte. */
+/* Clicking the image or the button flips the card. */
 function initCardFlip(root) {
   const flip = root.querySelector('.card-flip');
   if (!flip) return;
@@ -529,11 +528,11 @@ function initCardFlip(root) {
 
   const toggle = () => {
     const flipped = flip.dataset.flipped !== 'true';
-    // Rueckseite beim ersten Mal nachladen.
+    // Load the back face on the first flip.
     if (flipped && !back.getAttribute('src')) back.setAttribute('src', back.dataset.src);
     flip.dataset.flipped = String(flipped);
     if (btn) btn.setAttribute('aria-pressed', String(flipped));
-    // Die abgewandte Seite aus dem Vorlesefluss nehmen.
+    // Take the hidden face out of the screen-reader flow.
     back.setAttribute('aria-hidden', String(!flipped));
     front.setAttribute('aria-hidden', String(flipped));
   };

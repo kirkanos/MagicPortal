@@ -12,14 +12,14 @@ server {
     gzip_comp_level 5;
     gzip_types text/plain text/css application/javascript application/json image/svg+xml;
 
-    # --- Lokaler Bild-Spiegel mit Rueckfall auf Scryfall ---
-    # Das Volume liegt unter <root>/img. try_files entscheidet pro Datei: ist
-    # sie gespiegelt, kommt sie von hier, sonst holt nginx sie bei Scryfall.
-    # Deshalb braucht der Browser keine Existenzpruefung je Karte - die waere
-    # ein Zusatz-Request pro Bild und teurer als der Spiegel spart.
+    # --- Local image mirror with a fallback to Scryfall ---
+    # The volume sits at <root>/img. try_files decides per file: if it is
+    # mirrored it comes from here, otherwise nginx fetches it from Scryfall.
+    # That is why the browser needs no existence check per card - that would
+    # be an extra request per image and cost more than the mirror saves.
     #
-    # Ist der Spiegel aus (IMAGE_MIRROR), baut das Frontend die URLs direkt auf
-    # Scryfall und diese Bloecke werden nie angefragt.
+    # With the mirror off (IMAGE_MIRROR), the frontend builds Scryfall URLs
+    # directly and these blocks are never requested.
     location /img/cards/ {
         try_files $uri @scryfall_cards;
         add_header Cache-Control "public, max-age=2592000" always;
@@ -29,10 +29,10 @@ server {
         proxy_pass https://cards.scryfall.io;
         proxy_set_header Host cards.scryfall.io;
         proxy_ssl_server_name on;
-        # Keine Besucher-Header an einen fremden CDN weiterreichen: ein
-        # SSO-Cookie der eigenen Domain liegt auch an dieser Anfrage an und hat
-        # bei Scryfall nichts zu suchen - deren CDN bricht Anfragen mit grossem
-        # Cookie sogar ab (sichtbar als 414 statt Bild).
+        # Do not forward visitor headers to a third-party CDN: an SSO cookie
+        # for our own domain rides along on this request too and has no
+        # business at Scryfall - and their CDN even aborts requests carrying a
+        # large cookie (which shows up as a 414 instead of an image).
         proxy_set_header Cookie "";
         proxy_set_header Authorization "";
     }
@@ -50,10 +50,10 @@ server {
         proxy_pass https://svgs.scryfall.io;
         proxy_set_header Host svgs.scryfall.io;
         proxy_ssl_server_name on;
-        # Keine Besucher-Header an einen fremden CDN weiterreichen: ein
-        # SSO-Cookie der eigenen Domain liegt auch an dieser Anfrage an und hat
-        # bei Scryfall nichts zu suchen - deren CDN bricht Anfragen mit grossem
-        # Cookie sogar ab (sichtbar als 414 statt Bild).
+        # Do not forward visitor headers to a third-party CDN: an SSO cookie
+        # for our own domain rides along on this request too and has no
+        # business at Scryfall - and their CDN even aborts requests carrying a
+        # large cookie (which shows up as a 414 instead of an image).
         proxy_set_header Cookie "";
         proxy_set_header Authorization "";
     }
@@ -62,18 +62,19 @@ server {
         proxy_pass https://svgs.scryfall.io;
         proxy_set_header Host svgs.scryfall.io;
         proxy_ssl_server_name on;
-        # Keine Besucher-Header an einen fremden CDN weiterreichen: ein
-        # SSO-Cookie der eigenen Domain liegt auch an dieser Anfrage an und hat
-        # bei Scryfall nichts zu suchen - deren CDN bricht Anfragen mit grossem
-        # Cookie sogar ab (sichtbar als 414 statt Bild).
+        # Do not forward visitor headers to a third-party CDN: an SSO cookie
+        # for our own domain rides along on this request too and has no
+        # business at Scryfall - and their CDN even aborts requests carrying a
+        # large cookie (which shows up as a 414 instead of an image).
         proxy_set_header Cookie "";
         proxy_set_header Authorization "";
     }
 
-    # --- Reichweitenmessung (optional) ---
-    # Die beiden Proxy-Pfade erzeugt /docker-entrypoint.d/30-analytics.sh beim
-    # Start aus den ANALYTICS_*-Variablen. Ist nichts gesetzt, ist die Datei
-    # leer und es wird nichts geproxyt (siehe nginx/analytics.sh und README).
+    # --- Analytics (optional) ---
+    # The two proxy paths are generated at startup from the ANALYTICS_*
+    # variables by /docker-entrypoint.d/30-analytics.sh. With nothing set the
+    # file is empty and nothing is proxied (see nginx/analytics.sh and the
+    # README).
     include /etc/nginx/conf.d/analytics/locations.conf;
 
     # API requests are proxied to the Go backend container.
@@ -93,10 +94,10 @@ server {
         # served stale from the browser cache (returns 304 when unchanged).
         add_header Cache-Control "no-cache" always;
 
-        # Setzt den Platzhalter <!--analytics--> in den HTML-Seiten durch das
-        # Tracker-Snippet. Auch diese Datei erzeugt 30-analytics.sh; ohne
-        # ANALYTICS_* bleibt sie leer, dann gibt es kein sub_filter und die
-        # Seiten behalten ihr ETag.
+        # Replaces the <!--analytics--> placeholder in the HTML pages with
+        # the tracker snippet. 30-analytics.sh generates this file too;
+        # without ANALYTICS_* it stays empty, so there is no sub_filter and
+        # the pages keep their ETag.
         include /etc/nginx/conf.d/analytics/snippet.conf;
     }
 }

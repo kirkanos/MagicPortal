@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Ein selbstgehostetes Webportal für deine Magic: The Gathering Sammlung – aus einem ManaBox-CSV-Export.</strong>
+  <strong>A self-hosted web portal for your Magic: The Gathering collection, built from a ManaBox CSV export.</strong>
 </p>
 
 <p align="center">
@@ -15,233 +15,231 @@
 </p>
 
 <p align="center">
-  🔗 <strong>Live-Demo:</strong> <a href="https://mtg.kirkanos.net">mtg.kirkanos.net</a>
+  🔗 <strong>Live demo:</strong> <a href="https://mtg.kirkanos.net">mtg.kirkanos.net</a>
 </p>
 
 ---
 
-Läuft als kleiner Docker-Stack (nginx-Frontend + Go-Backend + SQLite). Kartenbilder,
-Typzeilen und **Preise** kommen aus [Scryfall](https://scryfall.com) und werden im
-Hintergrund gepflegt – die Oberfläche lädt alles fertig angereichert und schnell aus der API.
-Inspiriert von [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection-viewer).
+Runs as a small Docker stack (nginx frontend + Go backend + SQLite). Card images, type lines
+and **prices** come from [Scryfall](https://scryfall.com) and are kept up to date in the
+background – the interface loads everything pre-enriched and fast from the API.
+Inspired by [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection-viewer).
 
-## 📸 Eindrücke
+## 📸 Impressions
 
 |  |  |
 |---|---|
-| ![Karten-Ansicht](docs/screenshots/cards.png)<br>*Karten-Ansicht: Raster mit Filtern, Preisen, Sprachflaggen* | ![Editionen](docs/screenshots/editions.png)<br>*Editionen: gesammelt / fehlt / mehrfach je Set* |
-| ![Reserved List](docs/screenshots/reserved.png)<br>*Reserved List: besessen vs. fehlend + Investition* | ![Statistik-Dashboard](docs/screenshots/dashboard.png)<br>*Statistik: Wertentwicklung & größte Bewegungen* |
+| ![Card view](docs/screenshots/cards.png)<br>*Card view: grid with filters, prices, language flags* | ![Editions](docs/screenshots/editions.png)<br>*Editions: owned / missing / duplicates per set* |
+| ![Reserved List](docs/screenshots/reserved.png)<br>*Reserved List: owned vs. missing + investment* | ![Statistics dashboard](docs/screenshots/dashboard.png)<br>*Statistics: value over time & biggest movers* |
 
-<sub>Screenshots von der [Live-Demo](https://mtg.kirkanos.net). Aktuell halten mit `docs/screenshots.sh` (nutzt einen headless-Chrome-Docker-Container – kein Node, kein Host-Browser nötig).</sub>
+<sub>Screenshots from the [live demo](https://mtg.kirkanos.net). Refresh them with `docs/screenshots.sh` (uses a headless Chrome container – no Node, no browser on the host required).</sub>
 
 ## ✨ Features
 
-- **🗃️ Karten-Ansicht** – durchsuchbares, filterbares Raster (Set, Rarität, Farbe, Foil, **Ordner/Liste**, **Kartentyp & Untertyp** – z. B. Creature → Dragon, Sortierung inkl. Erscheinungsdatum). Der **Set-Filter** ist ein durchsuchbares Dropdown mit **Editionssymbol + Name** (statt Kürzel). Gleiche Karten in verschiedenen Sprachen werden zu **einer** Kachel zusammengefasst (Gesamtanzahl + Sprachflaggen); jede Kachel zeigt Editionssymbol, ausgeschriebenen Set-Namen und die nach Rarität eingefärbte Rarität. Die **Stichwort-Suche** (UND) erfasst auch Kartentext und Manakosten (z. B. `create token soldier`, `2rr`, `wu`).
-- **🔍 Kartendetails** – Manakosten als Symbole, Kartentext (Oracle), pro Sprache/Ausführung/Zustand eine Zeile (Ordner / Preis / Anzahl / Zustand / hinzugefügt am) sowie eine Galerie **aller weiteren Editionen** der Karte mit Bild, Edition und Preis. Bei **doppelseitigen Karten** (Transform/MDFC) wird zusätzlich die **Rückseite** angezeigt – sowohl in der Karten- als auch in der Editions-Detailansicht.
-- **📚 Editionen** – Überblick pro Set: besessen / fehlt / mehrfach, inklusive Editionen, aus denen du noch **keine** Karte hast. Set-Typ-Filter (Standard: sammelbare Typen, bis „alle"), aufklappbare Erklärung, Sortierung u. a. nach fehlenden Karten und Erscheinungsdatum. Klick öffnet ein Overlay mit **allen** Karten der Edition (fehlende ausgegraut), Set-Symbol, dem Wert der fehlenden Karten und – bei besessenen Karten – dem Ordner. In der Kartendetailansicht führt ein direkter **Cardmarket-Link** zum jeweiligen Produkt.
-- **🏛️ Reserved List** – Überblick über Wizards' [Reserved List](https://magic.wizards.com/en/formats/reserved-list): welche Karten du besitzt (jede Version/Sprache zählt) und welche fehlen, als Karten-Raster (fehlende ausgegraut). Kennzahlen: Anzahl gesammelt/fehlend, Vollständigkeit, **Wert der gesammelten** Karten und die nötige **Investition, um den Rest zu kaufen** (jeweils günstigste verfügbare Version). Filter (alle/gesammelt/fehlend), Suche und Sortierung nach Preis/Name.
-- **📁 Ordner & Listen** – eigene Übersichtsseiten für ManaBox-Ordner (Binder) und -Listen mit Kartenanzahl und Wert; Klick springt in die gefilterte Karten-Ansicht.
-- **🧩 Decks** – Menüpunkt für künftigen Deck-Import/-Export (derzeit Platzhalter, noch ohne Funktion).
-- **📊 Statistik** – umfangreiches Dashboard: Kennzahlen (Einträge, Karten, Editionen, Ordner, Kauf-/Marktwert, Wertzuwachs Markt − Kauf, Ø-Wert, Foil-Anteil, teuerste Karte) sowie Charts zu Rarität, Farben, Kartentypen, Sprachen, Zustand, Manawert, Foil, Kaufwert & Zugänge über Zeit, wertvollste Karten (Kauf/Markt), **wertgewichtet** nach Farbe und Rarität, Preisklassen-Verteilung und **Detailtabellen** (Rarität, Editionen) mit Einträgen, Exemplaren, Marktwert, Ø-Wert und Wertanteil.
-- **📈 Wertentwicklung** – das Backend schreibt täglich einen (foil-bewussten) Wert-Snapshot der Sammlung. Das Dashboard zeigt daraus die **Markt- vs. Kaufwert-Kurve** über Zeit (Zeitraum 30 T / 90 T / 1 J / alles) und die **größten Bewegungen** (Gewinner/Verlierer je Zeitraum, gewichtet nach gehaltener Menge). Die Historie entsteht ab Deployment vorwärts (keine rückwirkenden Preisdaten).
-- **✅ Deck-Checker** – Deckliste einfügen und sehen, welche Karten du schon besitzt.
-- **🌐 Zweisprachig** – Oberfläche in Deutsch und Englisch, umschaltbar im Menü; die Auswahl wird gespeichert (Standard: Deutsch).
-- **⬆️ CSV-Upload** – neue ManaBox-Exporte direkt im Menü hochladen (passwortgeschützt); der Import **ersetzt** die Sammlung vollständig, sodass sie exakt der CSV entspricht (nicht mehr enthaltene Karten verschwinden).
-- **🔄 Auto-Sync** – Kartendaten & Preise werden alle 5 Minuten im Hintergrund aktualisiert (Download nur, wenn Scryfall wirklich einen neuen Datensatz veröffentlicht hat).
-- **🧾 Aktivitätsprotokoll** – ein **nur im eingeloggten Zustand** sichtbarer Menüpunkt „Aktivität" zeigt die letzten Aktionen des Tools (Importe, Sync, Backups, Wiederherstellungen) samt Fehlermeldungen. Das Protokoll ist **persistent** (übersteht Neustarts) und lässt sich jederzeit leeren.
-- **⚙️ Admin-Interface** – ein **nur für eingeloggte Nutzer** sichtbares Zahnrad (oben rechts) öffnet ein Einstellungs-Overlay: der **Zufallskarten-Streifen** auf der Karten-Seite (an/aus + Anzahl), das **Aus-/Einblenden einzelner Menüpunkte** sowie die Wartungsaktionen **Sammlung leeren / Backup / Wiederherstellen** (serverseitig gespeichert, gilt für alle Besucher).
-- **🎲 Zufallskarten** – optionaler Streifen zufälliger Karten aus der Sammlung oben auf der Karten-Seite (nebeneinander, konfigurierbare Anzahl über das Admin-Interface).
+- **🗃️ Card view** – searchable, filterable grid (set, rarity, color, foil, **binder/list**, **card type & subtype** – e.g. Creature → Dragon, sorting including release date). The **set filter** is a searchable dropdown showing **set symbol + name** instead of codes. The same card in different languages is folded into **one** tile (total quantity + language flags); every tile shows the set symbol, the full set name and the rarity in its rarity color. The **keyword search** (AND) also covers rules text and mana cost (e.g. `create token soldier`, `2rr`, `wu`).
+- **🔍 Card details** – mana cost as symbols, Oracle text, one row per language/finish/condition (binder / price / quantity / condition / date added) plus a gallery of **all other printings** of the card with image, edition and price. **Double-faced cards** (transform/MDFC) can be **flipped** to the back – in both the card dialog and the editions overlay.
+- **📚 Editions** – per-set overview: owned / missing / duplicates, including sets you own **no** card from at all. Set-type filter (default: collectible types, up to "all"), an expandable explanation, sorting by missing cards and release date among others. A click opens an overlay with **every** card of the edition (missing ones greyed out), the set symbol, the value of the missing cards and – for owned cards – the binder. The card detail view links straight to the matching **Cardmarket** product.
+- **🏛️ Reserved List** – an overview of Wizards' [Reserved List](https://magic.wizards.com/en/formats/reserved-list): which cards you own (any version/language counts) and which are missing, as a card grid (missing ones greyed out). Key figures: owned/missing count, completeness, **value of the owned** cards and the **investment needed to buy the rest** (cheapest available version each). Filter (all/owned/missing), search and sorting by price/name.
+- **📁 Binders & lists** – dedicated overview pages for ManaBox binders and lists with card count and value; a click jumps to the filtered card view.
+- **🧩 Decks** – menu entry for a future deck import/export (currently a placeholder, no functionality yet).
+- **📊 Statistics** – a thorough dashboard: key figures (entries, cards, editions, binders, purchase/market value, gain market − purchase, average value, foil share, most expensive card) plus charts for rarity, colors, card types, languages, condition, mana value, foil, purchase value & additions over time, most valuable cards (purchase/market), **value-weighted** by color and rarity, price-bracket distribution and **detail tables** (rarity, editions) with entries, copies, market value, average value and share of value.
+- **📈 Value over time** – the backend writes a daily (foil-aware) value snapshot of the collection. From that, the dashboard draws the **market vs. purchase value curve** over time (range 30 d / 90 d / 1 y / all) and the **biggest movers** (gainers/losers per range, weighted by the quantity you hold). History starts at deployment and grows forward (no retroactive price data).
+- **✅ Deck checker** – paste a decklist and see which cards you already own.
+- **🌐 Bilingual** – interface in German and English, switchable in the menu; the choice is remembered (default: German).
+- **⬆️ CSV upload** – upload new ManaBox exports straight from the menu (password protected); the import **replaces** the collection entirely, so it matches the CSV exactly (cards no longer in it disappear).
+- **🔄 Auto sync** – card data & prices are refreshed every 5 minutes in the background (downloading only when Scryfall has actually published a new dataset).
+- **🧾 Activity log** – an "Activity" menu entry, visible **only while logged in**, shows the tool's recent actions (imports, syncs, backups, restores) including error messages. The log is **persistent** (survives restarts) and can be cleared at any time.
+- **⚙️ Admin interface** – a gear icon in the top right, visible **only to logged-in users**, opens a settings overlay: the **random card strip** on the cards page (on/off + count), **hiding or showing individual menu entries** and the maintenance actions **clear collection / backup / restore** (stored server-side, applies to all visitors).
+- **🎲 Random cards** – an optional strip of random cards from your collection at the top of the cards page (side by side, count configurable in the admin interface).
 
-## 🏗️ Architektur
+## 🏗️ Architecture
 
 ```text
-            ┌── web (nginx) ───────┐   statische Oberfläche, Reverse-Proxy /api
- Port oder  │                      │   → backend, lokaler Bild-Spiegel
+            ┌── web (nginx) ───────┐   static interface, reverse proxy /api
+ Port or    │                      │   → backend, local image mirror
  Traefik ───▶  mtg.example.com     │
             └──────────┬───────────┘
                        │ /api
-            ┌──────────▼───────────┐   Go-Backend: REST-API + Background-Jobs
-            │  backend (Go)        │   (SQLite im Volume "mtg-db")
+            ┌──────────▼───────────┐   Go backend: REST API + background jobs
+            │  backend (Go)        │   (SQLite in the "mtg-db" volume)
             └──────────────────────┘
 ```
 
-Zwei Container, mehr nicht. Ob davor ein Reverse Proxy steht oder schlicht ein Port
-veröffentlicht wird, entscheidet allein die gewählte Compose-Datei.
+Two containers, nothing else. Whether a reverse proxy sits in front or a port is simply
+published is decided solely by the compose file you pick.
 
-- Metadaten, Bilder und **Preise** stammen aus **Scryfall Bulk Data** – einem täglich aktualisierten Komplettdump, den das Backend im Hintergrund lädt und in SQLite ablegt (statt tausender Einzel-API-Calls im Browser).
-- Der Hintergrundjob läuft **alle 5 Minuten**: er prüft günstig, ob ein neuer Dump vorliegt, und lädt die ~140 MB nur dann. Der Set-Index wird wöchentlich aktualisiert.
+- Metadata, images and **prices** come from **Scryfall Bulk Data** – a daily full dump that the backend fetches in the background and stores in SQLite (instead of thousands of individual API calls in the browser).
+- The background job runs **every 5 minutes**: it cheaply checks whether a new dump exists and downloads the ~140 MB only then. The set index is refreshed weekly.
 
-## 🚀 Schnellstart
+## 🚀 Quick start
 
-Ohne weitere Infrastruktur – nur Docker:
+No extra infrastructure – just Docker:
 
 ```bash
 docker compose -f docker-compose.standalone.yml up -d --build
 ```
 
-Fertig: **http://localhost:8080**. Kein Traefik, kein externes Netzwerk, keine `.env` nötig.
-Der Stack startet mit **leerem Datenbestand** – lade deine ManaBox-CSV über das Menü hoch
-(siehe unten); die Scryfall-Daten holt sich das Backend beim Start selbst im Hintergrund.
+That's it: **http://localhost:8080**. No Traefik, no external network, no `.env` needed.
+The stack starts with an **empty collection** – upload your ManaBox CSV through the menu
+(see below); the backend fetches the Scryfall data itself in the background.
 
-Der Port liegt bewusst nur auf `127.0.0.1`. Für den Zugriff aus dem Heimnetz:
+The port deliberately binds to `127.0.0.1` only. To reach it from your home network:
 
 ```bash
-BIND=0.0.0.0 HTTP_PORT=8080 UPLOAD_PASSWORD=geheim \
+BIND=0.0.0.0 HTTP_PORT=8080 UPLOAD_PASSWORD=secret \
   docker compose -f docker-compose.standalone.yml up -d --build
 ```
 
-Dauerhaft gehört beides in eine `.env` neben der Compose-Datei (`cp .env.sample .env`); alle
-Variablen daraus gelten auch für den Standalone-Stack.
+For good, both belong in a `.env` next to the compose file (`cp .env.sample .env`); every
+variable in it applies to the standalone stack as well.
 
-### Welche Compose-Datei?
+### Which compose file?
 
-| Datei | Wofür |
+| File | What for |
 |---|---|
-| `docker-compose.standalone.yml` | **Normalfall zum Selberbetreiben.** Veröffentlicht einen Port, sonst nichts. |
-| `docker-compose.yml` | Betrieb hinter [Traefik](https://traefik.io) unter `https://$HOST`, mit Metrik-Port im gemeinsamen `traefik-network`. Erwartet das externe Netz (`docker network create traefik-network`) und eine `.env` mit `SERVICE`/`HOST`/`PORT`. |
-| `docker-compose.local.yml` | Testinstanz neben einem laufenden Server-Stack: eigener Projektname, eigene Volumes, Port `127.0.0.1:8088`, Umgebung ausschließlich aus `.env.local`. Schreibzugriffe auf fremde Ablagen sind fest abgeschaltet. |
+| `docker-compose.standalone.yml` | **The normal case for running it yourself.** Publishes a port, nothing else. |
+| `docker-compose.yml` | Running behind [Traefik](https://traefik.io) at `https://$HOST`, with the metrics port on a shared `traefik-network`. Expects that external network (`docker network create traefik-network`) and a `.env` with `SERVICE`/`HOST`/`PORT`. |
+| `docker-compose.local.yml` | A test instance alongside a running server stack: own project name, own volumes, port `127.0.0.1:8088`, environment exclusively from `.env.local`. Write access to remote storage is hard-disabled. |
 
-> Alle drei bauen dieselben zwei Images und unterscheiden sich nur darin, wie sie erreichbar sind.
-> `docker compose` liest automatisch eine `.env` **neben der Compose-Datei** – wer den
-> Standalone-Stack im selben Verzeichnis wie eine Server-`.env` startet, erbt deren Einstellungen
-> (etwa den automatischen Import). Mit `--env-file /dev/null` startet er ohne jede Vorbelegung.
+> All three build the same two images and differ only in how they are reachable.
+> `docker compose` automatically reads a `.env` **next to the compose file** – starting the
+> standalone stack in the same directory as a server `.env` inherits its settings (the
+> automatic import, for instance). `--env-file /dev/null` starts it with nothing preset.
 
-## 📥 Sammlung befüllen & aktualisieren
+## 📥 Filling and updating the collection
 
-Oben rechts im Menü: **„🔑 Login"** → Passwort → dann erscheinen **„⬆ CSV hochladen"**, **„Leeren"**,
-**„💾 Backup"** und **„⟲ Wiederherstellen"** (alle Aktionen sind erst nach dem Login sichtbar).
-Der Import **ersetzt** die Sammlung vollständig: Der Datenbestand entspricht danach exakt der
-hochgeladenen CSV – Karten, die nicht mehr enthalten sind, werden entfernt (atomar; bei einem
-Fehler bleibt die bisherige Sammlung erhalten). **„Leeren"** entfernt die gesamte Sammlung.
+Top right in the menu: **"🔑 Login"** → password → then **"⬆ Upload CSV"**, **"Clear"**,
+**"💾 Backup"** and **"⟲ Restore"** appear (all actions are hidden until you log in).
+The import **replaces** the collection entirely: afterwards the data matches the uploaded CSV
+exactly – cards no longer in it are removed (atomically; on error the previous collection
+stays intact). **"Clear"** removes the whole collection.
 
-Erwartete Spalten (Standard-ManaBox-Export):
+Expected columns (standard ManaBox export):
 `Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, Scryfall ID, Purchase price, Purchase price currency, Condition, Language, Added`.
 
-Der **Datenstand** (letzte Aktualisierung von Kartendaten/Preisen) steht oben rechts im Menü;
-**„🔄 Aktualisieren"** stößt einen sofortigen Scryfall-Sync an.
+The **data timestamp** (last update of card data/prices) is shown at the top right of the menu;
+**"🔄 Refresh"** triggers an immediate Scryfall sync.
 
-## ⚙️ Konfiguration (`.env`)
+## ⚙️ Configuration (`.env`)
 
-Alles ist optional – der Standalone-Stack läuft auch ganz ohne `.env`.
-Die ersten drei Werte braucht nur der Betrieb hinter Traefik:
+Everything is optional – the standalone stack also runs without any `.env` at all.
+The first three values are only needed when running behind Traefik:
 
-| Variable | Zweck |
+| Variable | Purpose |
 |---|---|
-| `SERVICE` | Dienstname (Container-Namen, Traefik-Router, systemd-Unit, `/services/$SERVICE`) |
-| `HOST` | Öffentliche Domain (Traefik-Routing + TLS) |
-| `PORT` | Interner Port des `web`-Containers (nginx, 80) |
-| `UPLOAD_PASSWORD` | Passwort für Upload/Reset/Sync (leer = kein Schutz) |
+| `SERVICE` | Service name (container names, Traefik router, systemd unit, `/services/$SERVICE`) |
+| `HOST` | Public domain (Traefik routing + TLS) |
+| `PORT` | Internal port of the `web` container (nginx, 80) |
+| `UPLOAD_PASSWORD` | Password for upload/reset/sync (empty = no protection) |
 
-Nur für den Standalone-Stack:
+Standalone stack only:
 
-| Variable | Zweck |
+| Variable | Purpose |
 |---|---|
-| `HTTP_PORT` | Veröffentlichter Port (Standard `8080`). Eigener Name, weil `PORT` oben den internen Port meint, auf den Traefik routet. |
-| `BIND` | Adresse, auf der er liegt (Standard `127.0.0.1`, `0.0.0.0` = im Netz erreichbar) |
+| `HTTP_PORT` | Published port (default `8080`). A separate name, because `PORT` above means the internal port Traefik routes to. |
+| `BIND` | Address it binds to (default `127.0.0.1`, `0.0.0.0` = reachable on the network) |
 
-Optional: `IMAGE_MIRROR` (Standard `false`) spiegelt Kartenbilder und Symbole lokal –
-Details in **[docs/roadmap.md](docs/roadmap.md)**.
-`SYNC_INTERVAL_MINUTES` (Standard 5) steuert das Hintergrund-Intervall,
-`METRICS_PORT` (Standard 9090, `off` = aus) und `METRICS_CACHE_SECONDS` (Standard 30) den
-Prometheus-Endpunkt.
-Die Datenbank liegt im benannten Volume `mtg-db`. Das Passwort wird via `X-Upload-Password`-Header
-übertragen (kein Browser-Login-Dialog).
+Optional: `IMAGE_MIRROR` (default `false`) mirrors card images and symbols locally –
+details in **[docs/roadmap.md](docs/roadmap.md)**.
+`SYNC_INTERVAL_MINUTES` (default 5) controls the background interval,
+`METRICS_PORT` (default 9090, `off` = disabled) and `METRICS_CACHE_SECONDS` (default 30) the
+Prometheus endpoint.
+The database lives in the named volume `mtg-db`. The password travels in an
+`X-Upload-Password` header (no browser login dialog).
 
-### 📥 Automatischer Remote-Import (optional)
+### 📥 Automatic remote import (optional)
 
-Das Backend kann regelmäßig eine Nextcloud- und/oder Google-Drive-Datei nach einem neuen
-ManaBox-Export durchsuchen und ihn bei Änderung automatisch importieren (Full-Replace, wie beim
-manuellen Upload). Die Änderungserkennung nutzt ETag/`Last-Modified` bzw. die Datei-Prüfsumme –
-unveränderte Dateien werden nicht erneut importiert. Alle Felder sind optional; leer = deaktiviert.
-Der **„🔄 Aktualisieren"-Button** stößt diese Prüfung zusätzlich manuell an (nur wenn eine Quelle
-konfiguriert ist); andernfalls aktualisiert er nur die Scryfall-Daten.
+The backend can poll a Nextcloud and/or Google Drive file for a new ManaBox export and import
+it automatically when it changes (full replace, just like a manual upload). Change detection
+uses ETag/`Last-Modified` or the file checksum – unchanged files are not re-imported. All
+fields are optional; empty = disabled. The **"🔄 Refresh" button** also triggers this check
+manually (only when a source is configured); otherwise it just refreshes the Scryfall data.
 
-| Variable | Zweck |
+| Variable | Purpose |
 |---|---|
-| `REMOTE_IMPORT_INTERVAL_MINUTES` | Prüf-Intervall (Standard 15) |
-| `REMOTE_IMPORT_DELETE` | Quelldatei nach erfolgreichem Import löschen (Standard `true`; `false` = behalten) |
-| `WEBDAV_URL` | Direkte WebDAV-URL zur CSV (Nextcloud: `…/remote.php/dav/files/<user>/<pfad>/export.csv`) |
-| `WEBDAV_USER` | Nextcloud-Benutzer |
-| `WEBDAV_PASSWORD` | Nextcloud-**App-Passwort** (nicht das Login-Passwort) |
-| `GDRIVE_FILE_ID` | Datei-ID der CSV in Google Drive |
-| `GDRIVE_SA_JSON` | Service-Account-JSON (inline, base64-kodiert oder Pfad zu gemounteter Datei) |
+| `REMOTE_IMPORT_INTERVAL_MINUTES` | Poll interval (default 15) |
+| `REMOTE_IMPORT_DELETE` | Delete the source file after a successful import (default `true`; `false` = keep it) |
+| `WEBDAV_URL` | Direct WebDAV URL to the CSV (Nextcloud: `…/remote.php/dav/files/<user>/<path>/export.csv`) |
+| `WEBDAV_USER` | Nextcloud user |
+| `WEBDAV_PASSWORD` | Nextcloud **app password** (not the login password) |
+| `GDRIVE_FILE_ID` | File ID of the CSV in Google Drive |
+| `GDRIVE_SA_JSON` | Service account JSON (inline, base64-encoded or a path to a mounted file) |
 
-**Google Drive:** einen Service-Account in der Google Cloud Console anlegen, die Drive-API aktivieren
-und die CSV-Datei (bzw. deren Ordner) für die Service-Account-E-Mail freigeben. Für den reinen Import
-genügt lesender Zugriff (`drive.readonly`); ist `REMOTE_IMPORT_DELETE` aktiv, wird der Schreib-Scope
-`drive` angefordert und die Datei muss für den Service-Account **löschbar** sein (Bearbeiter-Recht;
-kann sie nicht endgültig gelöscht werden, wird sie in den Papierkorb verschoben). Der Zugriff läuft
-komplett über die Go-Standardbibliothek (JWT-Signierung), ohne zusätzliche Abhängigkeit.
+**Google Drive:** create a service account in the Google Cloud Console, enable the Drive API
+and share the CSV file (or its folder) with the service account's e-mail address. Read access
+(`drive.readonly`) is enough for importing alone; with `REMOTE_IMPORT_DELETE` enabled the
+write scope `drive` is requested and the file must be **deletable** by the service account
+(editor permission; if it cannot be deleted permanently it is moved to the trash). Access is
+implemented entirely with the Go standard library (JWT signing), without an extra dependency.
 
-Nach einem erfolgreichen Import wird die Quelldatei standardmäßig **gelöscht** (bei Nextcloud per
-WebDAV-`DELETE`), sodass ein neuer ManaBox-Export einfach wieder abgelegt werden kann. Mit
-`REMOTE_IMPORT_DELETE=false` bleibt die Datei liegen.
+After a successful import the source file is **deleted** by default (via a WebDAV `DELETE` for
+Nextcloud), so a fresh ManaBox export can simply be dropped in again. With
+`REMOTE_IMPORT_DELETE=false` the file stays where it is.
 
-Der zuletzt erfolgte Remote-Import (Zeitpunkt, Quelle, evtl. Fehler) wird unter `/api/status`
-ausgewiesen.
+The most recent remote import (time, source, any error) is reported under `/api/status`.
 
-### 💾 Automatisches Backup (optional)
+### 💾 Automatic backup (optional)
 
-Die **eigenen, nicht wiederherstellbaren Daten** – Sammlung (`collection`), die Wert-Historie
-(`value_snapshots`, `price_history`) und die Einstellungen/Metadaten (`meta`, u. a. das
-Admin-`ui_config`) – werden regelmäßig in eine kompakte, gzip-komprimierte SQLite-Datei gesichert
-und als **datierte Kopie** zu jeder konfigurierten Quelle hochgeladen (Nextcloud per WebDAV-`PUT`,
-Google Drive per API). Der Scryfall-Katalog (`scryfall_cards`, `sets`) wird **nicht** gesichert
-(er wird ohnehin neu geladen – nach einem Restore sind seine Tabellen leer, was den Download
-erzwingt), daher bleibt ein Backup klein (typisch < 2 MB).
+The **data that is yours and cannot be recreated** – the collection (`collection`), the value
+history (`value_snapshots`, `price_history`) and the settings/metadata (`meta`, including the
+admin `ui_config`) – is backed up regularly into a compact, gzip-compressed SQLite file and
+uploaded as a **dated copy** to every configured source (Nextcloud via WebDAV `PUT`, Google
+Drive via API). The Scryfall catalog (`scryfall_cards`, `sets`) is **not** backed up (it is
+re-downloaded anyway – after a restore its tables are empty, which forces the download), so a
+backup stays small (typically < 2 MB).
 
-Bei **leerer Datenbank** (frisches Volume) stellt das Backend beim Start automatisch das neueste
-Remote-Backup wieder her. Manuell geht das ebenfalls – siehe Endpoints unten.
+With an **empty database** (a fresh volume) the backend restores the latest remote backup
+automatically on startup. Doing it manually works too – see the endpoints below.
 
-| Variable | Zweck |
+| Variable | Purpose |
 |---|---|
-| `BACKUP_INTERVAL_HOURS` | Backup-Intervall (Standard 24) |
-| `BACKUP_KEEP` | Anzahl behaltener Kopien; ältere werden gelöscht (Standard 30, `0` = alle behalten) |
-| `WEBDAV_BACKUP_DIR` | Ziel-**Ordner** als WebDAV-URL (z. B. `…/remote.php/dav/files/<user>/mtg-backups/`); nutzt `WEBDAV_USER`/`WEBDAV_PASSWORD` |
-| `GDRIVE_BACKUP_FOLDER_ID` | Ziel-**Ordner-ID** in Google Drive; nutzt `GDRIVE_SA_JSON` |
+| `BACKUP_INTERVAL_HOURS` | Backup interval (default 24) |
+| `BACKUP_KEEP` | Number of copies to keep; older ones are deleted (default 30, `0` = keep all) |
+| `WEBDAV_BACKUP_DIR` | Target **folder** as a WebDAV URL (e.g. `…/remote.php/dav/files/<user>/mtg-backups/`); uses `WEBDAV_USER`/`WEBDAV_PASSWORD` |
+| `GDRIVE_BACKUP_FOLDER_ID` | Target **folder ID** in Google Drive; uses `GDRIVE_SA_JSON` |
 
-**Google Drive (Backup):** Der Ziel-Ordner muss für die Service-Account-E-Mail mit **Bearbeiter**-Recht
-freigegeben sein. Für das Backup wird der Schreib-Scope `drive` angefordert (Import allein nutzt weiter
-nur `drive.readonly`).
+**Google Drive (backup):** the target folder must be shared with the service account's e-mail
+address with **editor** permission. The backup requests the write scope `drive` (importing
+alone still uses only `drive.readonly`).
 
-Endpoints (passwortgeschützt): `POST /api/backup` (jetzt sichern),
-`POST /api/backup/restore-latest` (neuestes Remote-Backup einspielen),
-`POST /api/backup/restore-upload` (hochgeladene `.db.gz` einspielen). Backup-Status (Zeitpunkt,
-Datei, letzter Restore, evtl. Fehler) steht unter `/api/status`.
+Endpoints (password protected): `POST /api/backup` (back up now),
+`POST /api/backup/restore-latest` (restore the latest remote backup),
+`POST /api/backup/restore-upload` (restore an uploaded `.db.gz`). Backup status (time, file,
+last restore, any error) is available under `/api/status`.
 
 ## 🔐 Deployment (Woodpecker CI + SOPS)
 
-Push auf `main` löst die [Woodpecker](https://woodpecker-ci.org)-Pipeline aus
+A push to `main` triggers the [Woodpecker](https://woodpecker-ci.org) pipeline
 ([`.woodpecker/pipeline.yaml`](.woodpecker/pipeline.yaml)):
 
-1. **Decrypt** – `.env.enc` wird per [SOPS](https://github.com/getsops/sops) (age) zu `.env` entschlüsselt.
-2. **Deploy** – Quellen werden nach `/services/$SERVICE` kopiert, die systemd-Unit installiert.
-3. **Restart** – der Dienst startet neu und baut per `docker compose up --build` auf dem Host.
+1. **Decrypt** – `.env.enc` is decrypted to `.env` with [SOPS](https://github.com/getsops/sops) (age).
+2. **Deploy** – sources are copied to `/services/$SERVICE`, the systemd unit is installed.
+3. **Restart** – the service restarts and builds on the host via `docker compose up --build`.
 
 Secrets (Woodpecker): `sops_age_key`, `ssh_host_local`.
-Die Zugangsdaten liegen **verschlüsselt** in [`.env.enc`](.env.enc); Klartext-`.env` ist gitignored.
+Credentials live **encrypted** in [`.env.enc`](.env.enc); a plaintext `.env` is gitignored.
 
 ```bash
-# .env bearbeiten und neu verschlüsseln:
+# Edit .env and re-encrypt it:
 sops --encrypt --age <age-recipient> --input-type dotenv --output-type dotenv .env > .env.enc
 ```
 
-## 📊 Reichweitenmessung (optional)
+## 📊 Analytics (optional)
 
-**Standard: aus.** Ohne Konfiguration lädt keine Seite eine Zeile fremden Code, nginx proxyt
-nichts, und die HTML-Antworten behalten ihr `ETag`.
+**Off by default.** Without configuration no page loads a single line of third-party code,
+nginx proxies nothing, and the HTML responses keep their `ETag`.
 
-Eingeschaltet wird sie über drei Variablen in der `.env`; die beiden letzten braucht nur, wer
-einen Anbieter nutzt, der es anders macht. Erprobt mit selbst gehosteten Instanzen von
-[Umami](https://umami.is) und [Plausible](https://plausible.io):
+It is switched on with three variables in the `.env`; the last two are only needed for
+providers that do it differently. Tested with self-hosted instances of
+[Umami](https://umami.is) and [Plausible](https://plausible.io):
 
-| Variable | Zweck |
+| Variable | Purpose |
 |---|---|
-| `ANALYTICS_SCRIPT_URL` | Upstream-URL des Tracker-Skripts. **Leer = alles aus.** |
-| `ANALYTICS_EVENT_URL` | Upstream-URL des Ereignis-Endpunkts. **Leer = alles aus.** |
-| `ANALYTICS_WEBSITE_ID` | Kennung der Website beim Anbieter |
-| `ANALYTICS_ID_ATTRIBUTE` | Attribut, in dem die Kennung steht (Standard `data-website-id`; Plausible: `data-domain`) |
-| `ANALYTICS_EVENT_PATH` | Lokaler Pfad für die Ereignisse (Standard `/js/api/send`; Plausible: `/api/event`) |
+| `ANALYTICS_SCRIPT_URL` | Upstream URL of the tracker script. **Empty = everything off.** |
+| `ANALYTICS_EVENT_URL` | Upstream URL of the event endpoint. **Empty = everything off.** |
+| `ANALYTICS_WEBSITE_ID` | The site's identifier at the provider |
+| `ANALYTICS_ID_ATTRIBUTE` | Attribute carrying that identifier (default `data-website-id`; Plausible: `data-domain`) |
+| `ANALYTICS_EVENT_PATH` | Local path for the events (default `/js/api/send`; Plausible: `/api/event`) |
 
 ```bash
 # Umami
@@ -257,93 +255,91 @@ ANALYTICS_ID_ATTRIBUTE=data-domain
 ANALYTICS_EVENT_PATH=/api/event
 ```
 
-**Wie es funktioniert.** Jede HTML-Seite enthält nur den Platzhalter `<!--analytics-->`. Beim
-Start des `web`-Containers baut `nginx/analytics.sh` daraus zwei Konfigurationsschnipsel: eine
-`sub_filter`-Regel, die den Platzhalter durch das Skript-Tag ersetzt, und zwei Proxy-Pfade.
-Ausgeliefert wird der Tracker deshalb **first-party** unter `/js/pl.js` der eigenen Domain –
-Inhaltsblocker filtern Anfragen an bekannte Analytics-Hosts sonst standardmäßig weg
-(`ERR_BLOCKED_BY_CLIENT`). Cookies und `Authorization` gehen dabei bewusst nicht mit zum
-Anbieter. Stehen die Variablen nicht, bleiben beide Schnipsel leer und der Platzhalter einfach
-stehen.
+**How it works.** Every HTML page contains nothing but the placeholder `<!--analytics-->`. On
+startup of the `web` container, `nginx/analytics.sh` turns that into two configuration
+snippets: a `sub_filter` rule replacing the placeholder with the script tag, and two proxy
+paths. The tracker is therefore served **first-party** from `/js/pl.js` on your own domain –
+content blockers filter requests to known analytics hosts by default
+(`ERR_BLOCKED_BY_CLIENT`). Cookies and `Authorization` deliberately do not travel to the
+provider. Without the variables both snippets stay empty and the placeholder simply remains.
 
-Ein Anführungszeichen in einem der Werte würde Konfiguration und HTML zerreißen; das Skript
-bricht dann beim Start ab, statt etwas Kaputtes auszuliefern.
+A quote character in any of the values would tear apart both the configuration and the HTML;
+the script aborts at startup instead of serving something broken.
 
-> Bis Oktober 2026 hieß die einzige Variable hier `UMAMI_WEBSITE_ID` und der Anbieter stand fest
-> in der nginx-Konfiguration. Wer von dort kommt, ersetzt sie durch `ANALYTICS_WEBSITE_ID` und
-> ergänzt die beiden URLs.
+> Until October 2026 the only variable here was `UMAMI_WEBSITE_ID` and the provider was
+> hard-coded in the nginx configuration. Coming from there, replace it with
+> `ANALYTICS_WEBSITE_ID` and add the two URLs.
 
 ## 🛡️ Hardening
 
-Beide Container laufen mit `read_only`-Rootfs, `cap_drop: ALL` (web nur mit den nötigen
-nginx-Caps), `no-new-privileges` sowie Speicher-/PID-Limits. Das Backend läuft als
-Non-Root-User (uid 10001); sein Port ist nicht nach außen gemappt – erreichbar nur über den
-nginx-Proxy.
+Both containers run with a `read_only` rootfs, `cap_drop: ALL` (web keeps only the caps nginx
+needs), `no-new-privileges` plus memory and PID limits. The backend runs as a non-root user
+(uid 10001); its port is not published – it is reachable only through the nginx proxy.
 
 ## 📈 Monitoring (optional)
 
-Das Backend exponiert Prometheus-Metriken auf einem eigenen Port (`METRICS_PORT`, Standard `9090`),
-der bewusst **nicht** über nginx/Traefik veröffentlicht wird – die Werte zeigen Sammlungswert,
-Ordnernamen und Fehlerzustände. Fertiges Grafana-Dashboard, Scrape-Config und Alertregeln liegen
-unter `docs/grafana/`; Details in **[docs/monitoring.md](docs/monitoring.md)**.
+The backend exposes Prometheus metrics on a separate port (`METRICS_PORT`, default `9090`)
+that is deliberately **not** published through nginx/Traefik – the values reveal collection
+value, binder names and error states. A ready-made Grafana dashboard, scrape config and alert
+rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring.md)**.
 
 ## 🔌 API
 
-| Methode | Pfad | Zweck |
+| Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/collection` | Sammlung, angereichert mit Scryfall-Daten |
-| `GET` | `/api/sets` | Set-Index |
-| `GET` | `/api/sets/{code}/cards` | Alle Karten eines Sets |
-| `GET` | `/api/prints?name=…` | Alle Drucke einer Karte (Editionen) |
-| `GET` | `/api/binders` | Ordner/Listen mit Kartenanzahl & Wert |
-| `GET` | `/api/status` | Sync-Status & Datenstand |
-| `GET` | `/api/summary` | Kompakte Kennzahlen (Kartenzahl + Sammlungswert), öffentlich mit CORS – für Einbettung |
-| `GET` | `/api/dashboard` | Fertige Aggregate der Statistikseite (ETag, bedingte Anfragen) |
-| `GET` | `/api/cards` | Gefilterte, gruppierte und sortierte Trefferseite fürs Kartenraster |
-| `GET` | `/api/cards/facets` | Werte für die Filterfelder + Kennzahlen |
-| `GET` | `/api/cards/random` | Zufällige Karten für den Streifen über dem Raster |
-| `GET` | `/api/config` | UI-Einstellungen (Zufallskarten, versteckte Menüpunkte) – öffentlich |
-| `POST` | `/api/config` | UI-Einstellungen speichern (passwortgeschützt) |
-| `GET` | `/api/auth-check` | Passwortprüfung (204/403) |
-| `POST` | `/api/upload` | CSV hochladen (Upsert) |
-| `POST` | `/api/reset` | Sammlung leeren |
-| `POST` | `/api/sync` | Scryfall-Sync jetzt anstoßen |
-| `POST` | `/api/images/sync` | Bild-Spiegel jetzt abgleichen (nur wenn `IMAGE_MIRROR`) |
+| `GET` | `/api/collection` | Collection, enriched with Scryfall data |
+| `GET` | `/api/sets` | Set index |
+| `GET` | `/api/sets/{code}/cards` | All cards of a set |
+| `GET` | `/api/prints?name=…` | All printings of a card (editions) |
+| `GET` | `/api/binders` | Binders/lists with card count & value |
+| `GET` | `/api/status` | Sync status & data timestamp |
+| `GET` | `/api/summary` | Compact key figures (card count + collection value), public with CORS – for embedding |
+| `GET` | `/api/dashboard` | Ready-made aggregates for the statistics page (ETag, conditional requests) |
+| `GET` | `/api/cards` | Filtered, grouped and sorted page of results for the card grid |
+| `GET` | `/api/cards/facets` | Values for the filter fields + key figures |
+| `GET` | `/api/cards/random` | Random cards for the strip above the grid |
+| `GET` | `/api/config` | UI settings (random cards, hidden menu entries) – public |
+| `POST` | `/api/config` | Store UI settings (password protected) |
+| `GET` | `/api/auth-check` | Password check (204/403) |
+| `POST` | `/api/upload` | Upload CSV (upsert) |
+| `POST` | `/api/reset` | Clear the collection |
+| `POST` | `/api/sync` | Trigger a Scryfall sync now |
+| `POST` | `/api/images/sync` | Sync the image mirror now (only with `IMAGE_MIRROR`) |
 
-## 🗂️ Projektstruktur
+## 🗂️ Project structure
 
 ```text
 mtg-portal/
-├── app/                     # nginx-Docroot (statische Oberfläche)
+├── app/                     # nginx docroot (static interface)
 │   ├── index.html · editions.html · binders.html · lists.html · decks.html · dashboard.html · deck-checker.html
 │   ├── css/style.css
 │   ├── js/i18n.js · shared.js · grid.js · editions.js · binders.js · dashboard.js · deck-checker.js
-│   └── images/              # Logo & Favicons
-├── backend/                 # Go-Backend (API + Sync-Jobs)
+│   └── images/              # logo & favicons
+├── backend/                 # Go backend (API + sync jobs)
 │   ├── main.go · db.go · csvimport.go · scryfall.go · metrics.go
 │   └── Dockerfile
 ├── docs/
-│   ├── monitoring.md        # Metriken, Scrape-Setup, Dashboard
-│   ├── roadmap.md           # geplante Arbeiten (Suche, Bild-Spiegel, Kartenflip)
-│   └── grafana/             # Dashboard-JSON, prometheus.yml-Ausschnitt, Alertregeln
+│   ├── monitoring.md        # metrics, scrape setup, dashboard
+│   ├── roadmap.md           # planned work (search, image mirror, card flip)
+│   └── grafana/             # dashboard JSON, prometheus.yml excerpt, alert rules
 ├── nginx/
-│   ├── default.conf.template   # statisch + Proxy /api → backend + Bild-Spiegel
-│   └── analytics.sh            # baut beim Start die Schnipsel für die Reichweitenmessung
+│   ├── default.conf.template   # static + proxy /api → backend + image mirror
+│   └── analytics.sh            # builds the analytics snippets at startup
 ├── .woodpecker/pipeline.yaml
-├── template.service         # systemd-Unit (Vorlage, %SERVICE%)
-├── Dockerfile               # web-Image
-├── docker-compose.standalone.yml # nur Docker, ein Port – der Normalfall
-├── docker-compose.yml       # Server-Stack hinter Traefik
-├── docker-compose.local.yml # Testinstanz neben dem Server-Stack (.env.local)
-├── .env.enc                 # SOPS-verschlüsselte Secrets (.env ist gitignored)
+├── template.service         # systemd unit (template, %SERVICE%)
+├── Dockerfile               # web image
+├── docker-compose.standalone.yml # just Docker, one port – the normal case
+├── docker-compose.yml       # server stack behind Traefik
+├── docker-compose.local.yml # test instance next to the server stack (.env.local)
+├── .env.enc                 # SOPS-encrypted secrets (.env is gitignored)
 └── LICENSE
 ```
 
-## 📄 Lizenz
+## 📄 License
 
-[Apache License 2.0](LICENSE) – frei nutzbar, anpassbar und weiterverteilbar, inklusive
-ausdrücklicher Patentlizenz. Urheberrechtshinweise siehe [NOTICE](NOTICE).
+[Apache License 2.0](LICENSE) – free to use, modify and redistribute, including an express
+patent licence. For copyright notices see [NOTICE](NOTICE).
 
-Kartendaten und -bilder stammen von [Scryfall](https://scryfall.com); *Magic: The Gathering*
-ist ein Markenzeichen von Wizards of the Coast. Dieses Projekt steht in keiner Verbindung zu
-Wizards of the Coast oder ManaBox.
+Card data and images come from [Scryfall](https://scryfall.com); *Magic: The Gathering* is a
+trademark of Wizards of the Coast. This project is not affiliated with Wizards of the Coast
+or ManaBox.

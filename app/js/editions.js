@@ -11,7 +11,7 @@ function priceEur(c) {
 }
 
 /* Collector number is language- and finish-independent, so the same card in
-   DE + EN (or normal + foil) collapses to one "verschiedene Karte". */
+   DE + EN (or normal + foil) collapses to one "distinct card". */
 function normNumber(n) {
   return String(n || '').trim().toLowerCase().replace(/^0+(?=\d)/, '');
 }

@@ -67,7 +67,7 @@ func snapshotValue(db *sql.DB) error {
 		return err
 	}
 
-	log.Printf("[value] Snapshot %s: Markt %.2f €, Kauf %.2f €, %d Karten", date, market.Float64, purchase.Float64, cardCount.Int64)
+	log.Printf("[value] snapshot %s: market %.2f EUR, purchase %.2f EUR, %d cards", date, market.Float64, purchase.Float64, cardCount.Int64)
 	return nil
 }
 

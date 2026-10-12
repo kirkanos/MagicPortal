@@ -103,7 +103,7 @@ func syncSets(db *sql.DB) error {
 		}
 	}
 	metaSet(db, "sets_synced_at", time.Now().UTC().Format(time.RFC3339))
-	log.Printf("[sync] sets: %d aktualisiert", total)
+	log.Printf("[sync] sets: %d updated", total)
 	return nil
 }
 
@@ -143,7 +143,7 @@ func syncSubtypes(db *sql.DB) error {
 	b, _ := json.Marshal(arr)
 	metaSet(db, "subtypes", string(b))
 	metaSet(db, "subtypes_synced_at", time.Now().UTC().Format(time.RFC3339))
-	log.Printf("[sync] subtypes: %d offizielle Untertypen", len(arr))
+	log.Printf("[sync] subtypes: %d official subtypes", len(arr))
 	return nil
 }
 
@@ -229,7 +229,7 @@ func syncBulk(db *sql.DB, force bool) error {
 		}
 	}
 	if dlURI == "" {
-		return fmt.Errorf("default_cards bulk entry nicht gefunden")
+		return fmt.Errorf("default_cards bulk entry not found")
 	}
 
 	// Skip the heavy download if we already have this exact dump.
@@ -237,7 +237,7 @@ func syncBulk(db *sql.DB, force bool) error {
 		return nil
 	}
 
-	log.Printf("[sync] lade Bulk-Data: %s", dlURI)
+	log.Printf("[sync] downloading bulk data: %s", dlURI)
 	dl, err := scryfallGet(dlURI)
 	if err != nil {
 		return err
@@ -386,8 +386,8 @@ func syncBulk(db *sql.DB, force bool) error {
 	if remoteUpdated != "" {
 		metaSet(db, "bulk_remote_updated_at", remoteUpdated)
 	}
-	log.Printf("[sync] bulk cards: %d gespeichert", count)
-	logActivity("info", "Sync", fmt.Sprintf("Kartendaten & Preise aktualisiert (%d Karten)", count))
+	log.Printf("[sync] bulk cards: %d stored", count)
+	logActivity("info", "Sync", fmt.Sprintf("Card data & prices updated (%d cards)", count))
 	return nil
 }
 
@@ -440,7 +440,7 @@ func startSync(force bool) bool {
 		syncMu.Unlock()
 		if err != nil {
 			// Dedup so a persistent failure (5-min poll) logs once, not repeatedly.
-			logActivityDedup("error", "Sync", "Aktualisierung fehlgeschlagen: "+err.Error())
+			logActivityDedup("error", "Sync", "Refresh failed: "+err.Error())
 		}
 	}()
 	return true
@@ -459,14 +459,14 @@ func doSync(force bool) error {
 	// Sets change rarely and the listing is small; refresh weekly (or if empty).
 	if force || metaStale("sets_synced_at", 7*24*time.Hour) || countRows(db, "sets") == 0 {
 		if err := syncSets(db); err != nil {
-			log.Printf("[sync] sets fehlgeschlagen: %v", err)
+			log.Printf("[sync] sets failed: %v", err)
 			firstErr = err
 		}
 	}
 	// Official subtype catalogs; change rarely (monthly, or if never fetched).
 	if force || metaStale("subtypes_synced_at", 30*24*time.Hour) || metaGet(db, "subtypes") == "" {
 		if err := syncSubtypes(db); err != nil {
-			log.Printf("[sync] subtypes fehlgeschlagen: %v", err)
+			log.Printf("[sync] subtypes failed: %v", err)
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -475,7 +475,7 @@ func doSync(force bool) error {
 	// Cards + prices: syncBulk does a cheap remote check and only downloads the
 	// full dump when Scryfall published a newer one (or when forced / empty).
 	if err := syncBulk(db, force); err != nil {
-		log.Printf("[sync] bulk fehlgeschlagen: %v", err)
+		log.Printf("[sync] bulk failed: %v", err)
 		if firstErr == nil {
 			firstErr = err
 		}
@@ -484,7 +484,7 @@ func doSync(force bool) error {
 	// Only when there is a collection to value, so history starts at first import.
 	if countRows(db, "collection") > 0 {
 		if err := snapshotValue(db); err != nil {
-			log.Printf("[value] Snapshot fehlgeschlagen: %v", err)
+			log.Printf("[value] snapshot failed: %v", err)
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -504,7 +504,7 @@ func startScheduler() {
 			interval = time.Duration(n) * time.Minute
 		}
 	}
-	log.Printf("[sync] Hintergrund-Intervall: %s", interval)
+	log.Printf("[sync] background interval: %s", interval)
 	go func() {
 		startSync(false)
 		ticker := time.NewTicker(interval)

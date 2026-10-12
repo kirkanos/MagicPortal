@@ -52,7 +52,7 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 	// is a full replace – would wipe the collection without any error. Refuse
 	// instead and report what was actually received.
 	if _, ok := idx["name"]; !ok {
-		return res, fmt.Errorf("CSV ohne Spalte \"Name\" – erkannte Kopfzeile: %s", snippet(firstLine))
+		return res, fmt.Errorf("CSV without a \"Name\" column - header detected: %s", snippet(firstLine))
 	}
 	get := func(rec []string, key string) string {
 		if i, ok := idx[key]; ok && i < len(rec) {
@@ -153,7 +153,7 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 	// collection (and, for remote imports, get deleted at the source afterwards).
 	// Clearing on purpose is what the reset endpoint is for.
 	if res.Added+res.Updated == 0 {
-		return res, fmt.Errorf("CSV enthält keine Karten – Sammlung unverändert (Kopfzeile: %s)", snippet(firstLine))
+		return res, fmt.Errorf("CSV contains no cards - collection unchanged (header: %s)", snippet(firstLine))
 	}
 
 	if err := tx.Commit(); err != nil {

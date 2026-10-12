@@ -17,8 +17,8 @@ type reservedCard struct {
 	Quantity      int      `json:"quantity"`
 	OwnedValue    float64  `json:"ownedValue"`
 	CheapestPrice *float64 `json:"cheapestPrice"`
-	// Wie ueberall sonst nur die ID, damit die Bilder ueber den lokalen
-	// Spiegel laufen koennen; leer, wenn der Katalog kein Bild fuehrt.
+	// Just the id, as everywhere else, so the images can go through the local
+	// mirror; empty when the catalog carries no image.
 	ImageID       string `json:"imageId"`
 	Rarity        string `json:"rarity"`
 	CardmarketURI string `json:"cardmarketUri"`
