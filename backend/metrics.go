@@ -138,6 +138,7 @@ var apiRoutes = map[string]string{
 	"binders": "/api/binders", "subtypes": "/api/subtypes", "status": "/api/status",
 	"summary": "/api/summary", "config": "/api/config", "reserved": "/api/reserved",
 	"dashboard":     "/api/dashboard",
+	"cards":         "/api/cards",
 	"images":        "/api/images/sync",
 	"value-history": "/api/value-history", "value-movers": "/api/value-movers",
 	"activity": "/api/activity", "backup": "/api/backup", "auth-check": "/api/auth-check",
@@ -155,6 +156,11 @@ func routeLabel(path string) string {
 	case "sets":
 		if tail != "" {
 			return "/api/sets/{code}/cards" // collapse the set code
+		}
+	case "cards":
+		switch tail {
+		case "facets", "random":
+			return "/api/cards/" + tail
 		}
 	case "activity":
 		if tail == "clear" {
