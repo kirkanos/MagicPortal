@@ -80,12 +80,17 @@ services:
     container_name: ${SERVICE}
     depends_on:
       - backend
+    environment:
+      # Umami-Website-ID, nginx setzt sie in die HTML-Seiten ein. Leer = kein Tracking.
+      - UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID:-}
     # --- Hardening ---
     read_only: true
     tmpfs:
       - /var/cache/nginx
       - /var/run
       - /tmp
+      # Hierhin schreibt das nginx-Image die aus dem Template erzeugte Konfiguration.
+      - /etc/nginx/conf.d
     volumes:
       # Nur lesend: nginx liefert gespiegelte Bilder direkt aus.
       - mtg-images:/usr/share/nginx/html/img:ro
