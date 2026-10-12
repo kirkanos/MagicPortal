@@ -11,7 +11,15 @@ im Browser aus der Scryfall-ID gebaut statt übertragen (14,8 → 10,0 MB).
 
 ---
 
-## 1. Suche ins Backend
+## 1. Suche ins Backend — erledigt
+
+> Umgesetzt in `backend/cards.go` und `app/js/grid.js`. Das Kartenraster lädt
+> die Sammlung nicht mehr; der Erstaufbau fiel von 2,36 MB auf rund 46 KB.
+> `oracleText` ist aus `/api/collection` verschwunden (2,36 → 1,32 MB gzip),
+> die Seite nutzen nur noch `editions.js` und `deck-checker.js`.
+>
+> Offen geblieben: `/api/prints` (die „weiteren Editionen" im Detaildialog)
+> liefert weiterhin fertige Bild-URLs und läuft damit am Bild-Spiegel vorbei.
 
 ### Warum
 

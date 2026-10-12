@@ -106,12 +106,14 @@ type scryfallOut struct {
 	Name string `json:"name,omitempty"`
 	// Only set when the catalog row has a different Scryfall id than the
 	// collection row (ManaBox occasionally exports the id of another printing).
-	ImageID      string   `json:"imageId,omitempty"`
-	HasBack      bool     `json:"hasBack,omitempty"`
-	TypeLine     string   `json:"typeLine"`
-	Colors       []string `json:"colors"`
-	ManaCost     string   `json:"manaCost"`
-	OracleText   string   `json:"oracleText"`
+	ImageID  string   `json:"imageId,omitempty"`
+	HasBack  bool     `json:"hasBack,omitempty"`
+	TypeLine string   `json:"typeLine"`
+	Colors   []string `json:"colors"`
+	ManaCost string   `json:"manaCost"`
+	// Der Regeltext steckt nicht mehr drin: das Kartenraster durchsucht ihn
+	// serverseitig (/api/cards) und bekommt ihn mit der Trefferseite, und die
+	// uebrigen Seiten zeigen ihn gar nicht an. Spart rund 2,2 MB je Abruf.
 	PriceEur     *float64 `json:"priceEur"`
 	PriceEurFoil *float64 `json:"priceEurFoil"`
 }
@@ -144,7 +146,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
 		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type,
-		       s.name, s.type_line, s.colors, s.mana_cost, s.oracle_text, s.scryfall_id,
+		       s.name, s.type_line, s.colors, s.mana_cost, s.scryfall_id,
 		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil
 		FROM collection c
 		LEFT JOIN scryfall_cards s
@@ -159,27 +161,26 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	out := []cardOut{}
 	for rows.Next() {
 		var (
-			c                                          cardOut
-			setCode                                    string
-			sName, sType, sColors, sMana, sOracle, sID sql.NullString
-			sHasBack                                   bool
-			sPrice, sPriceFoil                         sql.NullFloat64
+			c                                 cardOut
+			setCode                           string
+			sName, sType, sColors, sMana, sID sql.NullString
+			sHasBack                          bool
+			sPrice, sPriceFoil                sql.NullFloat64
 		)
 		if err := rows.Scan(&c.Key, &c.ScryfallID, &setCode, &c.SetName, &c.CollectorNumber, &c.Name,
 			&c.Foil, &c.Rarity, &c.Language, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Condition, &c.Added,
 			&c.BinderName, &c.BinderType,
-			&sName, &sType, &sColors, &sMana, &sOracle, &sID, &sHasBack, &sPrice, &sPriceFoil); err != nil {
+			&sName, &sType, &sColors, &sMana, &sID, &sHasBack, &sPrice, &sPriceFoil); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
 		c.SetCode = strings.ToUpper(setCode)
 		if sName.Valid || sID.Valid {
 			so := &scryfallOut{
-				TypeLine:   sType.String,
-				Colors:     colorsFromJSON(sColors.String),
-				ManaCost:   sMana.String,
-				OracleText: sOracle.String,
-				HasBack:    sHasBack,
+				TypeLine: sType.String,
+				Colors:   colorsFromJSON(sColors.String),
+				ManaCost: sMana.String,
+				HasBack:  sHasBack,
 			}
 			if sName.String != c.Name {
 				so.Name = sName.String

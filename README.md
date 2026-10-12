@@ -219,6 +219,9 @@ unter `docs/grafana/`; Details in **[docs/monitoring.md](docs/monitoring.md)**.
 | `GET` | `/api/status` | Sync-Status & Datenstand |
 | `GET` | `/api/summary` | Kompakte Kennzahlen (Kartenzahl + Sammlungswert), öffentlich mit CORS – für Einbettung |
 | `GET` | `/api/dashboard` | Fertige Aggregate der Statistikseite (ETag, bedingte Anfragen) |
+| `GET` | `/api/cards` | Gefilterte, gruppierte und sortierte Trefferseite fürs Kartenraster |
+| `GET` | `/api/cards/facets` | Werte für die Filterfelder + Kennzahlen |
+| `GET` | `/api/cards/random` | Zufällige Karten für den Streifen über dem Raster |
 | `GET` | `/api/config` | UI-Einstellungen (Zufallskarten, versteckte Menüpunkte) – öffentlich |
 | `POST` | `/api/config` | UI-Einstellungen speichern (passwortgeschützt) |
 | `GET` | `/api/auth-check` | Passwortprüfung (204/403) |

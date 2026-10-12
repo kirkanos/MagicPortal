@@ -1,59 +1,43 @@
-let allCards = [];
-let allGroups = [];
-let filteredCards = [];
+/* Die Seite haelt keine Sammlung mehr im Speicher: Suche, Filter, Gruppierung
+   und Sortierung macht /api/cards, hier liegt nur die jeweils sichtbare Seite.
+   Das spart beim Aufruf rund 10 MB JSON und macht die Seite auf dem Handy
+   benutzbar; dafuer kostet jeder Filterwechsel eine Abfrage (~60 ms). */
+let facets = null;        // Werte fuer die Filterfelder, von /api/cards/facets
 let setIndex = {};
-let officialSubtypes = null;
-let selectedSet = ''; // set-code chosen in the custom set filter ('' = all sets)
+let selectedSet = '';     // Set-Code im eigenen Dropdown ('' = alle)
+let pageOffset = 0;       // naechster Startindex
+let pageHasMore = false;
+let loadingPage = false;
+let queryToken = 0;       // verwirft Antworten ueberholter Abfragen
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic', special: 'Special' };
 const COLOR_LABEL = {
   W: t('Weiß', 'White'), U: t('Blau', 'Blue'), B: t('Schwarz', 'Black'), R: t('Rot', 'Red'), G: t('Grün', 'Green'),
 };
 
-/* ---- Group language/finish variants of the same card into one tile
-   (cardTypes / cardSubtypes / manaValue live in shared.js) ---- */
-function groupKey(c) {
-  return c.setCode + '|' + (c.collectorNumber ? 'n:' + c.collectorNumber : 'name:' + c.name.toLowerCase());
-}
+/* Das Backend liefert flache Gruppen; Kacheln und Detaildialog erwarten die
+   gewachsene Form mit `rep` und `variants[].scryfall`. Der Adapter stellt sie
+   her, damit an der Darstellung nichts geaendert werden muss.
 
-function pickRep(variants) {
-  return (
-    variants.find((v) => cardImage(v, 'small') && (v.language || '').toLowerCase() === 'en') ||
-    variants.find((v) => cardImage(v, 'small')) ||
-    variants[0]
-  );
-}
-
-function groupCards(rows) {
-  const map = {};
-  rows.forEach((c) => {
-    const k = groupKey(c);
-    if (!map[k]) {
-      map[k] = { key: k, name: c.name, setCode: c.setCode, setName: c.setName, collectorNumber: c.collectorNumber, variants: [] };
-    }
-    map[k].variants.push(c);
-  });
-
-  return Object.values(map).map((g) => {
-    g.rep = pickRep(g.variants);
-    g.rarity = g.rep.rarity;
-    g.totalQty = g.variants.reduce((a, v) => a + v.quantity, 0);
-    g.anyFoil = g.variants.some((v) => v.foil && v.foil !== 'normal');
-    const seen = new Set();
-    g.langs = [];
-    g.variants.forEach((v) => {
-      const l = (v.language || '').toLowerCase();
-      if (l && !seen.has(l)) {
-        seen.add(l);
-        g.langs.push(l);
-      }
-    });
-    g.marketPrice = variantMarketPrice(g.rep) || 0;
-    g.purchasePrice = g.rep.purchasePrice;
-    g.added = g.variants.reduce((m, v) => ((v.added || '') > m ? v.added || '' : m), '');
-    g.released = (setIndex[g.setCode.toLowerCase()] || {}).releasedAt || '';
-    return g;
-  });
+   variants[].marketPrice ist bereits foil-bewusst berechnet. Als priceEur
+   eingesetzt liefert variantMarketPrice() in shared.js denselben Wert - es
+   greift erst auf priceEurFoil zurueck, wenn es gesetzt ist. */
+function adaptGroup(g) {
+  const sc = {
+    typeLine: g.typeLine, manaCost: g.manaCost, oracleText: g.oracleText,
+    colors: g.colors || [], imageId: g.imageId, hasBack: g.hasBack,
+  };
+  const variants = (g.variants || []).map((v) => ({
+    ...v,
+    name: g.name, setCode: g.setCode, setName: g.setName,
+    collectorNumber: g.collectorNumber, rarity: g.rarity, scryfallId: g.imageId,
+    scryfall: { ...sc, priceEur: v.marketPrice },
+  }));
+  const rep = {
+    name: g.name, rarity: g.rarity, purchasePrice: g.purchasePrice,
+    scryfallId: g.imageId, scryfall: sc,
+  };
+  return { ...g, rep, variants };
 }
 
 /* Set symbol as a tinted CSS-mask span (same technique as the card tiles). */
@@ -74,21 +58,17 @@ function updateSetLabel() {
     label.textContent = t('Alle Sets', 'All sets');
     return;
   }
-  const card = allCards.find((c) => c.setCode === selectedSet);
-  const name = (setIndex[selectedSet.toLowerCase()] || {}).name || (card && card.setName) || selectedSet;
+  const fromFacets = (facets && facets.sets || []).find((x) => x.code === selectedSet);
+  const name = (setIndex[selectedSet.toLowerCase()] || {}).name || (fromFacets && fromFacets.name) || selectedSet;
   label.innerHTML = setSymHTML(setIcon(selectedSet)) + `<span class="set-name">${escapeHTML(name)}</span>`;
 }
 
 /* Custom set filter: a searchable dropdown showing the edition symbol + name
    (a native <select> can't render the set symbols). */
-function populateSetFilter(cards) {
+function populateSetFilter() {
   const opts = document.getElementById('set-options');
-  const seen = {};
-  cards.forEach((c) => {
-    if (!seen[c.setCode]) seen[c.setCode] = (setIndex[c.setCode.toLowerCase()] || {}).name || c.setName || c.setCode;
-  });
-  const list = Object.keys(seen)
-    .map((code) => ({ code, name: seen[code] }))
+  const list = (facets.sets || [])
+    .map((s) => ({ code: s.code, name: (setIndex[s.code.toLowerCase()] || {}).name || s.name || s.code }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   opts.innerHTML =
@@ -134,62 +114,33 @@ function populateSetFilter(cards) {
     selectedSet = opt.dataset.code;
     updateSetLabel();
     setOpen(false);
-    applyFilters();
+    runQuery();
   });
 
   updateSetLabel();
 }
 
-function populateFilters(cards) {
+function populateFilters() {
   const raritySel = document.getElementById('filter-rarity');
   const colorSel = document.getElementById('filter-color');
-
-  const rarities = uniqueSorted(cards.map((c) => c.rarity));
-  rarities.forEach((r) => {
+  const addOpt = (sel, value, label) => {
     const opt = document.createElement('option');
-    opt.value = r;
-    opt.textContent = RARITY_LABEL[r] || r;
-    raritySel.appendChild(opt);
-  });
+    opt.value = value;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  };
 
-  const colorSet = new Set();
-  cards.forEach((c) => (c.scryfall && c.scryfall.colors ? c.scryfall.colors : []).forEach((col) => colorSet.add(col)));
+  (facets.rarities || []).forEach((r) => addOpt(raritySel, r, RARITY_LABEL[r] || r));
   ['W', 'U', 'B', 'R', 'G'].forEach((col) => {
-    if (colorSet.has(col)) {
-      const opt = document.createElement('option');
-      opt.value = col;
-      opt.textContent = COLOR_LABEL[col];
-      colorSel.appendChild(opt);
-    }
+    if ((facets.colors || []).includes(col)) addOpt(colorSel, col, COLOR_LABEL[col]);
   });
-  if (cards.some((c) => c.scryfall && (!c.scryfall.colors || c.scryfall.colors.length === 0))) {
-    const opt = document.createElement('option');
-    opt.value = 'C';
-    opt.textContent = t('Farblos', 'Colorless');
-    colorSel.appendChild(opt);
-  }
+  if (facets.colorless) addOpt(colorSel, 'C', t('Farblos', 'Colorless'));
 
   const binderSel = document.getElementById('filter-binder');
-  if (binderSel) {
-    uniqueSorted(cards.map((c) => c.binderName)).forEach((b) => {
-      const opt = document.createElement('option');
-      opt.value = b;
-      opt.textContent = b;
-      binderSel.appendChild(opt);
-    });
-  }
+  if (binderSel) (facets.binders || []).forEach((b) => addOpt(binderSel, b, b));
 
   const typeSel = document.getElementById('filter-type');
-  if (typeSel) {
-    const typeSet = new Set();
-    cards.forEach((c) => cardTypes((c.scryfall && c.scryfall.typeLine) || '').forEach((tp) => typeSet.add(tp)));
-    [...typeSet].sort((a, b) => a.localeCompare(b)).forEach((tp) => {
-      const opt = document.createElement('option');
-      opt.value = tp;
-      opt.textContent = tp;
-      typeSel.appendChild(opt);
-    });
-  }
+  if (typeSel) (facets.types || []).forEach((tp) => addOpt(typeSel, tp, tp));
 }
 
 // Subtypes depend on the selected type (e.g. Creature → Dragon, Goblin …).
@@ -197,103 +148,112 @@ function populateFilters(cards) {
 function populateSubtypes(type) {
   const sel = document.getElementById('filter-subtype');
   if (!sel) return;
-  let subs = [];
-  if (type) {
-    const set = new Set();
-    allCards.forEach((c) => {
-      const tl = (c.scryfall && c.scryfall.typeLine) || '';
-      if (cardTypes(tl).includes(type)) cardSubtypes(tl).forEach((s) => set.add(s));
-    });
-    subs = [...set].sort((a, b) => a.localeCompare(b));
-    // Only keep officially recognised subtypes (filters out joke/Un-set noise).
-    if (officialSubtypes && officialSubtypes.size) subs = subs.filter((s) => officialSubtypes.has(s));
-  }
+  // Das Backend liefert die Untertypen je Typ; offiziell gefiltert wird dort
+  // nicht, das macht wie bisher der Katalog aus /api/subtypes.
+  let subs = (type && facets.subtypesByType && facets.subtypesByType[type]) || [];
+  if (officialSubtypes && officialSubtypes.size) subs = subs.filter((x) => officialSubtypes.has(x));
   sel.innerHTML =
     `<option value="">${t('Alle Untertypen', 'All subtypes')}</option>` +
-    subs.map((s) => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join('');
+    subs.map((x) => `<option value="${escapeHTML(x)}">${escapeHTML(x)}</option>`).join('');
   sel.disabled = subs.length === 0;
 }
 
-function renderStats(rows, distinctCount) {
-  const totalQty = rows.reduce((s, c) => s + c.quantity, 0);
-  const totalValue = rows.reduce((s, c) => s + c.purchasePrice * c.quantity, 0);
-  const marketValue = rows.reduce((s, c) => s + (variantMarketPrice(c) || 0) * c.quantity, 0);
-
+function renderStats() {
+  const st = (facets && facets.stats) || {};
   document.getElementById('stats-bar').innerHTML = `
-    <div class="stat-tile" title="${countHint('distinct')}"><div class="stat-value">${distinctCount}</div><div class="stat-label">${t('Verschiedene Karten', 'Distinct cards')}</div></div>
-    <div class="stat-tile" title="${countHint('total')}"><div class="stat-value">${totalQty}</div><div class="stat-label">${t('Karten gesamt', 'Cards total')}</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(totalValue, 'EUR')}</div><div class="stat-label">${t('Kaufwert', 'Purchase value')}</div></div>
-    <div class="stat-tile"><div class="stat-value">${formatCurrency(marketValue, 'EUR')}</div><div class="stat-label">${t('Marktwert (Scryfall)', 'Market value (Scryfall)')}</div></div>
+    <div class="stat-tile" title="${countHint('distinct')}"><div class="stat-value">${st.distinct || 0}</div><div class="stat-label">${t('Verschiedene Karten', 'Distinct cards')}</div></div>
+    <div class="stat-tile" title="${countHint('total')}"><div class="stat-value">${st.totalQty || 0}</div><div class="stat-label">${t('Karten gesamt', 'Cards total')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(st.purchaseValue || 0, 'EUR')}</div><div class="stat-label">${t('Kaufwert', 'Purchase value')}</div></div>
+    <div class="stat-tile"><div class="stat-value">${formatCurrency(st.marketValue || 0, 'EUR')}</div><div class="stat-label">${t('Marktwert (Scryfall)', 'Market value (Scryfall)')}</div></div>
   `;
 }
 
-function applyFilters() {
-  const q = document.getElementById('search').value.trim().toLowerCase();
-  // Stichwortsuche (UND): jedes Wort muss irgendwo vorkommen, Reihenfolge egal.
-  const terms = q ? q.split(/\s+/).filter(Boolean) : [];
-  const set = selectedSet;
-  const rarity = document.getElementById('filter-rarity').value;
-  const color = document.getElementById('filter-color').value;
-  const foil = document.getElementById('filter-foil').value;
-  const binder = document.getElementById('filter-binder').value;
-  const cardType = document.getElementById('filter-type').value;
-  const subtype = document.getElementById('filter-subtype').value;
-  const sortBy = document.getElementById('sort-by').value;
+/* Aktuelle Filterwerte als Abfrageparameter. */
+function currentParams() {
+  const p = new URLSearchParams();
+  const q = document.getElementById('search').value.trim();
+  if (q) p.set('q', q);
+  if (selectedSet) p.set('set', selectedSet);
+  const pick = (id, key) => {
+    const el = document.getElementById(id);
+    if (el && el.value) p.set(key, el.value);
+  };
+  pick('filter-rarity', 'rarity');
+  pick('filter-color', 'color');
+  pick('filter-foil', 'foil');
+  pick('filter-binder', 'binder');
+  pick('filter-type', 'type');
+  pick('filter-subtype', 'subtype');
+  pick('sort-by', 'sort');
+  return p;
+}
 
-  filteredCards = allCards.filter((c) => {
-    if (terms.length) {
-      const sc = c.scryfall || {};
-      // Durchsucht Name + Kartentext + Manakosten (ohne Klammern/Schrägstriche).
-      const hay = (
-        c.name + ' ' + (sc.oracleText || '') + ' ' + String(sc.manaCost || '').replace(/[{}\/]/g, '')
-      ).toLowerCase();
-      if (!terms.every((term) => hay.includes(term))) return false;
-    }
-    if (set && c.setCode !== set) return false;
-    if (rarity && c.rarity !== rarity) return false;
-    if (foil && c.foil !== foil) return false;
-    if (binder && c.binderName !== binder) return false;
-    if (cardType || subtype) {
-      const tl = (c.scryfall && c.scryfall.typeLine) || '';
-      if (cardType && !cardTypes(tl).includes(cardType)) return false;
-      if (subtype && !cardSubtypes(tl).includes(subtype)) return false;
-    }
-    if (color) {
-      const colors = (c.scryfall && c.scryfall.colors) || [];
-      if (color === 'C' && colors.length !== 0) return false;
-      if (color !== 'C' && !colors.includes(color)) return false;
-    }
-    return true;
-  });
+/* Holt eine Seite Treffer. append=false ersetzt das Raster (neue Filter),
+   append=true haengt die naechste Seite an (Scrollen). */
+async function runQuery(append = false) {
+  // Nur das Nachladen beim Scrollen darf sich selbst blockieren. Eine neue
+  // Filterabfrage darf nie verworfen werden, sonst zeigt die Seite stumm das
+  // vorherige Ergebnis; ueberholte Antworten faengt queryToken ab.
+  if (append && loadingPage) return;
+  loadingPage = true;
+  const token = ++queryToken;
+  const p = currentParams();
+  if (append) p.set('offset', String(pageOffset));
 
-  const groups = groupCards(filteredCards);
-  groups.sort((a, b) => {
-    switch (sortBy) {
-      case 'set':
-        return a.setCode.localeCompare(b.setCode) || a.name.localeCompare(b.name);
-      case 'price-desc':
-        return b.purchasePrice - a.purchasePrice;
-      case 'price-asc':
-        return a.purchasePrice - b.purchasePrice;
-      case 'value-desc':
-        return b.marketPrice - a.marketPrice || a.name.localeCompare(b.name);
-      case 'value-asc':
-        return a.marketPrice - b.marketPrice || a.name.localeCompare(b.name);
-      case 'rarity':
-        return (a.rarity || '').localeCompare(b.rarity || '');
-      case 'added-desc':
-        return (b.added || '').localeCompare(a.added || '');
-      case 'released-desc':
-        return (b.released || '').localeCompare(a.released || '') || a.name.localeCompare(b.name);
-      case 'released-asc':
-        return (a.released || '9999').localeCompare(b.released || '9999') || a.name.localeCompare(b.name);
-      default:
-        return a.name.localeCompare(b.name);
+  let data;
+  try {
+    const res = await fetch(API + '/cards?' + p.toString(), { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    data = await res.json();
+  } catch (e) {
+    loadingPage = false;
+    if (!append) {
+      document.getElementById('card-grid').innerHTML =
+        `<p style="color:#e05656">${t('Fehler beim Laden', 'Error loading')}: ${escapeHTML(e.message)}</p>`;
     }
-  });
+    return;
+  }
+  loadingPage = false;
+  // Eine zwischenzeitlich gestartete Abfrage hat Vorrang.
+  if (token !== queryToken) return;
 
-  document.getElementById('result-count').textContent = `${groups.length} ${t('von', 'of')} ${allGroups.length} ${t('Karten', 'cards')}`;
-  renderGrid(groups);
+  const groups = (data.groups || []).map(adaptGroup);
+  pageOffset = data.offset + groups.length;
+  pageHasMore = data.hasMore;
+
+  const grid = document.getElementById('card-grid');
+  if (!append) {
+    stopIncremental(grid);
+    grid.innerHTML = '';
+  }
+  const frag = document.createDocumentFragment();
+  groups.forEach((g) => frag.appendChild(buildCardTile(g)));
+  grid.appendChild(frag);
+
+  document.getElementById('result-count').textContent =
+    `${data.total} ${t('von', 'of')} ${(facets.stats || {}).distinct || data.total} ${t('Karten', 'cards')}`;
+  armLoadMore();
+}
+
+/* Sentinel am Ende des Rasters: kommt er in Sicht, wird nachgeladen. */
+let loadMoreObserver = null;
+function armLoadMore() {
+  const grid = document.getElementById('card-grid');
+  const old = document.getElementById('load-more-sentinel');
+  if (old) old.remove();
+  if (loadMoreObserver) loadMoreObserver.disconnect();
+  if (!pageHasMore) return;
+
+  const sentinel = document.createElement('div');
+  sentinel.id = 'load-more-sentinel';
+  grid.appendChild(sentinel);
+  loadMoreObserver = new IntersectionObserver((entries) => {
+    if (entries.some((e) => e.isIntersecting)) {
+      loadMoreObserver.disconnect();
+      runQuery(true);
+    }
+  }, { rootMargin: '600px' });
+  loadMoreObserver.observe(sentinel);
 }
 
 function buildCardTile(g) {
@@ -342,24 +302,28 @@ function renderGrid(groups) {
   renderIncremental(document.getElementById('card-grid'), groups, buildCardTile);
 }
 
-/* Random-cards strip above the filters, controlled by the admin config. */
-function renderRandomStrip() {
+/* Zufallsstreifen ueber den Filtern. Die Auswahl trifft das Backend, damit
+   dafuer nicht die ganze Sammlung im Browser liegen muss. */
+async function renderRandomStrip() {
   const el = document.getElementById('random-strip');
   if (!el) return;
   const cfg = UI_CONFIG || {};
-  if (!cfg.randomEnabled || !allGroups.length) {
+  if (!cfg.randomEnabled) {
     el.style.display = 'none';
     el.innerHTML = '';
     return;
   }
-  const n = Math.max(1, Math.min(cfg.randomCount || 6, allGroups.length));
-  const pool = allGroups.slice();
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+  let picks = [];
+  try {
+    const res = await fetch(API + '/cards/random?count=' + encodeURIComponent(cfg.randomCount || 6), { cache: 'no-store' });
+    if (res.ok) picks = (await res.json()).map(adaptGroup);
+  } catch (e) {
+    /* Der Streifen ist Beiwerk - faellt er aus, bleibt die Seite benutzbar. */
   }
-  const picks = pool.slice(0, n);
-
+  if (!picks.length) {
+    el.style.display = 'none';
+    return;
+  }
   el.style.display = '';
   el.innerHTML = `<h2 class="random-title">${t('Zufällige Karten aus deiner Sammlung', 'Random cards from your collection')}</h2>`;
   const row = document.createElement('div');
@@ -372,24 +336,28 @@ async function init() {
   initModal();
   showLoading(t('Lade Sammlung...', 'Loading collection...'));
   try {
-    allCards = await loadCollection(updateLoadingProgress);
-    setIndex = await loadSetIndex();
-    officialSubtypes = new Set(await loadSubtypes().catch(() => []));
+    [facets, setIndex, officialSubtypes] = await Promise.all([
+      fetch(API + '/cards/facets', { cache: 'no-cache' }).then((r) => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }),
+      loadSetIndex(),
+      loadSubtypes().then((x) => new Set(x)).catch(() => new Set()),
+    ]);
   } catch (e) {
     hideLoading();
     document.getElementById('card-grid').innerHTML = `<p style="color:#e05656">${t('Fehler beim Laden der Sammlung', 'Error loading collection')}: ${escapeHTML(e.message)}</p>`;
     return;
   }
   hideLoading();
-  allGroups = groupCards(allCards);
 
-  if (allGroups.length === 0) {
+  if (!facets.stats || !facets.stats.entries) {
     renderEmptyState();
     return;
   }
 
-  populateFilters(allCards);
-  populateSetFilter(allCards);
+  populateFilters();
+  populateSetFilter();
   populateSubtypes('');
 
   // Optional deep-link from the Ordner/Listen pages: index.html?binder=<name>
@@ -399,19 +367,20 @@ async function init() {
     if ([...binderSel.options].some((o) => o.value === binderParam)) binderSel.value = binderParam;
   }
 
-  renderStats(allCards, allGroups.length);
-  applyFilters();
+  renderStats();
+  await runQuery();
   await uiConfigReady;
   renderRandomStrip();
 
-  document.getElementById('search').addEventListener('input', debounce(applyFilters, 150));
-  // The set filter (custom dropdown) wires its own events in populateSetFilter().
+  // Tippen loest eine Abfrage aus - entprellt, damit nicht jeder Tastendruck
+  // eine Anfrage wird.
+  document.getElementById('search').addEventListener('input', debounce(() => runQuery(), 250));
   ['filter-rarity', 'filter-color', 'filter-foil', 'filter-binder', 'filter-subtype', 'sort-by'].forEach((id) => {
-    document.getElementById(id).addEventListener('change', applyFilters);
+    document.getElementById(id).addEventListener('change', () => runQuery());
   });
   document.getElementById('filter-type').addEventListener('change', (e) => {
     populateSubtypes(e.target.value);
-    applyFilters();
+    runQuery();
   });
 }
 
