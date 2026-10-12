@@ -69,7 +69,7 @@ function renderGrid() {
       : `<span class="dim">${t('kein Preis', 'no price')}</span>`;
     tile.innerHTML = `
       <div class="eo-thumb">
-        ${c.image ? `<img loading="lazy" src="${c.image}" alt="${escapeHTML(c.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
+        ${(() => { const img = setCardImage({ imageId: c.imageId }, 'small'); return img ? `<img loading="lazy" src="${escapeHTML(img)}" alt="${escapeHTML(c.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`; })()}
         ${c.owned && c.quantity > 1 ? `<span class="eo-qty">×${c.quantity}</span>` : ''}
         ${c.owned ? '<span class="eo-check">✓</span>' : `<span class="eo-missing-tag">${t('fehlt', 'missing')}</span>`}
       </div>

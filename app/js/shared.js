@@ -143,6 +143,10 @@ function setSymbolURL(uri) {
 function scryfallImageURL(card, size, face) {
   const sc = card.scryfall;
   if (!sc) return '';
+  // Ein paar Sonderdrucke (Art Series) haben im Katalog gar kein Bild - aus
+  // ihrer id laesst sich keine gueltige URL bauen, also bleibt es beim
+  // Platzhalter.
+  if (sc.noImage) return '';
   // imageId steht nur dort, wo der Katalog eine andere id fuehrt als der
   // Sammlungseintrag (abweichender Druck im ManaBox-Export).
   const id = sc.imageId || card.scryfallId || '';
@@ -458,13 +462,16 @@ async function loadCardVariants(group) {
           : p.priceEurFoil != null
           ? formatCurrency(p.priceEurFoil, 'EUR') + ' (Foil)'
           : '–';
-      const img = p.imageSmall || p.image;
-      const icon = p.iconSvgUri
-        ? `<img class="variant-icon" src="${escapeHTML(p.iconSvgUri)}" alt="" loading="lazy">`
+      // Bild und Editionssymbol werden abgeleitet, damit auch die Varianten
+      // ueber den lokalen Spiegel laufen, wenn er aktiv ist.
+      const img = setCardImage({ imageId: p.imageId }, 'small');
+      const iconURL = setSymbolURL(p.iconSvgUri);
+      const icon = iconURL
+        ? `<img class="variant-icon" src="${escapeHTML(iconURL)}" alt="" loading="lazy">`
         : '';
       return `
         <div class="variant" title="${escapeHTML(p.setName || p.setCode)} #${escapeHTML(p.collectorNumber)}">
-          <div class="variant-thumb">${img ? `<img loading="lazy" src="${img}" alt="">` : ''}</div>
+          <div class="variant-thumb">${img ? `<img loading="lazy" src="${escapeHTML(img)}" alt="">` : ''}</div>
           <div class="variant-set">${icon}<span>${escapeHTML(p.setName || p.setCode)}</span></div>
           <div class="variant-price">${price}</div>
         </div>`;

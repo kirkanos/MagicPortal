@@ -17,15 +17,19 @@ type reservedCard struct {
 	Quantity      int      `json:"quantity"`
 	OwnedValue    float64  `json:"ownedValue"`
 	CheapestPrice *float64 `json:"cheapestPrice"`
-	Image         string   `json:"image"`
-	Rarity        string   `json:"rarity"`
-	CardmarketURI string   `json:"cardmarketUri"`
+	// Wie ueberall sonst nur die ID, damit die Bilder ueber den lokalen
+	// Spiegel laufen koennen; leer, wenn der Katalog kein Bild fuehrt.
+	ImageID       string `json:"imageId"`
+	Rarity        string `json:"rarity"`
+	CardmarketURI string `json:"cardmarketUri"`
 }
 
 func handleReserved(w http.ResponseWriter, r *http.Request) {
 	// 1) All reserved printings → cheapest price + a representative image per name.
 	rows, err := db.Query(`
-		SELECT name, price_eur, image_small, image_normal, rarity, cardmarket_uri
+		SELECT name, price_eur,
+		       CASE WHEN COALESCE(image_normal, '') = '' THEN '' ELSE scryfall_id END,
+		       rarity, cardmarket_uri
 		FROM scryfall_cards WHERE reserved = 1`)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -39,16 +43,12 @@ func handleReserved(w http.ResponseWriter, r *http.Request) {
 	}
 	master := map[string]*acc{}
 	for rows.Next() {
-		var name, imgS, imgN, rarity, cardmarket string
+		var name, img, rarity, cardmarket string
 		var price *float64
-		if err := rows.Scan(&name, &price, &imgS, &imgN, &rarity, &cardmarket); err != nil {
+		if err := rows.Scan(&name, &price, &img, &rarity, &cardmarket); err != nil {
 			rows.Close()
 			http.Error(w, err.Error(), 500)
 			return
-		}
-		img := imgS
-		if img == "" {
-			img = imgN
 		}
 		a := master[name]
 		if a == nil {
@@ -111,7 +111,7 @@ func handleReserved(w http.ResponseWriter, r *http.Request) {
 		rc := reservedCard{
 			Name:          name,
 			CheapestPrice: a.cheapest,
-			Image:         a.image,
+			ImageID:       a.image,
 			Rarity:        a.rarity,
 			CardmarketURI: a.cardmarket,
 		}

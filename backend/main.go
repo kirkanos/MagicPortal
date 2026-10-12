@@ -106,7 +106,11 @@ type scryfallOut struct {
 	Name string `json:"name,omitempty"`
 	// Only set when the catalog row has a different Scryfall id than the
 	// collection row (ManaBox occasionally exports the id of another printing).
-	ImageID  string   `json:"imageId,omitempty"`
+	ImageID string `json:"imageId,omitempty"`
+	// NoImage markiert die wenigen Katalogeintraege ohne Bild (Art-Series und
+	// aehnliche Sonderdrucke). Ohne das Flag wuerde das Frontend aus der ID
+	// eine URL ableiten, die es bei Scryfall gar nicht gibt.
+	NoImage  bool     `json:"noImage,omitempty"`
 	HasBack  bool     `json:"hasBack,omitempty"`
 	TypeLine string   `json:"typeLine"`
 	Colors   []string `json:"colors"`
@@ -147,6 +151,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
 		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type,
 		       s.name, s.type_line, s.colors, s.mana_cost, s.scryfall_id,
+		       COALESCE(s.image_normal, '') <> '',
 		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil
 		FROM collection c
 		LEFT JOIN scryfall_cards s
@@ -164,13 +169,13 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 			c                                 cardOut
 			setCode                           string
 			sName, sType, sColors, sMana, sID sql.NullString
-			sHasBack                          bool
+			sHasImage, sHasBack               bool
 			sPrice, sPriceFoil                sql.NullFloat64
 		)
 		if err := rows.Scan(&c.Key, &c.ScryfallID, &setCode, &c.SetName, &c.CollectorNumber, &c.Name,
 			&c.Foil, &c.Rarity, &c.Language, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Condition, &c.Added,
 			&c.BinderName, &c.BinderType,
-			&sName, &sType, &sColors, &sMana, &sID, &sHasBack, &sPrice, &sPriceFoil); err != nil {
+			&sName, &sType, &sColors, &sMana, &sID, &sHasImage, &sHasBack, &sPrice, &sPriceFoil); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -181,11 +186,12 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 				Colors:   colorsFromJSON(sColors.String),
 				ManaCost: sMana.String,
 				HasBack:  sHasBack,
+				NoImage:  !sHasImage,
 			}
 			if sName.String != c.Name {
 				so.Name = sName.String
 			}
-			if sID.String != c.ScryfallID {
+			if sHasImage && sID.String != c.ScryfallID {
 				so.ImageID = sID.String
 			}
 			if sPrice.Valid {
@@ -256,7 +262,8 @@ type setCardOut struct {
 func handleSetCards(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToLower(r.PathValue("code"))
 	rows, err := db.Query(`
-		SELECT collector_number, name, rarity, type_line, price_eur, price_eur_foil, scryfall_id,
+		SELECT collector_number, name, rarity, type_line, price_eur, price_eur_foil,
+		       CASE WHEN COALESCE(image_normal, '') = '' THEN '' ELSE scryfall_id END,
 		       COALESCE(image_back_normal, '') <> '', cardmarket_uri
 		FROM scryfall_cards WHERE set_code = ?
 		ORDER BY CAST(collector_number AS INTEGER), collector_number`, code)
@@ -291,15 +298,16 @@ func handleSetCards(w http.ResponseWriter, r *http.Request) {
 }
 
 type printOut struct {
-	SetCode         string   `json:"setCode"`
-	SetName         string   `json:"setName"`
-	IconSvgURI      string   `json:"iconSvgUri"`
-	CollectorNumber string   `json:"collectorNumber"`
-	Rarity          string   `json:"rarity"`
-	Image           string   `json:"image"`
-	ImageSmall      string   `json:"imageSmall"`
-	PriceEur        *float64 `json:"priceEur"`
-	PriceEurFoil    *float64 `json:"priceEurFoil"`
+	SetCode         string `json:"setCode"`
+	SetName         string `json:"setName"`
+	IconSvgURI      string `json:"iconSvgUri"`
+	CollectorNumber string `json:"collectorNumber"`
+	Rarity          string `json:"rarity"`
+	// ImageID statt fertiger URLs: das Frontend leitet die Bildadresse daraus
+	// ab und kann sie damit ueber den lokalen Spiegel laufen lassen.
+	ImageID      string   `json:"imageId"`
+	PriceEur     *float64 `json:"priceEur"`
+	PriceEurFoil *float64 `json:"priceEurFoil"`
 }
 
 // handlePrints returns every printing of a card (by exact Scryfall name) across
@@ -310,7 +318,8 @@ func handlePrints(w http.ResponseWriter, r *http.Request) {
 	if name != "" {
 		rows, err := db.Query(`
 			SELECT sc.set_code, COALESCE(s.name, ''), COALESCE(s.icon_svg_uri, ''),
-			       sc.collector_number, sc.rarity, sc.image_normal, sc.image_small,
+			       sc.collector_number, sc.rarity,
+			       CASE WHEN COALESCE(sc.image_normal, '') = '' THEN '' ELSE sc.scryfall_id END,
 			       sc.price_eur, sc.price_eur_foil
 			FROM scryfall_cards sc
 			LEFT JOIN sets s ON s.code = sc.set_code
@@ -326,7 +335,7 @@ func handlePrints(w http.ResponseWriter, r *http.Request) {
 			var setCode string
 			var price, priceFoil sql.NullFloat64
 			if err := rows.Scan(&setCode, &p.SetName, &p.IconSvgURI, &p.CollectorNumber, &p.Rarity,
-				&p.Image, &p.ImageSmall, &price, &priceFoil); err != nil {
+				&p.ImageID, &price, &priceFoil); err != nil {
 				http.Error(w, err.Error(), 500)
 				return
 			}

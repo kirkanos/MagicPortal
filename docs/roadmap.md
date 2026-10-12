@@ -18,8 +18,9 @@ im Browser aus der Scryfall-ID gebaut statt übertragen (14,8 → 10,0 MB).
 > `oracleText` ist aus `/api/collection` verschwunden (2,36 → 1,32 MB gzip),
 > die Seite nutzen nur noch `editions.js` und `deck-checker.js`.
 >
-> Offen geblieben: `/api/prints` (die „weiteren Editionen" im Detaildialog)
-> liefert weiterhin fertige Bild-URLs und läuft damit am Bild-Spiegel vorbei.
+> Nachgezogen: `/api/prints` und `/api/reserved` liefern ebenfalls nur noch die
+> Scryfall-ID statt fertiger Bild-URLs, laufen damit über den Spiegel und sind
+> die letzten beiden Endpunkte gewesen, die ihn umgangen haben.
 
 ### Warum
 

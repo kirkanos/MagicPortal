@@ -98,7 +98,8 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 		SELECT c.id, c.name, c.set_code, c.set_name, c.collector_number, c.rarity, c.foil, c.language,
 		       c.condition, c.quantity, c.purchase_price, c.currency, c.added, c.binder_name, c.binder_type,
 		       s.scryfall_id, COALESCE(s.type_line, ''), COALESCE(s.mana_cost, ''), COALESCE(s.oracle_text, ''),
-		       COALESCE(s.colors, ''), COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil
+		       COALESCE(s.colors, ''), COALESCE(s.image_normal, '') <> '',
+		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil
 		FROM collection c
 		LEFT JOIN scryfall_cards s
 		       ON s.set_code = c.set_code AND s.collector_number = c.collector_number
@@ -112,11 +113,12 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 	for rows.Next() {
 		var c cardRow
 		var sID, colorsJSON *string
+		var hasImage bool
 		var priceEur, priceFoil *float64
 		if err := rows.Scan(&c.ID, &c.Name, &c.SetCode, &c.SetName, &c.CollectorNumber, &c.Rarity, &c.Foil,
 			&c.Language, &c.Condition, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Added,
 			&c.BinderName, &c.BinderType,
-			&sID, &c.TypeLine, &c.ManaCost, &c.OracleText, &colorsJSON, &c.HasBack,
+			&sID, &c.TypeLine, &c.ManaCost, &c.OracleText, &colorsJSON, &hasImage, &c.HasBack,
 			&priceEur, &priceFoil); err != nil {
 			return nil, nil, err
 		}
@@ -124,7 +126,11 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 		c.PriceEur, c.PriceEurFoil = priceEur, priceFoil
 		if sID != nil {
 			c.HasCatalog = true
-			c.ImageID = *sID
+			// Ohne Katalogbild bleibt die ID leer: aus ihr liesse sich sonst
+			// eine URL ableiten, die es bei Scryfall nicht gibt.
+			if hasImage {
+				c.ImageID = *sID
+			}
 		}
 		if colorsJSON != nil {
 			c.Colors = colorsFromJSON(*colorsJSON)
