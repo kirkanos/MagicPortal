@@ -160,9 +160,14 @@ Footer bereits steht.
 
 ---
 
-## 3. Doppelseitige Karten umdrehen
+## 3. Doppelseitige Karten umdrehen — erledigt
 
-### Heute
+> Umgesetzt in `shared.js` (`cardFaceHTML`, `initCardFlip`) und `style.css`.
+> Das Editionen-Overlay zeigt die Rückseite weiterhin als zweites Bild; es
+> wird mit Punkt 2 nachgezogen, wenn `/api/sets/{code}/cards` ohnehin auf
+> abgeleitete URLs umgestellt wird.
+
+### Vorher
 
 `cardGroupModalHTML()` in `shared.js` rendert bei einer doppelseitigen Karte
 beide Bilder untereinander in dieselbe Spalte. Das ist unübersichtlich, kostet

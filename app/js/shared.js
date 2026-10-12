@@ -375,8 +375,7 @@ function cardGroupModalHTML(group) {
   return `
     <div class="modal-card">
       <div class="modal-image">
-        ${img ? `<img src="${img}" alt="${escapeHTML(group.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
-        ${backImg ? `<img src="${backImg}" alt="${escapeHTML(group.name)} (${t('Rückseite', 'back')})">` : ''}
+        ${cardFaceHTML(group.name, img, backImg)}
       </div>
       <div class="modal-details">
         <h2>${escapeHTML(group.name)}</h2>
@@ -464,10 +463,58 @@ function initModal() {
   });
 }
 
+/* Kartenbild im Detaildialog. Doppelseitige Karten (Transform, modale DFCs,
+   Sagas) wurden frueher als zwei Bilder untereinander gezeigt; stattdessen
+   gibt es jetzt ein Bild, das sich umdrehen laesst.
+
+   Die Rueckseite haengt nur mit data-src im Markup und wird erst beim ersten
+   Umdrehen geladen - das spart bei jedem Oeffnen rund 100 KB, denn meistens
+   will man sie gar nicht sehen. */
+function cardFaceHTML(name, frontURL, backURL) {
+  if (!frontURL) return `<div class="no-image">${t('Kein Bild', 'No image')}</div>`;
+  if (!backURL) return `<img src="${frontURL}" alt="${escapeHTML(name)}">`;
+  const backLabel = `${escapeHTML(name)} (${t('Rückseite', 'back')})`;
+  return `
+    <div class="card-flip" data-flipped="false">
+      <div class="card-flip-inner">
+        <img class="card-face card-front" src="${frontURL}" alt="${escapeHTML(name)}">
+        <img class="card-face card-back" data-src="${backURL}" alt="${backLabel}" aria-hidden="true">
+      </div>
+    </div>
+    <button type="button" class="flip-btn" aria-pressed="false">
+      <span aria-hidden="true">↻</span> ${t('Umdrehen', 'Flip')}
+    </button>`;
+}
+
+/* Klick auf das Bild oder die Schaltflaeche dreht die Karte. */
+function initCardFlip(root) {
+  const flip = root.querySelector('.card-flip');
+  if (!flip) return;
+  const btn = root.querySelector('.flip-btn');
+  const back = flip.querySelector('.card-back');
+  const front = flip.querySelector('.card-front');
+
+  const toggle = () => {
+    const flipped = flip.dataset.flipped !== 'true';
+    // Rueckseite beim ersten Mal nachladen.
+    if (flipped && !back.getAttribute('src')) back.setAttribute('src', back.dataset.src);
+    flip.dataset.flipped = String(flipped);
+    if (btn) btn.setAttribute('aria-pressed', String(flipped));
+    // Die abgewandte Seite aus dem Vorlesefluss nehmen.
+    back.setAttribute('aria-hidden', String(!flipped));
+    front.setAttribute('aria-hidden', String(flipped));
+  };
+
+  flip.addEventListener('click', toggle);
+  if (btn) btn.addEventListener('click', toggle);
+}
+
 function openCardModal(html) {
   const overlay = document.getElementById('card-modal');
   if (!overlay) return;
-  overlay.querySelector('.modal-body').innerHTML = '<span class="modal-close">&times;</span>' + html;
+  const body = overlay.querySelector('.modal-body');
+  body.innerHTML = '<span class="modal-close">&times;</span>' + html;
+  initCardFlip(body);
   overlay.classList.add('open');
 }
 

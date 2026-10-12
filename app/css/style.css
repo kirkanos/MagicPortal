@@ -384,6 +384,31 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .cardmarket-link:hover { background: #388bfd; }
 .modal-image img { width: 100%; border-radius: 12px; }
 .modal-image .no-image { width: 260px; aspect-ratio: 63/88; background: #0d0e14; display: flex; align-items: center; justify-content: center; color: var(--text-dim); border-radius: 12px; }
+
+/* Doppelseitige Karten: ein Bild, das sich umdrehen laesst, statt zweier
+   untereinander. Beide Seiten liegen deckungsgleich uebereinander, gedreht
+   wird der Behaelter. */
+.card-flip { perspective: 1200px; cursor: pointer; }
+.card-flip-inner {
+  position: relative; aspect-ratio: 63/88;
+  transform-style: preserve-3d; transition: transform 0.5s ease;
+}
+.card-flip[data-flipped="true"] .card-flip-inner { transform: rotateY(180deg); }
+.card-face {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  backface-visibility: hidden; border-radius: 12px;
+}
+.card-back { transform: rotateY(180deg); }
+.flip-btn {
+  margin-top: 10px; width: 100%; padding: 7px 10px;
+  background: var(--bg-card); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; font-size: 0.85rem;
+}
+.flip-btn:hover { border-color: var(--accent); }
+/* Wer Animationen abbestellt hat, bekommt den Wechsel ohne Drehung. */
+@media (prefers-reduced-motion: reduce) {
+  .card-flip-inner { transition: none; }
+}
 .modal-details { flex: 1; min-width: 220px; }
 .modal-details h2 { margin: 0 0 4px; }
 .modal-type { color: var(--text-dim); margin: 0 0 14px; font-style: italic; }
