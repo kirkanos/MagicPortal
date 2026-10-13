@@ -40,6 +40,7 @@ Inspired by [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection-vi
 - **🔍 Card details** – mana cost as symbols, Oracle text, one row per language/finish/condition (binder / price / quantity / condition / date added) plus a gallery of **all other printings** of the card with image, edition and price. **Double-faced cards** (transform/MDFC) can be **flipped** to the back – in both the card dialog and the editions overlay.
 - **📚 Editions** – per-set overview: owned / missing / duplicates, including sets you own **no** card from at all. Set-type filter (default: collectible types, up to "all"), an expandable explanation, sorting by missing cards and release date among others. A click opens an overlay with **every** card of the edition (missing ones greyed out), the set symbol, the value of the missing cards and – for owned cards – the binder. The card detail view links straight to the matching **Cardmarket** product.
 - **🏛️ Reserved List** – an overview of Wizards' [Reserved List](https://magic.wizards.com/en/formats/reserved-list): which cards you own (any version/language counts) and which are missing, as a card grid (missing ones greyed out). Key figures: owned/missing count, completeness, **value of the owned** cards and the **investment needed to buy the rest** (cheapest available version each). Filter (all/owned/missing), search and sorting by price/name.
+- **⭐ Wishlist** – mark cards you are missing with a ☆ wherever you notice they are missing: on the Reserved List, in an edition overlay, in the card detail view, or in the deck checker (including "put everything missing on the list" in one click). Its own page shows per entry the **cheapest printing** and its price, the **30-day change**, an optional **target price**, a **minimum condition** and a note. Cards you own in a worse condition than you want are flagged as an **upgrade**. A **"Copy for Cardmarket"** button renders the list in Cardmarket's decklist format, grouped by minimum condition and chunked to 150 entries. Marking and editing require a login, like every other write.
 - **📁 Binders & lists** – dedicated overview pages for ManaBox binders and lists with card count and value; a click jumps to the filtered card view.
 - **🧩 Decks** – menu entry for a future deck import/export (currently a placeholder, no functionality yet).
 - **📊 Statistics** – a thorough dashboard: key figures (entries, cards, editions, binders, purchase/market value, gain market − purchase, average value, foil share, most expensive card) plus charts for rarity, colors, card types, languages, condition, mana value, foil, purchase value & additions over time, most valuable cards (purchase/market), **value-weighted** by color and rarity, price-bracket distribution and **detail tables** (rarity, editions) with entries, copies, market value, average value and share of value.
@@ -300,6 +301,10 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `GET` | `/api/cards/random` | Random cards for the strip above the grid |
 | `GET` | `/api/config` | UI settings (random cards, hidden menu entries) – public |
 | `POST` | `/api/config` | Store UI settings (password protected) |
+| `GET` | `/api/wishlist` | Wishlist with cheapest printing, price, 30-day change, target and what you own |
+| `POST` | `/api/wishlist` | Add or update one entry (password protected) |
+| `DELETE` | `/api/wishlist/{name}` | Remove one entry (password protected) |
+| `GET` | `/api/wishlist/export` | The list in Cardmarket's decklist format (`text/plain`) |
 | `GET` | `/api/auth-check` | Password check (204/403) |
 | `POST` | `/api/upload` | Upload CSV (upsert) |
 | `POST` | `/api/reset` | Clear the collection |
@@ -311,16 +316,19 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 ```text
 mtg-portal/
 ├── app/                     # nginx docroot (static interface)
-│   ├── index.html · editions.html · binders.html · lists.html · decks.html · dashboard.html · deck-checker.html
+│   ├── index.html · editions.html · reserved.html · wishlist.html · binders.html · lists.html
+│   ├── decks.html · dashboard.html · deck-checker.html · activity.html
 │   ├── css/style.css
-│   ├── js/i18n.js · shared.js · grid.js · editions.js · binders.js · dashboard.js · deck-checker.js
+│   ├── js/i18n.js · shared.js · grid.js · editions.js · reserved.js · wishlist.js
+│   ├── js/binders.js · dashboard.js · deck-checker.js · activity.js
 │   └── images/              # logo & favicons
 ├── backend/                 # Go backend (API + sync jobs)
 │   ├── main.go · db.go · csvimport.go · scryfall.go · metrics.go
+│   ├── cards.go · dashboard.go · reserved.go · wishlist.go · valuehistory.go · backup.go · images.go
 │   └── Dockerfile
 ├── docs/
 │   ├── monitoring.md        # metrics, scrape setup, dashboard
-│   ├── roadmap.md           # planned work (search, image mirror, card flip)
+│   ├── roadmap.md           # planned work and the reasoning behind what is done
 │   └── grafana/             # dashboard JSON, prometheus.yml excerpt, alert rules
 ├── nginx/
 │   ├── default.conf.template   # static + proxy /api → backend + image mirror

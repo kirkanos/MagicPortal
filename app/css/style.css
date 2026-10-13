@@ -684,6 +684,92 @@ table.deck-table th { color: var(--text-dim); font-weight: 600; }
 }
 .rl-cm-link:hover { color: #7cc3f0; text-decoration: underline; }
 
+/* Wishlist marker. Hidden unless the session is unlocked - marking is a write,
+   like every other action in the app (body.is-unlocked is set in shared.js). */
+.wish-btn {
+  display: none; background: rgba(0,0,0,0.65); border: 1px solid var(--border);
+  color: var(--text-dim); cursor: pointer; border-radius: 6px; line-height: 1;
+  padding: 2px 6px; font-size: 0.95rem;
+}
+body.is-unlocked .wish-btn { display: inline-block; }
+.wish-btn:hover { color: var(--accent); border-color: var(--accent); }
+.wish-btn.on { color: var(--accent); border-color: var(--accent); }
+.wish-btn:disabled { opacity: 0.5; cursor: progress; }
+/* On a card thumbnail the marker floats in the top right corner. */
+.wish-btn.on-thumb { position: absolute; top: 6px; right: 6px; }
+body.is-unlocked .wish-btn.on-thumb { display: inline-block; }
+
+.wish-line { display: none; align-items: center; gap: 8px; margin: 10px 0; }
+body.is-unlocked .wish-line { display: flex; }
+.wish-line-label { color: var(--text-dim); font-size: 0.85rem; }
+.wish-col { width: 1%; text-align: center; }
+.wish-cell { text-align: center; }
+.wish-bulk { display: none; margin-bottom: 12px; }
+body.is-unlocked .wish-bulk { display: inline-block; }
+
+/* Wishlist page */
+.wl-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.wl-add { display: flex; gap: 8px; flex: 1; min-width: 260px; }
+.wl-add input {
+  flex: 1; min-width: 0; padding: 9px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text);
+}
+.wl-howto { margin-bottom: 14px; color: var(--text-dim); font-size: 0.86rem; }
+.wl-howto summary { cursor: pointer; color: var(--accent); }
+.wl-howto-body { padding: 8px 0 0 4px; line-height: 1.5; }
+.wl-howto-body ol { margin: 6px 0; padding-left: 20px; }
+
+.wl-export-out { margin-bottom: 14px; }
+.wl-export-note { color: var(--text-dim); font-size: 0.84rem; margin: 0 0 6px; }
+.wl-export-text {
+  width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-elevated); color: var(--text); font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem; resize: vertical;
+}
+
+.wl-list { display: flex; flex-direction: column; gap: 10px; }
+.wl-row {
+  position: relative; display: grid; gap: 12px; align-items: start;
+  grid-template-columns: 56px minmax(180px, 1fr) minmax(280px, 1.4fr) 28px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px;
+}
+.wl-row.target-met { border-color: var(--green); }
+.wl-thumb {
+  aspect-ratio: 63/88; border-radius: 6px; overflow: hidden;
+  background: #0d0e14; border: 1px solid var(--border);
+}
+.wl-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wl-thumb .no-image {
+  display: flex; align-items: center; justify-content: center; height: 100%;
+  color: var(--text-dim); font-size: 0.6rem; text-align: center;
+}
+.wl-name { font-weight: 600; }
+.wl-prio { color: var(--accent); margin-left: 6px; font-weight: 700; }
+.wl-meta { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; }
+.wl-price { color: var(--text); font-weight: 600; }
+.wl-price.met { color: var(--green); }
+.wl-where { color: var(--text-dim); }
+.wl-change.up { color: #ef8a8a; }
+.wl-change.down { color: var(--green); }
+.wl-owned { color: var(--green); }
+.wl-upgrade { color: var(--accent); }
+.wl-unknown { color: #ef8a8a; }
+
+.wl-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.wl-field { display: flex; flex-direction: column; gap: 3px; font-size: 0.72rem; color: var(--text-dim); }
+.wl-field-wide { grid-column: 1 / -1; }
+.wl-field .wl-input {
+  padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg-elevated); color: var(--text); font-size: 0.82rem; min-width: 0;
+}
+.wl-field .wl-input:disabled { opacity: 0.55; cursor: not-allowed; }
+.wl-remove {
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 1.3rem; line-height: 1; padding: 0 4px;
+}
+.wl-remove:hover { color: var(--red); }
+
 /* Activity log */
 .activity-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .activity-head h1 { margin: 0; font-size: 1.4rem; }
@@ -732,6 +818,8 @@ table.deck-table th { color: var(--text-dim); font-weight: 600; }
 }
 
 @media (max-width: 800px) {
+  .wl-row { grid-template-columns: 48px 1fr 24px; }
+  .wl-fields { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .deck-checker-layout { grid-template-columns: 1fr; }
   .edition-table { font-size: 0.82rem; }
   .edition-table th, .edition-table td { padding: 9px 8px; }

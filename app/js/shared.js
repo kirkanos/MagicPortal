@@ -61,6 +61,9 @@ async function fetchSetCards(code) {
 const UPLOAD_PW_KEY = 'mtg_upload_pw';
 // localStorage (not sessionStorage) so the login persists across browser sessions.
 let uploadPassword = localStorage.getItem(UPLOAD_PW_KEY) || sessionStorage.getItem(UPLOAD_PW_KEY) || null;
+// Whether write actions are available (no password configured, or logged in).
+// Pages listen for the `auth-change` event instead of polling this.
+let isUnlocked = false;
 
 function uploadHeaders(extra) {
   const headers = Object.assign({}, extra || {});
@@ -162,6 +165,113 @@ function cardImage(card, size) {
    object) but use the same derivation. */
 function setCardImage(card, size, face) {
   return scryfallImageURL({ scryfallId: card.imageId, scryfall: { hasBack: card.hasBack } }, size, face || 'front');
+}
+
+/* ---- Wishlist ----
+   The set of marked names is loaded once per page and kept in memory, so the
+   toggles on a grid of several hundred cards do not each need a request. Names
+   are compared lowercased, like everywhere else that keys by card name. */
+
+let wishlistNames = null;
+let wishlistReady = null;
+
+async function loadWishlistNames(force) {
+  if (wishlistReady && !force) return wishlistReady;
+  wishlistReady = (async () => {
+    try {
+      const res = await fetch(API + '/wishlist', { cache: 'no-store' });
+      const data = res.ok ? await res.json() : { items: [] };
+      wishlistNames = new Set((data.items || []).map((i) => i.name.toLowerCase()));
+    } catch (e) {
+      wishlistNames = new Set();
+    }
+    return wishlistNames;
+  })();
+  return wishlistReady;
+}
+
+function onWishlist(name) {
+  return !!wishlistNames && wishlistNames.has(String(name || '').toLowerCase());
+}
+
+/* Adds or removes one card. `extra` may carry setCode/collectorNumber (pin a
+   printing), targetEur, minCondition, note and priority. Returns the new state. */
+async function setWishlist(name, on, extra) {
+  const res = on
+    ? await fetch(API + '/wishlist', {
+        method: 'POST',
+        headers: uploadHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(Object.assign({ name }, extra || {})),
+      })
+    : await fetch(API + '/wishlist/' + encodeURIComponent(name), {
+        method: 'DELETE',
+        headers: uploadHeaders(),
+      });
+  if (res.status === 403) throw new Error(t('Falsches oder fehlendes Passwort', 'Wrong or missing password'));
+  if (!res.ok) throw new Error(t('Wunschliste konnte nicht gespeichert werden', 'Could not save the wishlist') + ' (HTTP ' + res.status + ')');
+  if (!wishlistNames) wishlistNames = new Set();
+  if (on) wishlistNames.add(name.toLowerCase());
+  else wishlistNames.delete(name.toLowerCase());
+  return on;
+}
+
+/* The marker rendered on a card tile or in a detail view. Hidden by CSS unless
+   the session is unlocked - marking is a write, like every other action. */
+function wishButtonHTML(name, extraClass) {
+  const active = onWishlist(name);
+  const title = active
+    ? t('Von der Wunschliste entfernen', 'Remove from the wishlist')
+    : t('Auf die Wunschliste setzen', 'Add to the wishlist');
+  return (
+    `<button type="button" class="wish-btn${active ? ' on' : ''}${extraClass ? ' ' + extraClass : ''}" ` +
+    `data-wish="${escapeHTML(name)}" title="${escapeHTML(title)}" aria-label="${escapeHTML(title)}">` +
+    `${active ? '★' : '☆'}</button>`
+  );
+}
+
+/* One delegated handler per container for every marker inside it. `onChange` is
+   called after a successful toggle, e.g. to refresh a counter. */
+function initWishButtons(container, onChange) {
+  if (!container || container.dataset.wishWired) return;
+  container.dataset.wishWired = '1';
+  container.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.wish-btn');
+    if (!btn || !container.contains(btn)) return;
+    // Tiles and table rows have click handlers of their own (open the detail
+    // view); marking must not also open it. stopImmediatePropagation, not
+    // stopPropagation: the other handler often sits on the same container, and
+    // only this stops it - which is why this listener is wired first.
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    const name = btn.dataset.wish;
+    const on = !btn.classList.contains('on');
+    btn.disabled = true;
+    try {
+      await setWishlist(name, on);
+      syncWishButtons(name);
+      if (onChange) onChange(name, on);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+/* Keeps every marker for the same card in sync - a name can appear more than
+   once on a page (grid tile plus open detail view). */
+function syncWishButtons(name) {
+  const active = onWishlist(name);
+  document.querySelectorAll('.wish-btn').forEach((b) => {
+    if (b.dataset.wish.toLowerCase() !== String(name).toLowerCase()) return;
+    b.classList.toggle('on', active);
+    b.textContent = active ? '★' : '☆';
+    const title = active
+      ? t('Von der Wunschliste entfernen', 'Remove from the wishlist')
+      : t('Auf die Wunschliste setzen', 'Add to the wishlist');
+    b.title = title;
+    b.setAttribute('aria-label', title);
+  });
 }
 
 const LANGUAGE_FLAG = {
@@ -331,6 +441,21 @@ const CONDITION_LABEL = {
   damaged: 'Damaged',
 };
 
+/* The vocabulary in the order Cardmarket and ManaBox use it, best first. Drives
+   the condition selects; the labels above stay the single source for the text.
+   `light_played`/`lightly_played` are the same grade in two spellings, so only
+   one of them is offered for new input. */
+const CONDITION_ORDER = ['mint', 'near_mint', 'excellent', 'good', 'light_played', 'played', 'poor'];
+
+function conditionOptionsHTML(selected) {
+  return (
+    `<option value="">${t('egal', 'any')}</option>` +
+    CONDITION_ORDER.map(
+      (c) => `<option value="${c}"${c === selected ? ' selected' : ''}>${escapeHTML(conditionLabel(c))}</option>`
+    ).join('')
+  );
+}
+
 function conditionLabel(c) {
   if (!c) return '–';
   const k = String(c).toLowerCase();
@@ -417,6 +542,7 @@ function cardGroupModalHTML(group) {
           <dt>${t('Exemplare gesamt', 'Copies total')}</dt><dd>${group.totalQty}</dd>
           <dt title="${priceHint()}">${t('Marktwert gesamt', 'Total market value')}</dt><dd title="${priceHint()}">${formatCurrency(totalMarket, 'EUR')}</dd>
         </dl>
+        <div class="wish-line">${wishButtonHTML(group.name)}<span class="wish-line-label">${t('Wunschliste', 'Wishlist')}</span></div>
         <h3 class="lang-table-title">${t('Sprachen in deiner Sammlung', 'Languages in your collection')}</h3>
         <table class="lang-table">
           <thead><tr><th>${t('Sprache', 'Language')}</th><th>${t('Zustand', 'Condition')}</th><th>${t('Ordner', 'Folder')}</th><th class="num" title="${priceHint()}">${t('Preis (Cardmarket-Trend)', 'Price (Cardmarket trend)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
@@ -547,6 +673,7 @@ function openCardModal(html) {
   const body = overlay.querySelector('.modal-body');
   body.innerHTML = '<span class="modal-close">&times;</span>' + html;
   initCardFlip(body);
+  initWishButtons(overlay);
   overlay.classList.add('open');
 }
 
@@ -634,6 +761,7 @@ const NAV_ITEMS = [
   { key: 'index', label: () => t('Karten', 'Cards') },
   { key: 'editions', label: () => t('Editionen', 'Editions') },
   { key: 'reserved', label: () => t('Reserved List', 'Reserved List') },
+  { key: 'wishlist', label: () => t('Wunschliste', 'Wishlist') },
   { key: 'binders', label: () => t('Ordner', 'Folders') },
   { key: 'lists', label: () => t('Listen', 'Lists') },
   { key: 'decks', label: () => t('Decks', 'Decks') },
@@ -773,6 +901,11 @@ function initCollectionUpload() {
   refreshSyncStatus();
 
   function setUnlocked(unlocked) {
+    // Pages read this to decide whether write controls (wishlist markers) are
+    // offered; the class drives the CSS, the variable the JS.
+    isUnlocked = unlocked;
+    document.body.classList.toggle('is-unlocked', unlocked);
+    document.dispatchEvent(new CustomEvent('auth-change', { detail: { unlocked } }));
     uploadLabel.style.display = unlocked ? '' : 'none';
     if (syncBtn) syncBtn.style.display = unlocked ? '' : 'none';
     // Admin settings + activity log are only offered once logged in.

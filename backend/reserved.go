@@ -25,53 +25,13 @@ type reservedCard struct {
 }
 
 func handleReserved(w http.ResponseWriter, r *http.Request) {
-	// 1) All reserved printings → cheapest price + a representative image per name.
-	rows, err := db.Query(`
-		SELECT name, price_eur,
-		       CASE WHEN COALESCE(image_normal, '') = '' THEN '' ELSE scryfall_id END,
-		       rarity, cardmarket_uri
-		FROM scryfall_cards WHERE reserved = 1`)
+	// 1) All reserved printings → cheapest price + a representative image per
+	// name. Shared with the wishlist: the same question, the same answer.
+	master, err := cheapestByName("c.reserved = 1")
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	type acc struct {
-		cheapest   *float64
-		image      string
-		rarity     string
-		cardmarket string
-	}
-	master := map[string]*acc{}
-	for rows.Next() {
-		var name, img, rarity, cardmarket string
-		var price *float64
-		if err := rows.Scan(&name, &price, &img, &rarity, &cardmarket); err != nil {
-			rows.Close()
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		a := master[name]
-		if a == nil {
-			a = &acc{image: img, rarity: rarity, cardmarket: cardmarket}
-			master[name] = a
-		}
-		if price != nil && (a.cheapest == nil || *price < *a.cheapest) {
-			a.cheapest = price
-			if img != "" {
-				a.image = img // prefer the cheapest printing's image
-			}
-			if cardmarket != "" {
-				a.cardmarket = cardmarket
-			}
-		}
-		if a.image == "" && img != "" {
-			a.image = img
-		}
-		if a.cardmarket == "" && cardmarket != "" {
-			a.cardmarket = cardmarket
-		}
-	}
-	rows.Close()
 
 	// 2) Owned reserved cards: quantity + foil-aware market value per name.
 	ownedRows, err := db.Query(`
@@ -110,10 +70,10 @@ func handleReserved(w http.ResponseWriter, r *http.Request) {
 	for name, a := range master {
 		rc := reservedCard{
 			Name:          name,
-			CheapestPrice: a.cheapest,
-			ImageID:       a.image,
-			Rarity:        a.rarity,
-			CardmarketURI: a.cardmarket,
+			CheapestPrice: a.Price,
+			ImageID:       a.ImageID,
+			Rarity:        a.Rarity,
+			CardmarketURI: a.CardmarketURI,
 		}
 		if o, ok := ownedMap[name]; ok {
 			rc.Owned = true
@@ -122,8 +82,8 @@ func handleReserved(w http.ResponseWriter, r *http.Request) {
 			ownedCount++
 			ownedValue += o.value
 		} else {
-			if a.cheapest != nil {
-				costToComplete += *a.cheapest
+			if a.Price != nil {
+				costToComplete += *a.Price
 			} else {
 				missingUnpriced++
 			}

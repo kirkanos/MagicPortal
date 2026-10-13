@@ -41,6 +41,10 @@ CREATE TABLE IF NOT EXISTS scryfall_cards (
   updated_at       TEXT,
   PRIMARY KEY (set_code, collector_number)
 );
+-- The catalog is keyed by printing, but half the app asks by name: all
+-- printings of a card (/api/prints), the Reserved List, the wishlist. Without
+-- this index each of those is a full scan over ~110k rows.
+CREATE INDEX IF NOT EXISTS idx_scryfall_cards_name ON scryfall_cards(name);
 
 CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
@@ -76,6 +80,20 @@ CREATE TABLE IF NOT EXISTS image_files (
   ts         TEXT,
   bytes      INTEGER,
   fetched_at TEXT
+);
+
+-- Wishlist: cards you are missing, keyed by name (all printings of a name are
+-- the same want). set_code/collector_number pin a specific printing when it
+-- actually matters; min_condition is what you would accept when buying.
+CREATE TABLE IF NOT EXISTS wishlist (
+  name             TEXT PRIMARY KEY,
+  set_code         TEXT,
+  collector_number TEXT,
+  target_eur       REAL,
+  min_condition    TEXT,
+  note             TEXT,
+  priority         INTEGER DEFAULT 0,
+  added            TEXT
 );
 
 -- Persistent activity log (tool actions + errors), shown in the UI.

@@ -67,6 +67,40 @@ func snapshotValue(db *sql.DB) error {
 		return err
 	}
 
+	// Wished cards are not in the collection, so the insert above skips them -
+	// and without a price point the whole point of the wishlist (how has this
+	// card moved?) would have nothing to show on exactly those cards. One row
+	// per entry and day, for the cheapest printing of each wished name.
+	//
+	// The minimum is pre-aggregated in a subquery rather than correlated per
+	// row: a correlated MIN turns this into a full catalog scan per catalog row
+	// (109k x 109k) and never finishes - the first version did exactly that and
+	// locked the single database connection for good.
+	//
+	// Same set filter as cheapestByName(): otherwise the history would track a
+	// proxy printing while the page shows a real one, and every change would be
+	// noise.
+	if _, err := db.Exec(`
+		INSERT INTO price_history(date, scryfall_key, name, price_eur, price_eur_foil)
+		SELECT ?, s.set_code || '|' || s.collector_number, s.name, s.price_eur, s.price_eur_foil
+		FROM scryfall_cards s
+		JOIN (
+			SELECT s2.name AS name, MIN(s2.price_eur) AS cheapest
+			FROM scryfall_cards s2
+			JOIN wishlist w ON w.name = s2.name
+			LEFT JOIN sets st ON st.code = s2.set_code
+			WHERE s2.price_eur IS NOT NULL
+			  AND COALESCE(st.digital, 0) = 0
+			  AND COALESCE(st.set_type, '') <> 'memorabilia'
+			GROUP BY s2.name
+		) m ON m.name = s.name AND s.price_eur = m.cheapest
+		GROUP BY s.name
+		ON CONFLICT(date, scryfall_key) DO UPDATE SET
+			price_eur=excluded.price_eur, price_eur_foil=excluded.price_eur_foil, name=excluded.name`,
+		date); err != nil {
+		return err
+	}
+
 	log.Printf("[value] snapshot %s: market %.2f EUR, purchase %.2f EUR, %d cards", date, market.Float64, purchase.Float64, cardCount.Int64)
 	return nil
 }

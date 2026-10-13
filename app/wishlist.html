@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-en="MagicPortal – Wishlist">MagicPortal – Wunschliste</title>
+<link rel="icon" type="image/svg+xml" href="images/magic-portal-icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
+<link rel="apple-touch-icon" href="images/favicon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<!-- Analytics placeholder: nginx substitutes the tracker snippet here when
+     ANALYTICS_* is configured (see the README). Without it the comment simply
+     stays and nothing is loaded. -->
+<!--analytics-->
+</head>
+<body>
+<nav class="topnav">
+  <a href="index.html" class="brand"><img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="brand-logo"></a>
+  <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Menü" data-en-aria="Menu" aria-expanded="false">☰</button>
+  <a href="index.html" data-en="Cards">Karten</a>
+  <a href="editions.html" data-en="Editions">Editionen</a>
+  <a href="reserved.html" data-en="Reserved List">Reserved List</a>
+  <a href="wishlist.html" class="active" data-en="Wishlist">Wunschliste</a>
+  <a href="binders.html" data-en="Folders">Ordner</a>
+  <a href="lists.html" data-en="Lists">Listen</a>
+  <a href="decks.html" data-en="Decks">Decks</a>
+  <a href="dashboard.html" data-en="Statistics">Statistik</a>
+  <a href="deck-checker.html" data-en="Deck Checker">Deck-Checker</a>
+  <a href="activity.html" id="nav-activity" data-en="Activity" style="display:none">Aktivität</a>
+  <span class="nav-actions">
+    <button type="button" id="lang-toggle" class="lang-toggle" aria-label="Sprache" data-en-aria="Language"></button>
+    <span class="sync-status" id="sync-status" title="Letzte Aktualisierung der Kartendaten/Preise" data-en-title="Last update of card data / prices"></span>
+    <button type="button" id="csv-sync" class="reset-btn" title="Kartendaten & Preise von Scryfall aktualisieren – prüft zusätzlich auf einen neuen CSV-Import aus Nextcloud/Google Drive (falls konfiguriert)" data-en-title="Refresh card data & prices from Scryfall – also checks for a new CSV import from Nextcloud/Google Drive (if configured)" data-en="🔄 Refresh" style="display:none">🔄 Aktualisieren</button>
+    <button type="button" id="csv-unlock" class="reset-btn" title="Anmelden" data-en-title="Log in" data-en="🔑 Login" style="display:none">🔑 Login</button>
+    <label class="upload-btn" id="csv-upload-label" title="Eigene ManaBox-CSV hochladen" data-en-title="Upload your own ManaBox CSV" style="display:none"><span data-en="⬆ Upload CSV">⬆ CSV hochladen</span>
+      <input type="file" id="csv-upload" accept=".csv,text/csv" hidden>
+    </label>
+    <button type="button" id="admin-gear" class="gear-btn" title="Einstellungen" data-en-title="Settings" aria-label="Einstellungen" data-en-aria="Settings" style="display:none">⚙</button>
+  </span>
+</nav>
+
+<main>
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <p class="section-hint" id="section-hint" data-en-html="Cards you are missing, marked from the Reserved List, an edition or the deck checker. The price is the cheapest printing &ndash; or the one you pinned. The <strong>condition</strong> is what you would accept when buying: it travels to Cardmarket with the export and is compared against what you already own, but it cannot sharpen the price &ndash; Scryfall knows exactly one price per printing, with no condition dimension.">
+    Karten, die dir fehlen – markiert aus der Reserved List, einer Edition oder dem Deck-Checker.
+    Der Preis ist der günstigste Druck – oder der, den du festgelegt hast.
+    Der <strong>Zustand</strong> ist das, was du beim Kauf akzeptieren würdest: Er wandert mit dem Export zu
+    Cardmarket und wird mit dem verglichen, was du schon besitzt – den Preis schärfen kann er nicht,
+    denn Scryfall kennt pro Druck genau einen Preis, ohne Zustandsdimension.
+  </p>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Karte suchen..." data-en-placeholder="Search card...">
+    <select id="filter-state">
+      <option value="all" data-en="All entries">Alle Einträge</option>
+      <option value="target" data-en="Only: target price reached">Nur: Zielpreis erreicht</option>
+      <option value="upgrade" data-en="Only: upgrade (owned, worse condition)">Nur: Upgrade (besitze schlechteren Zustand)</option>
+      <option value="missing" data-en="Only: not owned at all">Nur: gar nicht vorhanden</option>
+    </select>
+    <select id="sort-by">
+      <option value="default" data-en="Sort: Priority, then price">Sortieren: Priorität, dann Preis</option>
+      <option value="price-desc" data-en="Sort: Price (high → low)">Sortieren: Preis (hoch → niedrig)</option>
+      <option value="price-asc" data-en="Sort: Price (low → high)">Sortieren: Preis (low → high)</option>
+      <option value="change-asc" data-en="Sort: Biggest drop">Sortieren: Stärkster Preisrückgang</option>
+      <option value="name" data-en="Sort: Name (A → Z)">Sortieren: Name (A → Z)</option>
+      <option value="added" data-en="Sort: Recently added">Sortieren: Zuletzt hinzugefügt</option>
+    </select>
+  </div>
+
+  <div class="wl-bar">
+    <form class="wl-add" id="wl-add-form">
+      <input type="text" id="wl-add-name" placeholder="Karte per Name hinzufügen (exakt wie bei Scryfall)" data-en-placeholder="Add a card by name (exactly as Scryfall spells it)" autocomplete="off">
+      <button type="submit" class="upload-btn" data-en="Add">Hinzufügen</button>
+    </form>
+    <button type="button" id="wl-export" class="reset-btn" title="Liste im Cardmarket-Deckformat in die Zwischenablage kopieren" data-en-title="Copy the list in Cardmarket's decklist format to the clipboard" data-en="📋 Copy for Cardmarket">📋 Für Cardmarket kopieren</button>
+  </div>
+
+  <details class="wl-howto" id="wl-howto">
+    <summary data-en="How it gets to Cardmarket">Wie es zu Cardmarket kommt</summary>
+    <div class="wl-howto-body" data-en-html="Cardmarket&rsquo;s API is closed to new applicants and the Shopping Wizard cannot be driven by a URL. What does work is the decklist paste field:
+      <ol><li>Copy the list with the button above.</li>
+      <li>Open <em>Buying → My Wants → Add Decklist</em> at Cardmarket.</li>
+      <li>Paste one block per wants list &ndash; the export is already grouped by minimum condition and chunked to 150 entries, which is Cardmarket&rsquo;s limit per list.</li>
+      <li>Set the minimum condition once for the list, then start the Shopping Wizard from there.</li></ol>
+      Pinned printings are exported with their expansion. The collector number is deliberately left out: Cardmarket&rsquo;s &ldquo;(V.1)&rdquo; is a version counter within an expansion, not a collector number.">
+      <p>Cardmarkets API nimmt keine neuen Antragsteller mehr an, und der Shopping Wizard lässt sich nicht
+      per URL steuern. Was funktioniert, ist das Decklisten-Einfügefeld:</p>
+      <ol>
+        <li>Liste mit dem Button oben kopieren.</li>
+        <li>Bei Cardmarket <em>Buying → My Wants → Add Decklist</em> öffnen.</li>
+        <li>Pro Wants-Liste einen Block einfügen – der Export ist schon nach Mindestzustand gruppiert und
+        auf 150 Einträge gestückelt, das ist Cardmarkets Grenze pro Liste.</li>
+        <li>Den Mindestzustand einmal für die Liste setzen, dann von dort den Shopping Wizard starten.</li>
+      </ol>
+      <p>Festgelegte Drucke werden mit ihrer Edition exportiert. Die Sammlernummer bleibt bewusst weg:
+      Cardmarkets „(V.1)" ist ein Versionszähler innerhalb einer Edition, keine Sammlernummer.</p>
+    </div>
+  </details>
+
+  <div class="wl-export-out" id="wl-export-out" hidden></div>
+
+  <div class="result-count" id="result-count"></div>
+  <div class="wl-list" id="wl-list"></div>
+</main>
+
+</main>
+
+<footer class="site-footer">
+  <span>&copy; 2026 <a href="https://www.kirkanos.net" target="_blank" rel="noopener">kirkanos</a></span>
+  <a class="footer-gh" href="https://github.com/kirkanos/mtg-portal" target="_blank" rel="noopener" aria-label="GitHub Repository" title="Auf GitHub ansehen" data-en-title="View on GitHub">
+    <svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.03.08-2.13 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.93.08 2.13.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+  </a>
+</footer>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-text" data-en="Loading wishlist...">Lade Wunschliste...</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/wishlist.js"></script>
+</body>
+</html>

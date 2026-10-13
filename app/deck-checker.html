@@ -21,6 +21,7 @@
   <a href="index.html" data-en="Cards">Karten</a>
   <a href="editions.html" data-en="Editions">Editionen</a>
   <a href="reserved.html" data-en="Reserved List">Reserved List</a>
+  <a href="wishlist.html" data-en="Wishlist">Wunschliste</a>
   <a href="binders.html" data-en="Folders">Ordner</a>
   <a href="lists.html" data-en="Lists">Listen</a>
   <a href="decks.html" data-en="Decks">Decks</a>
@@ -50,9 +51,10 @@
     </div>
     <div>
       <div class="deck-summary" id="deck-summary"></div>
+      <button type="button" id="wish-all-missing" class="reset-btn wish-bulk" style="display:none"></button>
       <div style="overflow-x:auto;">
         <table class="deck-table" id="deck-table">
-          <thead><tr><th data-en="Card">Karte</th><th data-en="Needed">Benötigt</th><th data-en="Owned">Im Besitz</th><th data-en="Status">Status</th></tr></thead>
+          <thead><tr><th data-en="Card">Karte</th><th data-en="Needed">Benötigt</th><th data-en="Owned">Im Besitz</th><th data-en="Status">Status</th><th class="wish-col" title="Wunschliste" data-en-title="Wishlist">☆</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>

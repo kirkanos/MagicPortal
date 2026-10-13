@@ -226,6 +226,9 @@ type dbGauges struct {
 	lastSnapshot                   float64
 	importErr, syncErr, backupErr  float64
 	dbBytes                        float64
+	wishlistItems                  int64
+	wishlistValueEUR               float64
+	wishlistTargetsMet             int64
 	imageFiles                     int64
 	imageBytes                     int64
 	lastImageSync                  float64
@@ -301,6 +304,11 @@ func collectGauges() *dbGauges {
 		}
 		rows.Close()
 	}
+
+	// Wishlist: enriched in Go (cheapest printing per name, target comparison),
+	// so this reuses the endpoint's own aggregation instead of a second query
+	// that could drift from it.
+	g.wishlistItems, g.wishlistValueEUR, g.wishlistTargetsMet = wishlistGauges()
 
 	_ = db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM image_files`).Scan(&g.imageFiles, &g.imageBytes)
 	g.lastImageSync = metaUnix("image_sync_last_at")
@@ -412,6 +420,9 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	simple(n("activity_errors_24h"), "Error entries in the activity log over the last 24h", "gauge", float64(g.activityErrors24h))
 	simple(n("db_size_bytes"), "Size of the SQLite file", "gauge", g.dbBytes)
 	simple(n("backup_last_size_bytes"), "Size of the most recently created backup", "gauge", float64(metricBackupBytes.Load()))
+	simple(n("wishlist_items"), "Entries on the wishlist", "gauge", float64(g.wishlistItems))
+	simple(n("wishlist_value_eur"), "What the wishlist would cost at the cheapest printing, in EUR", "gauge", g.wishlistValueEUR)
+	simple(n("wishlist_targets_met"), "Wishlist entries at or below their target price", "gauge", float64(g.wishlistTargetsMet))
 	simple(n("image_mirror_enabled"), "1 if the local image mirror is active", "gauge", boolGauge(imageMirrorEnabled()))
 	simple(n("images_mirrored"), "Number of locally mirrored files", "gauge", float64(g.imageFiles))
 	simple(n("images_bytes"), "Disk space occupied by the image mirror", "gauge", float64(g.imageBytes))

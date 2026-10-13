@@ -38,7 +38,7 @@ const backupSuffix = ".db.gz"
 // come back on restore. The Scryfall catalog (scryfall_cards, sets) is still not
 // backed up – it is empty after a fresh restore, which makes the sync re-download
 // it regardless of any restored sync markers.
-var backupTables = []string{"collection", "value_snapshots", "price_history", "meta"}
+var backupTables = []string{"collection", "value_snapshots", "price_history", "wishlist", "meta"}
 
 // ---- config ----
 
@@ -209,11 +209,23 @@ func restoreFromGz(gzData []byte) error {
 	}
 	defer tx.Rollback()
 	for _, tbl := range backupTables {
+		// A backup taken before a table existed simply does not carry it.
+		// Without this check the whole restore would fail on "no such table"
+		// - and an older backup is exactly the one you restore in an
+		// emergency, so it has to keep working.
+		var present int
+		if err := tx.QueryRow(`SELECT COUNT(*) FROM rst.sqlite_master WHERE type='table' AND name=?`, tbl).Scan(&present); err != nil {
+			return err
+		}
+		if present == 0 {
+			log.Printf("[backup] restore: table %s not in the backup, skipped", tbl)
+			continue
+		}
 		if _, err := tx.Exec(`DELETE FROM main.` + tbl); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(`INSERT INTO main.` + tbl + ` SELECT * FROM rst.` + tbl); err != nil {
-			return fmt.Errorf("Tabelle %s: %w", tbl, err)
+			return fmt.Errorf("table %s: %w", tbl, err)
 		}
 	}
 	return tx.Commit()

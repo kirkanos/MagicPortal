@@ -50,6 +50,26 @@ background sync. Scrape intervals below 30 s therefore yield no fresher values.
 Binder names are user data: renaming one creates a new time series. With a lot
 of binders/lists it is worth keeping an eye on the series count.
 
+### Wishlist
+| Metric | Type | Meaning |
+| --- | --- | --- |
+| `mtg_wishlist_items` | gauge | Entries on the wishlist |
+| `mtg_wishlist_value_eur` | gauge | What the list would cost at the cheapest printing |
+| `mtg_wishlist_targets_met` | gauge | Entries at or below their target price |
+
+`mtg_wishlist_targets_met` is the notification channel for a reached target
+price: alert on it going up rather than building a second mechanism into the
+tool. A rule along the lines of
+
+```promql
+increase(mtg_wishlist_targets_met[1h]) > 0
+```
+
+fires once when a card falls below the price you set. The figures come from the
+same aggregation as `/api/wishlist` (deliberately, so the alert and the page
+can never disagree), which also means they exclude digital and memorabilia
+sets - see `cheapestByName` in `backend/wishlist.go`.
+
 ### Import, sync, backup
 | Metric | Type | Meaning |
 | --- | --- | --- |

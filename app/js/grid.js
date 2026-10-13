@@ -344,6 +344,8 @@ async function init() {
       loadSetIndex(),
       loadSubtypes().then((x) => new Set(x)).catch(() => new Set()),
     ]);
+    // Needed before the first card modal opens, so its marker starts correct.
+    await loadWishlistNames();
   } catch (e) {
     hideLoading();
     document.getElementById('card-grid').innerHTML = `<p style="color:#e05656">${t('Fehler beim Laden der Sammlung', 'Error loading collection')}: ${escapeHTML(e.message)}</p>`;

@@ -72,6 +72,7 @@ function renderGrid() {
         ${(() => { const img = setCardImage({ imageId: c.imageId }, 'small'); return img ? `<img loading="lazy" src="${escapeHTML(img)}" alt="${escapeHTML(c.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`; })()}
         ${c.owned && c.quantity > 1 ? `<span class="eo-qty">×${c.quantity}</span>` : ''}
         ${c.owned ? '<span class="eo-check">✓</span>' : `<span class="eo-missing-tag">${t('fehlt', 'missing')}</span>`}
+        ${wishButtonHTML(c.name, 'on-thumb')}
       </div>
       <div class="eo-cardname">${escapeHTML(c.name)}</div>
       <div class="rl-cardprice">${priceLine}</div>
@@ -94,7 +95,7 @@ function renderGrid() {
 async function init() {
   showLoading(t('Lade Reserved List...', 'Loading Reserved List...'));
   try {
-    await loadReserved();
+    await Promise.all([loadReserved(), loadWishlistNames()]);
   } catch (e) {
     hideLoading();
     document.querySelector('main').innerHTML = `<p style="color:#e05656">${t('Fehler beim Laden', 'Error loading')}: ${escapeHTML(e.message)}</p>`;
@@ -103,6 +104,7 @@ async function init() {
   hideLoading();
   renderSummary();
   renderGrid();
+  initWishButtons(document.getElementById('rl-grid'));
   document.getElementById('search').addEventListener('input', debounce(renderGrid, 150));
   document.getElementById('filter-owned').addEventListener('change', renderGrid);
   document.getElementById('sort-by').addEventListener('change', renderGrid);

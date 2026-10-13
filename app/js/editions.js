@@ -422,6 +422,7 @@ function buildEoTile({ card: c, idx, ownedInfo, isOwned }) {
       ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(c.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
       ${isOwned && ownedInfo.copies > 1 ? `<span class="eo-qty">×${ownedInfo.copies}</span>` : ''}
       ${isOwned ? '<span class="eo-check">✓</span>' : `<span class="eo-missing-tag">${t('fehlt', 'missing')}</span>`}
+      ${wishButtonHTML(c.name, 'on-thumb')}
     </div>
     <div class="eo-cardname"><span class="eo-num">#${escapeHTML(c.collectorNumber)}</span> ${escapeHTML(c.name)}</div>
   `;
@@ -550,6 +551,7 @@ function editionCardDetailHTML(card, ownedInfo) {
             ? `<a class="cardmarket-link" href="${escapeHTML(card.cardmarketUri)}" target="_blank" rel="noopener noreferrer">${t('Auf Cardmarket ansehen', 'View on Cardmarket')} ↗</a>`
             : ''
         }
+        <div class="wish-line">${wishButtonHTML(card.name)}<span class="wish-line-label">${t('Wunschliste', 'Wishlist')}</span></div>
         ${ownership}
       </div>
     </div>`;
@@ -572,6 +574,7 @@ async function init() {
   try {
     allCards = await loadCollection(updateLoadingProgress);
     setIndex = await loadSetIndex();
+    await loadWishlistNames();
   } catch (e) {
     hideLoading();
     document.getElementById('editions-table').innerHTML = `<p style="color:#e05656">${t('Fehler beim Laden', 'Error loading')}: ${escapeHTML(e.message)}</p>`;
@@ -613,6 +616,8 @@ async function init() {
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay || e.target.classList.contains('eo-close')) closeEditionOverlay();
   });
+  initWishButtons(document.getElementById('eo-grid'));
+  initWishButtons(document.getElementById('eo-card-overlay'));
   document.getElementById('eo-grid').addEventListener('click', (e) => {
     const tile = e.target.closest('.eo-card');
     if (!tile) return;
