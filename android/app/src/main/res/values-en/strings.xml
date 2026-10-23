@@ -81,4 +81,16 @@
     <string name="color_r">Red</string>
     <string name="color_g">Green</string>
     <string name="color_c">Colorless</string>
+    <string name="detail_rarity">Rarity</string>
+    <string name="detail_copies">Copies total</string>
+    <string name="detail_market_total">Total market value</string>
+    <string name="detail_wishlist">Wishlist</string>
+    <string name="detail_languages">Languages in your collection</string>
+    <string name="detail_other_printings">Other printings of this card</string>
+    <string name="detail_loading_printings">Loading printings…</string>
+    <string name="detail_no_other_printings">No other printings found.</string>
+    <string name="detail_flip">↻ Flip</string>
+    <string name="detail_added">Added %1$s</string>
+    <string name="detail_price_hint">Market value = Cardmarket price trend, pulled from Scryfall once a day – not the current lowest buy price.</string>
+    <string name="wish_save_failed">Could not save the wishlist: %1$s</string>
 </resources>

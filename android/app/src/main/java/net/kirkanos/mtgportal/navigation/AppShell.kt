@@ -76,7 +76,7 @@ fun AppShell() {
         NavHost(nav, startDestination = CardsRoute(), modifier = Modifier.padding(padding)) {
             composable<CardsRoute> { entry ->
                 val r = entry.toRoute<CardsRoute>()
-                CardsScreen(binder = r.binder, set = r.set, onOpenCard = { /* detail sheet: next step */ })
+                CardsScreen(binder = r.binder, set = r.set)
             }
             composable<EditionsRoute> { NotYet(R.string.nav_editions) }
             composable<ReservedRoute> { NotYet(R.string.nav_reserved) }

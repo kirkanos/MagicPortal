@@ -14,6 +14,7 @@ import net.kirkanos.mtgportal.core.data.AuthRepository
 import net.kirkanos.mtgportal.core.data.ConfigRepository
 import net.kirkanos.mtgportal.core.data.SecretStore
 import net.kirkanos.mtgportal.core.data.SettingsRepository
+import net.kirkanos.mtgportal.core.data.WishlistRepository
 import net.kirkanos.mtgportal.core.network.HttpClients
 
 /**
@@ -35,6 +36,7 @@ class AppContainer(context: Context) {
     val api = http.portalApi
     val auth = AuthRepository(api, settings)
     val config = ConfigRepository(api, settings, appScope)
+    val wishlist = WishlistRepository(api, auth)
 
     /** Coil with SVG support (set and mana symbols) on the image-only client. */
     val imageLoader: ImageLoader = ImageLoader.Builder(context)
@@ -53,5 +55,6 @@ class AppContainer(context: Context) {
     suspend fun refreshServerState() {
         auth.probe()
         config.refresh()
+        wishlist.load()
     }
 }

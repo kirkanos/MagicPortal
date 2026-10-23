@@ -209,3 +209,60 @@ data class ImageMirrorStatusDto(
     val lastAt: String = "",
     val lastError: String = "",
 )
+
+@Serializable
+data class WishlistDto(
+    val summary: WishlistSummaryDto = WishlistSummaryDto(),
+    val items: List<WishlistItemDto> = emptyList(),
+)
+
+@Serializable
+data class WishlistSummaryDto(
+    val items: Int = 0,
+    val value: Double = 0.0,
+    val targetsMet: Int = 0,
+    val unpriced: Int = 0,
+    val owned: Int = 0,
+    val upgrades: Int = 0,
+    val days: Int = 30,
+)
+
+/** wishlistItem in backend/wishlist.go. The name is the identity. */
+@Serializable
+data class WishlistItemDto(
+    val name: String,
+    val setCode: String = "",
+    val collectorNumber: String = "",
+    val targetEur: Double? = null,
+    val minCondition: String = "",
+    val note: String = "",
+    val priority: Int = 0,
+    val added: String = "",
+    val imageId: String = "",
+    val rarity: String = "",
+    val cardmarketUri: String = "",
+    val price: Double? = null,
+    val priceSetCode: String = "",
+    val priceSetName: String = "",
+    val priceNumber: String = "",
+    val pinned: Boolean = false,
+    val unknownToCatalog: Boolean = false,
+    val priceThen: Double? = null,
+    val changePct: Double? = null,
+    val targetMet: Boolean = false,
+    val ownedQuantity: Int = 0,
+    val bestCondition: String = "",
+    val needsUpgrade: Boolean = false,
+)
+
+/** POST /api/wishlist upserts on the name; the whole row is sent every time. */
+@Serializable
+data class WishlistInputDto(
+    val name: String,
+    val setCode: String = "",
+    val collectorNumber: String = "",
+    val targetEur: Double? = null,
+    val minCondition: String = "",
+    val note: String = "",
+    val priority: Int = 0,
+)

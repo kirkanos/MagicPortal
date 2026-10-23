@@ -11,8 +11,11 @@ import net.kirkanos.mtgportal.core.network.dto.SetCardDto
 import net.kirkanos.mtgportal.core.network.dto.SetDto
 import net.kirkanos.mtgportal.core.network.dto.StatusDto
 import net.kirkanos.mtgportal.core.network.dto.UiConfigDto
+import net.kirkanos.mtgportal.core.network.dto.WishlistDto
+import net.kirkanos.mtgportal.core.network.dto.WishlistInputDto
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -91,4 +94,18 @@ interface PortalApi {
     /** Owned copies per lowercase name; every asked name is in the answer. */
     @POST("collection/owned")
     suspend fun ownedByName(@Body body: OwnedByNameRequest): Map<String, Int>
+
+    @GET("wishlist")
+    suspend fun wishlist(): WishlistDto
+
+    @POST("wishlist")
+    suspend fun upsertWishlist(@Body item: WishlistInputDto): Response<Unit>
+
+    /** The name is one path segment; Retrofit encodes "/" in "Fire // Ice". */
+    @DELETE("wishlist/{name}")
+    suspend fun deleteWishlist(@Path("name") name: String): Response<Unit>
+
+    /** Cardmarket decklist format, text/plain. */
+    @GET("wishlist/export")
+    suspend fun wishlistExport(): String
 }

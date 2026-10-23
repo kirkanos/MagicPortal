@@ -90,4 +90,17 @@
     <string name="color_r">Rot</string>
     <string name="color_g">Grün</string>
     <string name="color_c">Farblos</string>
+    <!-- Card detail (cardGroupModalHTML in shared.js) -->
+    <string name="detail_rarity">Rarität</string>
+    <string name="detail_copies">Exemplare gesamt</string>
+    <string name="detail_market_total">Marktwert gesamt</string>
+    <string name="detail_wishlist">Wunschliste</string>
+    <string name="detail_languages">Sprachen in deiner Sammlung</string>
+    <string name="detail_other_printings">Weitere Editionen dieser Karte</string>
+    <string name="detail_loading_printings">Lade Varianten…</string>
+    <string name="detail_no_other_printings">Keine weiteren Editionen gefunden.</string>
+    <string name="detail_flip">↻ Umdrehen</string>
+    <string name="detail_added">Hinzugefügt %1$s</string>
+    <string name="detail_price_hint">Marktwert = Cardmarket-Preistrend, von Scryfall einmal täglich übernommen – nicht der aktuell günstigste Kaufpreis.</string>
+    <string name="wish_save_failed">Wunschliste konnte nicht gespeichert werden: %1$s</string>
 </resources>

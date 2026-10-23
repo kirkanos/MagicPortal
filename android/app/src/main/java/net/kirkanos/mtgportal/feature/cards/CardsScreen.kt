@@ -87,7 +87,9 @@ private val COLORS = listOf(
 )
 
 @Composable
-fun CardsScreen(binder: String?, set: String?, onOpenCard: (CardGroupDto) -> Unit) {
+fun CardsScreen(binder: String?, set: String?) {
+    var openCard by remember { mutableStateOf<CardGroupDto?>(null) }
+    val onOpenCard: (CardGroupDto) -> Unit = { openCard = it }
     val vm = containerViewModel { CardsViewModel(it, binder, set) }
     val st by vm.state.collectAsStateWithLifecycle()
     val images by appContainer().config.imageUrls.collectAsStateWithLifecycle()
@@ -164,6 +166,8 @@ fun CardsScreen(binder: String?, set: String?, onOpenCard: (CardGroupDto) -> Uni
         }
         if (st.loadingMore) item(span = full) { Loading() }
     }
+
+    openCard?.let { CardDetailSheet(it, onDismiss = { openCard = null }) }
 
     if (filtersOpen) {
         FilterSheet(st, onChange = vm::setFilters, onReset = vm::resetFilters, onDismiss = { filtersOpen = false })
