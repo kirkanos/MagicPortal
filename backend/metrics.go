@@ -155,6 +155,11 @@ func routeLabel(path string) string {
 	}
 	head, tail, _ := strings.Cut(rest, "/")
 	switch head {
+	case "catalog":
+		switch tail {
+		case "index", "card", "search":
+			return "/api/catalog/" + tail
+		}
 	case "collection":
 		if tail == "owned" {
 			return "/api/collection/owned"
