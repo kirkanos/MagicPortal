@@ -289,8 +289,10 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/collection` | Collection, enriched with Scryfall data |
+| `POST` | `/api/collection/owned` | Owned copies per card name, body `{"names": [...]}` (max. 500) – the deck checker without downloading the collection |
+| `GET` | `/api/editions` | Completion per set: owned, missing, duplicates, value (ETag, conditional requests) |
 | `GET` | `/api/sets` | Set index |
-| `GET` | `/api/sets/{code}/cards` | All cards of a set |
+| `GET` | `/api/sets/{code}/cards` | All cards of a set, with the owned copies per language and binder |
 | `GET` | `/api/prints?name=…` | All printings of a card (editions) |
 | `GET` | `/api/binders` | Binders/lists with card count & value |
 | `GET` | `/api/status` | Sync status & data timestamp |

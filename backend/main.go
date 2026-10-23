@@ -37,6 +37,8 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/collection", handleCollection)
+	mux.HandleFunc("POST /api/collection/owned", handleOwnedByName)
+	mux.HandleFunc("GET /api/editions", handleEditions)
 	mux.HandleFunc("GET /api/sets", handleSets)
 	mux.HandleFunc("GET /api/sets/{code}/cards", handleSetCards)
 	mux.HandleFunc("GET /api/prints", handlePrints)
@@ -261,10 +263,22 @@ type setCardOut struct {
 	ImageID         string   `json:"imageId"`
 	HasBack         bool     `json:"hasBack,omitempty"`
 	CardmarketURI   string   `json:"cardmarketUri"`
+	// Owned copies of this card, absent when none. Lets a client draw the set
+	// overlay without downloading the collection (see editions.go).
+	Owned *setCardOwned `json:"owned,omitempty"`
 }
 
 func handleSetCards(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToLower(r.PathValue("code"))
+	// Before the catalog query, not inside its loop: cardRows() needs the
+	// single database connection, which an open rows cursor still holds.
+	collection, _, err := cardRows()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	owned := ownedBySet(collection)[code]
+
 	rows, err := db.Query(`
 		SELECT collector_number, name, rarity, type_line, price_eur, price_eur_foil,
 		       CASE WHEN COALESCE(image_normal, '') = '' THEN '' ELSE scryfall_id END,
@@ -296,6 +310,7 @@ func handleSetCards(w http.ResponseWriter, r *http.Request) {
 			c.PriceEurFoil = &p
 		}
 		c.CardmarketURI = cardmarket.String
+		c.Owned = owned["n:"+normNumber(c.CollectorNumber)]
 		out = append(out, c)
 	}
 	writeJSON(w, out)
