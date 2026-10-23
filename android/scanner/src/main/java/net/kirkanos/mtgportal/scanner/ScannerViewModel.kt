@@ -16,6 +16,7 @@ import net.kirkanos.mtgportal.scanner.catalog.Printing
 import net.kirkanos.mtgportal.scanner.match.CardMatcher
 import net.kirkanos.mtgportal.scanner.ocr.CardReadingParser
 import net.kirkanos.mtgportal.scanner.ocr.OcrEngine
+import net.kirkanos.mtgportal.scanner.ocr.ReadingFusion
 import java.util.concurrent.atomic.AtomicBoolean
 
 sealed interface CatalogState {
@@ -45,6 +46,7 @@ class ScannerViewModel(private val store: CatalogStore) : ViewModel() {
 
     private val ocr = OcrEngine()
     private val session = ScanSession()
+    private val fusion = ReadingFusion()
     private var matcher: CardMatcher? = null
 
     init {
@@ -70,7 +72,7 @@ class ScannerViewModel(private val store: CatalogStore) : ViewModel() {
     fun onCard(card: Bitmap) {
         viewModelScope.launch(Dispatchers.Default) {
             try {
-                val reading = CardReadingParser.parse(ocr.read(card))
+                val reading = fusion.fuse(CardReadingParser.parse(ocr.read(card)))
                 val match = matcher?.match(reading)
                 Log.d(TAG, "$reading -> ${match?.printing?.let { "${it.setCode}/${it.collectorNumber} ${it.name}" }} ${match?.source} ${match?.confidence}")
                 val added = session.offer(match, reading.language)

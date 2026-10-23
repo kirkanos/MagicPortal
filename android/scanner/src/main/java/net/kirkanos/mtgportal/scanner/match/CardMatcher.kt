@@ -75,6 +75,13 @@ class CardMatcher(private val index: CatalogIndex) {
                 val conf = if (hits.size == 1) 0.85f * sim else 0.6f * sim
                 return Match(hits.first(), conf, MatchSource.OCR_NAME, (hits.drop(1) + printings.filter { it !in hits }).take(12))
             }
+            // The set size is the smallest print on the card and misread
+            // most ("140/445" for 140/145); the number alone still beats
+            // guessing by year.
+            val byNumber = printings.filter { it.collectorNumber.equals(n.number, ignoreCase = true) }
+            if (n.total != null && byNumber.size == 1) {
+                return Match(byNumber.single(), 0.7f * sim, MatchSource.OCR_NAME, printings.filter { it !in byNumber }.take(12))
+            }
         }
         return null
     }
@@ -115,6 +122,7 @@ class CardMatcher(private val index: CatalogIndex) {
      * both readings compete.
      */
     internal fun bestNames(title: String): Pair<IntArray, Float>? {
+        if (shouting(title)) return null
         val readings = buildList {
             add(NameNormalizer.normalize(title))
             Regex("""^\S\s+(.+)$""").matchEntire(title.trim())?.let { add(NameNormalizer.normalize(it.groupValues[1])) }
@@ -122,12 +130,25 @@ class CardMatcher(private val index: CatalogIndex) {
         var best: Pair<String, Float>? = null
         for (q in readings) for (name in index.byName.keys) {
             if (kotlin.math.abs(name.length - q.length) > 3) continue
-            val s = 1f - NameNormalizer.levenshtein(q, name).toFloat() / maxOf(q.length, name.length)
+            val d = NameNormalizer.levenshtein(q, name)
+            // Short words are close to many names: "Decode" is two edits
+            // from "Deicide". Up to six letters, one misread letter only.
+            if (q.length <= 6 && d > 1) continue
+            val s = 1f - d.toFloat() / maxOf(q.length, name.length)
             if (best == null || s > best.second) best = name to s
         }
         val (name, score) = best ?: return null
         if (score < 0.6f) return null
         return index.byName.getValue(name) to score
+    }
+
+    /**
+     * Card titles are set in title case. Text in capitals is packaging,
+     * a sleeve or the table ("STEAM DECK", "COLOR"), not a card name.
+     */
+    private fun shouting(title: String): Boolean {
+        val letters = title.filter(Char::isLetter)
+        return letters.length >= 4 && letters.count(Char::isUpperCase) > letters.length * 0.6
     }
 
     private fun nameSimilarity(title: String, catalogName: String): Float {

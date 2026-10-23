@@ -2,11 +2,15 @@ package net.kirkanos.mtgportal.scanner.match
 
 import net.kirkanos.mtgportal.scanner.MatchSource
 import net.kirkanos.mtgportal.scanner.catalog.CatalogIndex
+import net.kirkanos.mtgportal.scanner.ocr.CardReading
 import net.kirkanos.mtgportal.scanner.ocr.CardReadingParser
+import net.kirkanos.mtgportal.scanner.ocr.NumberCandidate
+import net.kirkanos.mtgportal.scanner.ocr.ReadingFusion
 import net.kirkanos.mtgportal.scanner.ocr.OcrLine
 import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -92,5 +96,48 @@ class CardMatcherTest {
         assertTrue(score > 0.9f)
         // ... while "A Little Chat" keeps its "A".
         assertEquals("A Little Chat", index.printing(matcher.bestNames("A Little Chat")!!.first[0]).name)
+    }
+
+    // ---- readings from the first scans on the device (24.10.2026) ----
+
+    private fun reading(name: String?, set: String? = null, numbers: List<NumberCandidate> = emptyList(), rarity: Char? = null, year: Int? = null) =
+        CardReading(name, set, if (set != null) "en" else null, numbers, rarity, year)
+
+    @Test
+    fun aMisreadSetSizeStillFindsThePrinting() {
+        // Worldwake has 145 cards; the frame with the name read "445".
+        val m = matcher.match(reading("Quicksand", numbers = listOf(NumberCandidate("140", 445)), year = 2010))!!
+        assertEquals("wwk/140", "${m.printing.setCode}/${m.printing.collectorNumber}")
+        assertTrue("better than a guess by year", m.confidence > 0.55f)
+    }
+
+    @Test
+    fun nameAndNumberFromDifferentFrames() {
+        // Showcase King of the Oathbreakers: the title in one frame, "0369 R"
+        // in the next; the set line came out as "tok".
+        var t = 0L
+        val fusion = ReadingFusion(now = { t })
+        fusion.fuse(reading("King of the Oathbreakers", set = "tok"))
+        t += 200
+        val r = fusion.fuse(reading(null, set = "tok", numbers = listOf(NumberCandidate("369")), rarity = 'R', year = 2023))
+        val m = matcher.match(r)!!
+        assertEquals("ltr/369", "${m.printing.setCode}/${m.printing.collectorNumber}")
+    }
+
+    @Test
+    fun oldCardWithoutNumberByName() {
+        val m = matcher.match(reading("Maze of hadoWS"))!!
+        assertEquals("Maze of Shadows", m.printing.name)
+    }
+
+    @Test
+    fun textAroundTheCardIsNoCardName() {
+        // Read from a box and a Steam Deck next to the cards.
+        for (junk in listOf("COLOR", "SPEED", "BRIGHT", "STEAM DECK", "Decode", "SSTRE")) {
+            assertNull(junk, matcher.bestNames(junk))
+        }
+        // A misread letter in a real title is still fine.
+        assertNotNull(matcher.bestNames("Maze ofShadows"))
+        assertNotNull(matcher.bestNames("Valor"))
     }
 }
