@@ -7,10 +7,11 @@
 #   tools/dev-connect.sh 192.168.2.50:41234     # first time / after a port change
 #   tools/dev-connect.sh                        # reconnect to the last address
 #
-# The address is the one on the phone under "Wireless debugging" (not the
-# pairing port). It changes when wireless debugging is toggled or the phone
-# reboots; "adb mdns services" lists the current one. Pair once with
-# "adb pair <ip>:<pairing-port>" before the first connect.
+# After pairing once ("adb pair <ip>:<pairing-port>"), adb finds the phone by
+# itself via mDNS and lists it as "adb-<serial>-<id>._adb-tls-connect._tcp".
+# Prefer that name over ip:port: it survives port changes after a reboot, and
+# connecting by ip:port as well makes adb list the same phone twice - which
+# runs instrumented tests twice in parallel against each other.
 
 set -euo pipefail
 
@@ -28,7 +29,10 @@ if [[ -z $addr ]]; then
     exit 1
 fi
 
-"$ADB" connect "$addr"
+case $addr in
+    *._adb-tls-connect._tcp) ;;             # mDNS name: adb is already connected
+    *) "$ADB" connect "$addr" ;;
+esac
 mkdir -p "$(dirname "$STATE")" && echo "$addr" > "$STATE"
 
 # adb reverse is per connection and gone after every reconnect - that is why

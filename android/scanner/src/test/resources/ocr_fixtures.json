@@ -1,0 +1,789 @@
+[
+ {
+  "file": "2x2_bolt.jpg",
+  "lines": [
+   {
+    "t": "Lightning Bolt",
+    "x": 0.088,
+    "y": 0.074,
+    "h": 0.043
+   },
+   {
+    "t": "Instant",
+    "x": 0.088,
+    "y": 0.592,
+    "h": 0.024
+   },
+   {
+    "t": "Lightning Bolt deals 3 damage to",
+    "x": 0.088,
+    "y": 0.673,
+    "h": 0.032
+   },
+   {
+    "t": "any target.",
+    "x": 0.088,
+    "y": 0.712,
+    "h": 0.026
+   },
+   {
+    "t": "The sparkmage shrieked, calling on the",
+    "x": 0.086,
+    "y": 0.774,
+    "h": 0.033
+   },
+   {
+    "t": "rage of the storms of his youth. To his",
+    "x": 0.088,
+    "y": 0.808,
+    "h": 0.038
+   },
+   {
+    "t": "surprise, the sky responded with a fierce",
+    "x": 0.086,
+    "y": 0.846,
+    "h": 0.033
+   },
+   {
+    "t": "energy hed never thought to see again.",
+    "x": 0.088,
+    "y": 0.882,
+    "h": 0.031
+   },
+   {
+    "t": "117/331 U",
+    "x": 0.064,
+    "y": 0.946,
+    "h": 0.015
+   },
+   {
+    "t": "TM &O2022 Wizards of the Coast",
+    "x": 0.601,
+    "y": 0.946,
+    "h": 0.015
+   },
+   {
+    "t": "2X2• EN > CHRISTOPHER MOELLER",
+    "x": 0.064,
+    "y": 0.964,
+    "h": 0.018
+   }
+  ]
+ },
+ {
+  "file": "4ed_serra.jpg",
+  "lines": [
+   {
+    "t": "3*",
+    "x": 0.769,
+    "y": 0.056,
+    "h": 0.03
+   },
+   {
+    "t": "Serra Age!",
+    "x": 0.083,
+    "y": 0.058,
+    "h": 0.045
+   },
+   {
+    "t": "Surnron Angel",
+    "x": 0.089,
+    "y": 0.575,
+    "h": 0.027
+   },
+   {
+    "t": "Flying",
+    "x": 0.144,
+    "y": 0.657,
+    "h": 0.033
+   },
+   {
+    "t": "Attacking does not cause Serra",
+    "x": 0.146,
+    "y": 0.688,
+    "h": 0.028
+   },
+   {
+    "t": "Angel to tap.",
+    "x": 0.144,
+    "y": 0.721,
+    "h": 0.035
+   },
+   {
+    "t": "Born with wings of light and a sword",
+    "x": 0.146,
+    "y": 0.752,
+    "h": 0.033
+   },
+   {
+    "t": "of faith, this heavenly incarnation",
+    "x": 0.158,
+    "y": 0.785,
+    "h": 0.034
+   },
+   {
+    "t": "embodies both fury and puriy.",
+    "x": 0.147,
+    "y": 0.817,
+    "h": 0.03
+   },
+   {
+    "t": "Illus. DOuglas Shuler",
+    "x": 0.089,
+    "y": 0.914,
+    "h": 0.027
+   },
+   {
+    "t": "44/44",
+    "x": 0.854,
+    "y": 0.921,
+    "h": 0.029
+   },
+   {
+    "t": "O1995 Wizards of the Coast, Inc. All rights reserved.",
+    "x": 0.088,
+    "y": 0.937,
+    "h": 0.015
+   }
+  ]
+ },
+ {
+  "file": "7ed_counterspell.jpg",
+  "lines": [
+   {
+    "t": "Counterspell",
+    "x": 0.109,
+    "y": 0.071,
+    "h": 0.038
+   },
+   {
+    "t": "Ihstant",
+    "x": 0.109,
+    "y": 0.574,
+    "h": 0.022
+   },
+   {
+    "t": "Counter target spell.",
+    "x": 0.275,
+    "y": 0.743,
+    "h": 0.036
+   },
+   {
+    "t": "Ilus. Mark Romanoskí",
+    "x": 0.308,
+    "y": 0.909,
+    "h": 0.031
+   },
+   {
+    "t": "&1993 2001Wizards of the Coast, Inc. 671350",
+    "x": 0.266,
+    "y": 0.933,
+    "h": 0.018
+   }
+  ]
+ },
+ {
+  "file": "c21_solring.jpg",
+  "lines": [
+   {
+    "t": "Sol Ring",
+    "x": 0.098,
+    "y": 0.076,
+    "h": 0.041
+   },
+   {
+    "t": "Artifact",
+    "x": 0.082,
+    "y": 0.59,
+    "h": 0.025
+   },
+   {
+    "t": "e:Add o.",
+    "x": 0.095,
+    "y": 0.709,
+    "h": 0.029
+   },
+   {
+    "t": "Lost to time is the artificer's art of",
+    "x": 0.086,
+    "y": 0.775,
+    "h": 0.032
+   },
+   {
+    "t": "trapping ight from a distant star in a",
+    "x": 0.088,
+    "y": 0.809,
+    "h": 0.036
+   },
+   {
+    "t": "ring of purest gold.",
+    "x": 0.086,
+    "y": 0.847,
+    "h": 0.033
+   },
+   {
+    "t": "263",
+    "x": 0.064,
+    "y": 0.945,
+    "h": 0.012
+   },
+   {
+    "t": "TM &C 2021 Wizards of the Coast",
+    "x": 0.6,
+    "y": 0.946,
+    "h": 0.015
+   },
+   {
+    "t": "C21 • EN >MIKE BIEREK",
+    "x": 0.063,
+    "y": 0.96,
+    "h": 0.019
+   }
+  ]
+ },
+ {
+  "file": "ice_brainstorm.jpg",
+  "lines": [
+   {
+    "t": "Brainstorm",
+    "x": 0.079,
+    "y": 0.055,
+    "h": 0.033
+   },
+   {
+    "t": "Lnstant",
+    "x": 0.086,
+    "y": 0.575,
+    "h": 0.024
+   },
+   {
+    "t": "Draw three cards; then, take two",
+    "x": 0.144,
+    "y": 0.632,
+    "h": 0.028
+   },
+   {
+    "t": "cards from your hand and put them",
+    "x": 0.146,
+    "y": 0.666,
+    "h": 0.03
+   },
+   {
+    "t": "on top of your library in any order.",
+    "x": 0.146,
+    "y": 0.698,
+    "h": 0.032
+   },
+   {
+    "t": "I reeled from the blow, and then",
+    "x": 0.152,
+    "y": 0.73,
+    "h": 0.03
+   },
+   {
+    "t": "suddenly, I knew exactly what to do.",
+    "x": 0.144,
+    "y": 0.762,
+    "h": 0.033
+   },
+   {
+    "t": "Within moments, victory was mine.",
+    "x": 0.15,
+    "y": 0.793,
+    "h": 0.029
+   },
+   {
+    "t": "-Gustha Ebbasdotter,",
+    "x": 0.193,
+    "y": 0.823,
+    "h": 0.033
+   },
+   {
+    "t": "Kjeldoran Royal Mage",
+    "x": 0.143,
+    "y": 0.858,
+    "h": 0.03
+   },
+   {
+    "t": "Illus. Christopher Rush",
+    "x": 0.076,
+    "y": 0.917,
+    "h": 0.03
+   },
+   {
+    "t": "O 1995 Wizards of the Coast, Inc. All rights reserved.",
+    "x": 0.077,
+    "y": 0.94,
+    "h": 0.017
+   }
+  ]
+ },
+ {
+  "file": "ice_necro.jpg",
+  "lines": [
+   {
+    "t": "Necropotence",
+    "x": 0.068,
+    "y": 0.06,
+    "h": 0.043
+   },
+   {
+    "t": ",",
+    "x": 0.057,
+    "y": 0.462,
+    "h": 0.013
+   },
+   {
+    "t": "Enchantment",
+    "x": 0.082,
+    "y": 0.575,
+    "h": 0.029
+   },
+   {
+    "t": "Skip your draw phase. If you discard a card from",
+    "x": 0.146,
+    "y": 0.659,
+    "h": 0.02
+   },
+   {
+    "t": "your hand, remove that card from the game.",
+    "x": 0.143,
+    "y": 0.687,
+    "h": 0.021
+   },
+   {
+    "t": "0: Pay 1 life to set aside the top card of your",
+    "x": 0.149,
+    "y": 0.715,
+    "h": 0.024
+   },
+   {
+    "t": "library. At the beginning of your next discard",
+    "x": 0.144,
+    "y": 0.743,
+    "h": 0.021
+   },
+   {
+    "t": "phase, put that card into your hand. Effects that",
+    "x": 0.144,
+    "y": 0.77,
+    "h": 0.02
+   },
+   {
+    "t": "prevent or redirect damage cannot be used to",
+    "x": 0.144,
+    "y": 0.799,
+    "h": 0.02
+   },
+   {
+    "t": "counter this loss of life.",
+    "x": 0.144,
+    "y": 0.823,
+    "h": 0.022
+   },
+   {
+    "t": "Ilus. Mark Tedin",
+    "x": 0.086,
+    "y": 0.917,
+    "h": 0.022
+   },
+   {
+    "t": "NO 1995 Wizards of the Coast, Inc. All rights reserved.",
+    "x": 0.08,
+    "y": 0.941,
+    "h": 0.017
+   }
+  ]
+ },
+ {
+  "file": "m10_bolt.jpg",
+  "lines": [
+   {
+    "t": "Lightning Bolt",
+    "x": 0.079,
+    "y": 0.085,
+    "h": 0.038
+   },
+   {
+    "t": "Instant",
+    "x": 0.1,
+    "y": 0.591,
+    "h": 0.026
+   },
+   {
+    "t": "Lightning Bolt deals 3 damage to",
+    "x": 0.101,
+    "y": 0.667,
+    "h": 0.033
+   },
+   {
+    "t": "target creature or player.",
+    "x": 0.101,
+    "y": 0.704,
+    "h": 0.031
+   },
+   {
+    "t": "The sparkmage shrieked, calling on the",
+    "x": 0.107,
+    "y": 0.757,
+    "h": 0.033
+   },
+   {
+    "t": "rage of the storms of his youth. To his",
+    "x": 0.103,
+    "y": 0.793,
+    "h": 0.032
+   },
+   {
+    "t": "surprise, the sky responded with a fierce",
+    "x": 0.101,
+    "y": 0.828,
+    "h": 0.032
+   },
+   {
+    "t": "energy hed never thought to see again.",
+    "x": 0.103,
+    "y": 0.865,
+    "h": 0.031
+   },
+   {
+    "t": "Christopher Moeller",
+    "x": 0.17,
+    "y": 0.928,
+    "h": 0.03
+   },
+   {
+    "t": "A993-2009 Wizards of the Coast L",
+    "x": 0.159,
+    "y": 0.955,
+    "h": 0.02
+   }
+  ]
+ },
+ {
+  "file": "m20_shivan.jpg",
+  "lines": [
+   {
+    "t": "Shivan Dragon",
+    "x": 0.085,
+    "y": 0.075,
+    "h": 0.04
+   },
+   {
+    "t": "M20)",
+    "x": 0.807,
+    "y": 0.59,
+    "h": 0.035
+   },
+   {
+    "t": "Creature Dragon",
+    "x": 0.086,
+    "y": 0.592,
+    "h": 0.029
+   },
+   {
+    "t": "Flying (This creature can't be blocked",
+    "x": 0.089,
+    "y": 0.668,
+    "h": 0.032
+   },
+   {
+    "t": "except by creatures with flying or reach.)",
+    "x": 0.089,
+    "y": 0.702,
+    "h": 0.033
+   },
+   {
+    "t": "a: Shivan Dragon gets +1/+0 untl",
+    "x": 0.095,
+    "y": 0.747,
+    "h": 0.031
+   },
+   {
+    "t": "end of turn.",
+    "x": 0.088,
+    "y": 0.781,
+    "h": 0.028
+   },
+   {
+    "t": "I's just playing with us, Marsden.\"",
+    "x": 0.091,
+    "y": 0.847,
+    "h": 0.032
+   },
+   {
+    "t": "-Dafynne the Radiant, last words",
+    "x": 0.122,
+    "y": 0.881,
+    "h": 0.031
+   },
+   {
+    "t": "5/5",
+    "x": 0.826,
+    "y": 0.918,
+    "h": 0.03
+   },
+   {
+    "t": "335/280 R",
+    "x": 0.065,
+    "y": 0.94,
+    "h": 0.015
+   },
+   {
+    "t": "TM &© 2019 Wizards of the Coast",
+    "x": 0.598,
+    "y": 0.96,
+    "h": 0.016
+   },
+   {
+    "t": "M20• EN > DoNATO GIANCOLA",
+    "x": 0.067,
+    "y": 0.96,
+    "h": 0.017
+   }
+  ]
+ },
+ {
+  "file": "msh_bruce.jpg",
+  "lines": [
+   {
+    "t": "A Bruce Banner",
+    "x": 0.083,
+    "y": 0.077,
+    "h": 0.035
+   },
+   {
+    "t": "Legendary Creature– Human Scientist Hero M",
+    "x": 0.103,
+    "y": 0.59,
+    "h": 0.031
+   },
+   {
+    "t": "X X, e: Draw X cards. Activate only",
+    "x": 0.095,
+    "y": 0.674,
+    "h": 0.031
+   },
+   {
+    "t": "as a sorcery.",
+    "x": 0.088,
+    "y": 0.71,
+    "h": 0.027
+   },
+   {
+    "t": "2aa9:Transform Bruce Banner.",
+    "x": 0.109,
+    "y": 0.754,
+    "h": 0.033
+   },
+   {
+    "t": "Activate only as a sorcery.",
+    "x": 0.086,
+    "y": 0.791,
+    "h": 0.036
+   },
+   {
+    "t": "cYou shouldn't make me angry .",
+    "x": 0.089,
+    "y": 0.853,
+    "h": 0.04
+   },
+   {
+    "t": "8/8 Creature 220",
+    "x": 0.049,
+    "y": 0.909,
+    "h": 0.021
+   },
+   {
+    "t": "1/1",
+    "x": 0.83,
+    "y": 0.918,
+    "h": 0.03
+   },
+   {
+    "t": "M O049",
+    "x": 0.064,
+    "y": 0.941,
+    "h": 0.013
+   },
+   {
+    "t": "O MARVEL",
+    "x": 0.595,
+    "y": 0.942,
+    "h": 0.014
+   },
+   {
+    "t": "TM &O 2026 Wizards of the Coast",
+    "x": 0.595,
+    "y": 0.958,
+    "h": 0.016
+   },
+   {
+    "t": "MSH • EN >TOMMY ARNOLD",
+    "x": 0.065,
+    "y": 0.96,
+    "h": 0.014
+   }
+  ]
+ },
+ {
+  "file": "snc_047.jpg",
+  "lines": [
+   {
+    "t": "A Little Chat",
+    "x": 0.083,
+    "y": 0.074,
+    "h": 0.029
+   },
+   {
+    "t": "nstant",
+    "x": 0.086,
+    "y": 0.591,
+    "h": 0.025
+   },
+   {
+    "t": "Casualty 1 (As you cast this spell, you",
+    "x": 0.089,
+    "y": 0.664,
+    "h": 0.035
+   },
+   {
+    "t": "may sacrifice a creature with power I or",
+    "x": 0.088,
+    "y": 0.7,
+    "h": 0.031
+   },
+   {
+    "t": "greater. When you do, copy this spell.)",
+    "x": 0.085,
+    "y": 0.735,
+    "h": 0.032
+   },
+   {
+    "t": "Look at the top two cards of your",
+    "x": 0.086,
+    "y": 0.782,
+    "h": 0.031
+   },
+   {
+    "t": "library. Put one of them into your",
+    "x": 0.086,
+    "y": 0.816,
+    "h": 0.034
+   },
+   {
+    "t": "hand and the other on the bottom of",
+    "x": 0.086,
+    "y": 0.849,
+    "h": 0.026
+   },
+   {
+    "t": "your library.",
+    "x": 0.086,
+    "y": 0.888,
+    "h": 0.031
+   },
+   {
+    "t": "047/281 U",
+    "x": 0.064,
+    "y": 0.943,
+    "h": 0.015
+   },
+   {
+    "t": "TM &O 2022 Wizards of the Coast",
+    "x": 0.598,
+    "y": 0.943,
+    "h": 0.017
+   },
+   {
+    "t": "SNC• EN >MATT STEWART",
+    "x": 0.064,
+    "y": 0.962,
+    "h": 0.017
+   }
+  ]
+ },
+ {
+  "file": "snc_ledger.jpg",
+  "lines": [
+   {
+    "t": "Ledger Shredder",
+    "x": 0.086,
+    "y": 0.075,
+    "h": 0.041
+   },
+   {
+    "t": "Creature - Bird Advisor",
+    "x": 0.085,
+    "y": 0.589,
+    "h": 0.025
+   },
+   {
+    "t": "Flying",
+    "x": 0.086,
+    "y": 0.655,
+    "h": 0.031
+   },
+   {
+    "t": "Whenever a player casts their second",
+    "x": 0.086,
+    "y": 0.7,
+    "h": 0.029
+   },
+   {
+    "t": "spell each turn, Ledger Shredder",
+    "x": 0.091,
+    "y": 0.732,
+    "h": 0.032
+   },
+   {
+    "t": "connives. (Draw a card, then discard a",
+    "x": 0.088,
+    "y": 0.765,
+    "h": 0.029
+   },
+   {
+    "t": "card. If you discarded a nonland card, put a",
+    "x": 0.088,
+    "y": 0.798,
+    "h": 0.032
+   },
+   {
+    "t": "+1/+1 counter on this creature. )",
+    "x": 0.091,
+    "y": 0.831,
+    "h": 0.029
+   },
+   {
+    "t": "No evidence, no crime.",
+    "x": 0.085,
+    "y": 0.89,
+    "h": 0.032
+   },
+   {
+    "t": "1/3",
+    "x": 0.83,
+    "y": 0.92,
+    "h": 0.03
+   },
+   {
+    "t": "o46/281 R",
+    "x": 0.064,
+    "y": 0.942,
+    "h": 0.018
+   },
+   {
+    "t": "SNC • EN MILA PESIC",
+    "x": 0.065,
+    "y": 0.96,
+    "h": 0.02
+   },
+   {
+    "t": "TM &©2022 Wizards of the Coast",
+    "x": 0.598,
+    "y": 0.961,
+    "h": 0.016
+   }
+  ]
+ }
+]
