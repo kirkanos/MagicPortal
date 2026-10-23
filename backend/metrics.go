@@ -119,6 +119,7 @@ var (
 	metricSyncs   = newCounterVec()
 	// Images downloaded by the local mirror, by result.
 	metricImageDownloads = newCounterVec()
+	metricHashScans      = newCounterVec()
 
 	metricHTTPRequests = newCounterVec()
 	metricHTTPDuration = newHistogram([]float64{0.005, 0.025, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30})
@@ -140,7 +141,6 @@ var apiRoutes = map[string]string{
 	"dashboard":     "/api/dashboard",
 	"editions":      "/api/editions",
 	"cards":         "/api/cards",
-	"images":        "/api/images/sync",
 	"value-history": "/api/value-history", "value-movers": "/api/value-movers",
 	"wishlist": "/api/wishlist",
 	"activity": "/api/activity", "backup": "/api/backup", "auth-check": "/api/auth-check",
@@ -157,7 +157,7 @@ func routeLabel(path string) string {
 	switch head {
 	case "catalog":
 		switch tail {
-		case "index", "card", "search":
+		case "index", "card", "search", "hashes":
 			return "/api/catalog/" + tail
 		}
 	case "collection":
@@ -188,6 +188,10 @@ func routeLabel(path string) string {
 		switch tail {
 		case "restore-latest", "restore-upload":
 			return "/api/backup/" + tail
+		}
+	case "images", "hashes":
+		if tail == "sync" {
+			return "/api/" + head + "/sync"
 		}
 	}
 	if r, ok := apiRoutes[head]; ok && tail == "" {
@@ -250,6 +254,8 @@ type dbGauges struct {
 	imageFiles                     int64
 	imageBytes                     int64
 	lastImageSync                  float64
+	cardHashes                     int64
+	lastHashSync                   float64
 }
 
 type binderGauge struct {
@@ -330,6 +336,8 @@ func collectGauges() *dbGauges {
 
 	_ = db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM image_files`).Scan(&g.imageFiles, &g.imageBytes)
 	g.lastImageSync = metaUnix("image_sync_last_at")
+	g.cardHashes = int64(countRows(db, "card_hashes"))
+	g.lastHashSync = metaUnix("hash_sync_last_at")
 
 	g.lastImport = metaUnix("remote_import_last_at")
 	g.lastSync = metaUnix("bulk_synced_at")
@@ -445,6 +453,10 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	simple(n("images_mirrored"), "Number of locally mirrored files", "gauge", float64(g.imageFiles))
 	simple(n("images_bytes"), "Disk space occupied by the image mirror", "gauge", float64(g.imageBytes))
 	simple(n("last_image_sync_timestamp_seconds"), "Time of the last image mirror run", "gauge", g.lastImageSync)
+	simple(n("hash_index_enabled"), "1 if the image hash index for the scanner is active", "gauge", boolGauge(hashIndexEnabled()))
+	simple(n("card_hashes"), "Printings in the image hash index", "gauge", float64(g.cardHashes))
+	simple(n("hash_sync_in_progress"), "1 while the hash index is being built", "gauge", boolGauge(hashSyncInProgress()))
+	simple(n("last_hash_sync_timestamp_seconds"), "Time of the last hash index run", "gauge", g.lastHashSync)
 
 	// --- process counters ---
 	vec(n("imports_total"), "Import runs by source and result", "counter", metricImports)
@@ -454,6 +466,7 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	vec(n("backups_total"), "Backup runs by target and result", "counter", metricBackups)
 	vec(n("syncs_total"), "Scryfall syncs by result", "counter", metricSyncs)
 	vec(n("image_downloads_total"), "Images downloaded by the local mirror", "counter", metricImageDownloads)
+	vec(n("hash_scans_total"), "Scans hashed for the scanner index, by source (mirror, download) or error", "counter", metricHashScans)
 
 	// --- HTTP ---
 	vec(n("http_requests_total"), "API requests by route, method and status", "counter", metricHTTPRequests)

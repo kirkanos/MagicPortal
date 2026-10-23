@@ -142,6 +142,9 @@ Standalone stack only:
 
 Optional: `IMAGE_MIRROR` (default `false`) mirrors card images and symbols locally –
 details in **[docs/roadmap.md](docs/roadmap.md)**.
+`HASH_INDEX` (default `false`) builds the image hash index the Android scanner uses for
+old and foreign cards: nightly at `HASH_SYNC_HOUR` (default 4), for `HASH_SCOPE`
+`old` (default: old frame before July 2003 plus the collection), `collection` or `all`.
 `SYNC_INTERVAL_MINUTES` (default 5) controls the background interval,
 `METRICS_PORT` (default 9090, `off` = disabled) and `METRICS_CACHE_SECONDS` (default 30) the
 Prometheus endpoint.
@@ -294,6 +297,7 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `GET` | `/api/sets` | Set index |
 | `GET` | `/api/catalog/index` | The whole Scryfall catalog in compact form for the Android scanner's offline index (ETag over the content) |
 | `GET` | `/api/catalog/card?set=…&number=…` | One printing of the catalog, with prices |
+| `GET` | `/api/catalog/hashes` | Image hashes for the Android scanner, binary (`MPH1`, 32 bytes per printing, ETag) – only with `HASH_INDEX` |
 | `GET` | `/api/catalog/search?name=…` | Name search that forgives typos and OCR errors, every printing newest first |
 | `GET` | `/api/sets/{code}/cards` | All cards of a set, with the owned copies per language and binder |
 | `GET` | `/api/prints?name=…` | All printings of a card (editions) |
@@ -315,6 +319,7 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `POST` | `/api/reset` | Clear the collection |
 | `POST` | `/api/sync` | Trigger a Scryfall sync now |
 | `POST` | `/api/images/sync` | Sync the image mirror now (only with `IMAGE_MIRROR`) |
+| `POST` | `/api/hashes/sync` | Build the image hash index now (only with `HASH_INDEX`) |
 
 ## 🗂️ Project structure
 

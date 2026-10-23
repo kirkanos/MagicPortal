@@ -33,6 +33,7 @@ func main() {
 	startRemoteImportScheduler()
 	startBackupScheduler()
 	startImageScheduler()
+	startHashScheduler()
 	startMetricsServer()
 
 	mux := http.NewServeMux()
@@ -42,6 +43,7 @@ func main() {
 	mux.HandleFunc("GET /api/catalog/index", handleCatalogIndex)
 	mux.HandleFunc("GET /api/catalog/card", handleCatalogCard)
 	mux.HandleFunc("GET /api/catalog/search", handleCatalogSearch)
+	mux.HandleFunc("GET /api/catalog/hashes", handleCatalogHashes)
 	mux.HandleFunc("GET /api/sets", handleSets)
 	mux.HandleFunc("GET /api/sets/{code}/cards", handleSetCards)
 	mux.HandleFunc("GET /api/prints", handlePrints)
@@ -65,6 +67,7 @@ func main() {
 	mux.HandleFunc("GET /api/activity", handleActivity)
 	mux.HandleFunc("POST /api/activity/clear", handleActivityClear)
 	mux.HandleFunc("POST /api/images/sync", handleImageSyncNow)
+	mux.HandleFunc("POST /api/hashes/sync", handleHashSyncNow)
 	mux.HandleFunc("POST /api/backup", handleBackupNow)
 	mux.HandleFunc("POST /api/backup/restore-latest", handleRestoreLatest)
 	mux.HandleFunc("POST /api/backup/restore-upload", handleRestoreUpload)
@@ -485,6 +488,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		},
 		"backup":      backupStatus(),
 		"imageMirror": imageStatus(),
+		"hashIndex":   hashStatus(),
 	})
 }
 

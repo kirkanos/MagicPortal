@@ -37,6 +37,13 @@ services:
       - IMAGE_SIZES=${IMAGE_SIZES:-small,normal}
       - IMAGE_RATE_PER_SECOND=${IMAGE_RATE_PER_SECOND:-10}
       - IMAGE_MAX_BYTES=${IMAGE_MAX_BYTES:-3221225472}
+      # Image hash index for the Android scanner (default: off). Hashes the
+      # small scans of old-frame and owned printings at night, ~350 MB fetched
+      # once; HASH_SCOPE=collection|old|all.
+      - HASH_INDEX=${HASH_INDEX:-false}
+      - HASH_SCOPE=${HASH_SCOPE:-old}
+      - HASH_SYNC_HOUR=${HASH_SYNC_HOUR:-4}
+      - HASH_RATE_PER_SECOND=${HASH_RATE_PER_SECOND:-8}
       # Prometheus endpoint on a separate port (METRICS_PORT=off disables it).
       # Deliberately NOT behind nginx/Traefik: the metrics reveal collection
       # value and error states. Prometheus reaches them via the traefik-network.

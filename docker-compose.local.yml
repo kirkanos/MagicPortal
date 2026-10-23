@@ -25,6 +25,10 @@ services:
     environment:
       - DB_PATH=/data/mtg.db
       - IMAGE_DIR=/images
+      # The scanner's image hash index, so the Android app can be tested
+      # against it. Runs only when triggered (POST /api/hashes/sync) or at
+      # 04:00 UTC.
+      - HASH_INDEX=true
       # --- not overridable: no write access to remote storage ---
       # NEVER delete the source file after an import (otherwise the local
       # instance steals the server's CSV from Nextcloud).
