@@ -40,6 +40,7 @@ import net.kirkanos.mtgportal.core.ui.theme.PortalColors
 import androidx.navigation.toRoute
 import net.kirkanos.mtgportal.feature.binders.BindersScreen
 import net.kirkanos.mtgportal.feature.cards.CardsScreen
+import net.kirkanos.mtgportal.feature.deckchecker.DeckCheckerScreen
 import net.kirkanos.mtgportal.feature.decks.DecksScreen
 import net.kirkanos.mtgportal.feature.editions.EditionsScreen
 import net.kirkanos.mtgportal.feature.editions.SetCardsScreen
@@ -102,7 +103,7 @@ fun AppShell() {
             }
             composable<DecksRoute> { DecksScreen() }
             composable<DashboardRoute> { NotYet(R.string.nav_dashboard) }
-            composable<DeckCheckerRoute> { NotYet(R.string.nav_deck_checker) }
+            composable<DeckCheckerRoute> { DeckCheckerScreen() }
             composable<ActivityRoute> { NotYet(R.string.nav_activity) }
             composable<SettingsRoute> { SettingsScreen() }
         }

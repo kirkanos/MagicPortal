@@ -222,4 +222,19 @@
     <string name="set_type_draft_innovation">Draft innovation</string>
     <string name="set_type_box">Box set</string>
     <string name="set_type_funny">Funny</string>
+    <string name="dc_label">Paste a decklist (format: 1 Lightning Bolt or 4x Brainstorm, one card per line)</string>
+    <string name="dc_placeholder">1 Lightning Bolt\n4 Brainstorm\n1 Black Lotus</string>
+    <string name="dc_check">Check deck</string>
+    <string name="dc_no_lines">No valid lines detected.</string>
+    <string name="dc_lines">Card lines</string>
+    <string name="dc_complete">Complete</string>
+    <string name="dc_partial">Partial</string>
+    <string name="dc_missing">Missing</string>
+    <string name="dc_needed_owned">needed %1$d · owned %2$d</string>
+    <string name="dc_bulk">☆ Put all %1$d missing cards on the wishlist</string>
+    <string name="dc_bulk_all_there">Every missing card is already on the wishlist.</string>
+    <string name="dc_bulk_confirm">Put %1$d cards on the wishlist?</string>
+    <string name="dc_bulk_failed">%1$d cards could not be saved.</string>
+    <string name="dc_bulk_done">%1$d cards put on the wishlist.</string>
+    <string name="common_ok">OK</string>
 </resources>

@@ -237,4 +237,20 @@
     <string name="set_type_draft_innovation">Draft-Innovation</string>
     <string name="set_type_box">Box-Set</string>
     <string name="set_type_funny">Spaß-Set</string>
+    <!-- Deck checker (deck-checker.html / deck-checker.js) -->
+    <string name="dc_label">Deckliste einfügen (Format: 1 Lightning Bolt oder 4x Brainstorm, eine Karte pro Zeile)</string>
+    <string name="dc_placeholder">1 Lightning Bolt\n4 Brainstorm\n1 Black Lotus</string>
+    <string name="dc_check">Deck prüfen</string>
+    <string name="dc_no_lines">Keine gültigen Zeilen erkannt.</string>
+    <string name="dc_lines">Kartenzeilen</string>
+    <string name="dc_complete">Vollständig</string>
+    <string name="dc_partial">Teilweise</string>
+    <string name="dc_missing">Fehlt</string>
+    <string name="dc_needed_owned">benötigt %1$d · im Besitz %2$d</string>
+    <string name="dc_bulk">☆ Alle %1$d fehlenden auf die Wunschliste</string>
+    <string name="dc_bulk_all_there">Alle fehlenden Karten stehen schon auf der Wunschliste.</string>
+    <string name="dc_bulk_confirm">%1$d Karten auf die Wunschliste setzen?</string>
+    <string name="dc_bulk_failed">%1$d Karten konnten nicht gespeichert werden.</string>
+    <string name="dc_bulk_done">%1$d Karten auf die Wunschliste gesetzt.</string>
+    <string name="common_ok">OK</string>
 </resources>
