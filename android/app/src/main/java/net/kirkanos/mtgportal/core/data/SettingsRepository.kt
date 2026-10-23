@@ -26,14 +26,17 @@ class SettingsRepository(
 ) {
     private val baseUrlKey = stringPreferencesKey("base_url")
     private val secretKey = stringPreferencesKey("upload_password")
+    private val editionTypesKey = stringPreferencesKey("editions_type_filter")
 
     private val _baseUrl: MutableStateFlow<String>
     private val _secret: MutableStateFlow<String?>
+    private val _editionTypes: MutableStateFlow<String?>
 
     init {
         val prefs = runBlocking { context.settingsStore.data.first() }
         _baseUrl = MutableStateFlow(prefs[baseUrlKey] ?: defaultBaseUrl)
         _secret = MutableStateFlow(prefs[secretKey]?.let(secrets::decrypt))
+        _editionTypes = MutableStateFlow(prefs[editionTypesKey])
     }
 
     val baseUrl: StateFlow<String> = _baseUrl.asStateFlow()
@@ -52,5 +55,13 @@ class SettingsRepository(
             if (pw.isNullOrEmpty()) it.remove(secretKey) else it[secretKey] = secrets.encrypt(pw)
         }
         _secret.value = pw?.takeIf { it.isNotEmpty() }
+    }
+
+    /** The editions page's set-type filter, like localStorage['mtg_editions_type'] on the web. */
+    val editionTypes: StateFlow<String?> = _editionTypes.asStateFlow()
+
+    suspend fun setEditionTypes(encoded: String) {
+        context.settingsStore.edit { it[editionTypesKey] = encoded }
+        _editionTypes.value = encoded
     }
 }

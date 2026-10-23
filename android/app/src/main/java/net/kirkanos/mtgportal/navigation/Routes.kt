@@ -8,6 +8,7 @@ import net.kirkanos.mtgportal.R
 // pages can link into a filtered grid, like ?binder= and ?set= on the web.
 @Serializable data class CardsRoute(val binder: String? = null, val set: String? = null)
 @Serializable data object EditionsRoute
+@Serializable data class SetCardsRoute(val code: String)
 @Serializable data object ReservedRoute
 @Serializable data object WishlistRoute
 @Serializable data class BindersRoute(val type: String)

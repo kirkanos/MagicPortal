@@ -41,6 +41,8 @@ import androidx.navigation.toRoute
 import net.kirkanos.mtgportal.feature.binders.BindersScreen
 import net.kirkanos.mtgportal.feature.cards.CardsScreen
 import net.kirkanos.mtgportal.feature.decks.DecksScreen
+import net.kirkanos.mtgportal.feature.editions.EditionsScreen
+import net.kirkanos.mtgportal.feature.editions.SetCardsScreen
 import net.kirkanos.mtgportal.feature.reserved.ReservedScreen
 import net.kirkanos.mtgportal.feature.wishlist.WishlistScreen
 import net.kirkanos.mtgportal.feature.settings.SettingsScreen
@@ -90,7 +92,8 @@ fun AppShell() {
                 val r = entry.toRoute<CardsRoute>()
                 CardsScreen(binder = r.binder, set = r.set)
             }
-            composable<EditionsRoute> { NotYet(R.string.nav_editions) }
+            composable<EditionsRoute> { EditionsScreen(onOpenSet = { nav.navigate(SetCardsRoute(it)) }) }
+            composable<SetCardsRoute> { entry -> SetCardsScreen(entry.toRoute<SetCardsRoute>().code) }
             composable<ReservedRoute> { ReservedScreen() }
             composable<WishlistRoute> { WishlistScreen() }
             composable<BindersRoute> { entry ->
