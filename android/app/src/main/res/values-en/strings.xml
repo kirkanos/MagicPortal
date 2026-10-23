@@ -15,7 +15,6 @@
 
     <string name="common_retry">Try again</string>
     <string name="common_cancel">Cancel</string>
-    <string name="common_not_yet">This page arrives in one of the next steps.</string>
     <string name="common_wrong_password">Wrong or missing password</string>
     <string name="common_server_unreachable">Server not reachable: %1$s</string>
     <string name="common_server_error">Server error (HTTP %1$d): %2$s</string>
@@ -72,7 +71,6 @@
     <string name="cards_result_count">%1$s of %2$s cards</string>
     <string name="cards_random_title">Random cards from your collection</string>
     <string name="cards_no_image">No image</string>
-    <string name="cards_error_loading">Error loading: %1$s</string>
     <string name="cards_empty">No cards found.</string>
     <string name="cards_collection_empty">The collection is still empty. Log in and upload your ManaBox export on the web.</string>
     <string name="color_w">White</string>
@@ -148,7 +146,6 @@
     <string name="wl_export">📋 Copy for Cardmarket</string>
     <string name="wl_export_copied">Copied to the clipboard – and here to read back:</string>
     <string name="wl_export_empty">Nothing to export.</string>
-    <string name="wl_export_failed">Export failed: %1$s</string>
     <string name="wl_howto_title">How it gets to Cardmarket</string>
     <string name="wl_howto">Cardmarket\'s API is closed to new applicants and the Shopping Wizard cannot be driven by a URL. What does work is the decklist paste field:\n\n1. Copy the list with the button above.\n2. Open \"Buying → My Wants → Add Decklist\" at Cardmarket.\n3. Paste one block per wants list – the export is already grouped by minimum condition and chunked to 150 entries, which is Cardmarket\'s limit per list.\n4. Set the minimum condition once for the list, then start the Shopping Wizard from there.\n\nPinned printings are exported with their expansion. The collector number is deliberately left out: Cardmarket\'s \"(V.1)\" is a version counter within an expansion, not a collector number.</string>
     <string name="wl_result_count">%1$d of %2$d entries</string>
@@ -156,8 +153,6 @@
     <string name="wl_empty">Nothing on the wishlist yet. Mark cards with the ☆ on the Reserved List, in an edition or in the deck checker.</string>
     <string name="wl_unknown_name">unknown name</string>
     <string name="wl_no_price">no price</string>
-    <string name="wl_pinned">pinned printing</string>
-    <string name="wl_cheapest">cheapest printing</string>
     <string name="wl_not_owned">not owned</string>
     <string name="wl_unknown_condition">unknown</string>
     <string name="wl_upgrade_tag">upgrade</string>
@@ -279,7 +274,6 @@
     <string name="db_added_month">Additions per month</string>
     <string name="db_rarity_table">Rarity in detail</string>
     <string name="db_set_table">Editions in detail (top by value)</string>
-    <string name="db_col_entries">Entries</string>
     <string name="db_col_copies">Copies</string>
     <string name="db_col_avg">Avg./card</string>
     <string name="db_col_share">Value share</string>
@@ -287,4 +281,39 @@
     <string name="db_legend_purchase">Purchase value</string>
     <string name="db_unknown">unknown</string>
     <string name="color_multi">Multicolor</string>
+    <string name="act_refresh">⟳ Refresh</string>
+    <string name="act_clear">Clear log</string>
+    <string name="act_clear_confirm">Really clear the log? All current entries will be removed.</string>
+    <string name="act_empty">No entries yet.</string>
+    <string name="act_login_needed">Please log in in the settings to view the log.</string>
+    <string name="act_src_restore">Restore</string>
+    <string name="act_src_reset">Reset</string>
+    <string name="act_src_log">Log</string>
+    <string name="admin_open">⚙ Administration</string>
+    <string name="admin_random">Random cards</string>
+    <string name="admin_random_enabled">Show random cards on the Cards page</string>
+    <string name="admin_random_count">Count</string>
+    <string name="admin_menu">Menu items</string>
+    <string name="admin_menu_hint">Unchecked items are hidden from the menu.</string>
+    <string name="admin_save">Save</string>
+    <string name="admin_saved">Saved.</string>
+    <string name="admin_data">Data</string>
+    <string name="admin_sync">🔄 Refresh card data &amp; prices</string>
+    <string name="admin_sync_hint">Refresh card data &amp; prices from Scryfall – also checks for a new CSV import from Nextcloud/Google Drive (if configured).</string>
+    <string name="admin_syncing">Updating card data…</string>
+    <string name="admin_card_data">Card data: %1$s</string>
+    <string name="admin_sync_error">Last sync error: %1$s</string>
+    <string name="admin_counts">Collection: %1$s · Card DB: %2$s · Sets: %3$s</string>
+    <string name="admin_upload">⬆ Upload CSV</string>
+    <string name="admin_upload_confirm">The uploaded file replaces the entire collection. Continue?</string>
+    <string name="admin_upload_done">Import: %1$d cards (%2$d new, %3$d updated).</string>
+    <string name="admin_images">Refresh the image mirror now</string>
+    <string name="admin_maintenance">Maintenance</string>
+    <string name="admin_reset">Clear collection</string>
+    <string name="admin_reset_confirm">Clear the entire collection? You can upload a new CSV afterwards.</string>
+    <string name="admin_backup">💾 Backup</string>
+    <string name="admin_restore">⟲ Restore</string>
+    <string name="admin_restore_confirm">Restore the latest backup? The current collection and value history will be replaced.</string>
+    <string name="admin_started">Started.</string>
+    <string name="admin_done">Done.</string>
 </resources>

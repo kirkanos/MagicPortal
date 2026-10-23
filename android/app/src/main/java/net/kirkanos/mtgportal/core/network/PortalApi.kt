@@ -1,6 +1,9 @@
 package net.kirkanos.mtgportal.core.network
 
+import net.kirkanos.mtgportal.core.network.dto.ActivityDto
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
+import net.kirkanos.mtgportal.core.network.dto.ImportResultDto
+import net.kirkanos.mtgportal.core.network.dto.UiConfigInputDto
 import net.kirkanos.mtgportal.core.network.dto.CardGroupDto
 import net.kirkanos.mtgportal.core.network.dto.CardsPageDto
 import net.kirkanos.mtgportal.core.network.dto.DashboardDto
@@ -17,6 +20,7 @@ import net.kirkanos.mtgportal.core.network.dto.StatusDto
 import net.kirkanos.mtgportal.core.network.dto.UiConfigDto
 import net.kirkanos.mtgportal.core.network.dto.WishlistDto
 import net.kirkanos.mtgportal.core.network.dto.WishlistInputDto
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -124,4 +128,35 @@ interface PortalApi {
 
     @GET("value-movers")
     suspend fun valueMovers(@Query("days") days: Int): MoversDto
+
+    // ---- Admin: everything below needs the upload password ----
+
+    @POST("config")
+    suspend fun setConfig(@Body cfg: UiConfigInputDto): UiConfigDto
+
+    @GET("activity")
+    suspend fun activity(): List<ActivityDto>
+
+    @POST("activity/clear")
+    suspend fun clearActivity(): Response<Unit>
+
+    /** Card data and prices from Scryfall; also checks for a remote CSV. Returns at once. */
+    @POST("sync")
+    suspend fun sync(): Response<Unit>
+
+    @POST("images/sync")
+    suspend fun imagesSync(): Response<Unit>
+
+    @POST("backup")
+    suspend fun backup(): Response<Unit>
+
+    @POST("backup/restore-latest")
+    suspend fun restoreLatest(): Response<Unit>
+
+    @POST("reset")
+    suspend fun reset(): Response<Unit>
+
+    /** Raw CSV as the body, like the web's file upload. Replaces the collection. */
+    @POST("upload")
+    suspend fun upload(@Body csv: RequestBody): ImportResultDto
 }

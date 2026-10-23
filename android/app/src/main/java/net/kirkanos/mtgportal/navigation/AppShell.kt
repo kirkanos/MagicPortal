@@ -47,6 +47,8 @@ import net.kirkanos.mtgportal.feature.editions.EditionsScreen
 import net.kirkanos.mtgportal.feature.editions.SetCardsScreen
 import net.kirkanos.mtgportal.feature.reserved.ReservedScreen
 import net.kirkanos.mtgportal.feature.wishlist.WishlistScreen
+import net.kirkanos.mtgportal.feature.activity.ActivityScreen
+import net.kirkanos.mtgportal.feature.settings.AdminScreen
 import net.kirkanos.mtgportal.feature.settings.SettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,8 +107,9 @@ fun AppShell() {
             composable<DecksRoute> { DecksScreen() }
             composable<DashboardRoute> { DashboardScreen() }
             composable<DeckCheckerRoute> { DeckCheckerScreen() }
-            composable<ActivityRoute> { NotYet(R.string.nav_activity) }
-            composable<SettingsRoute> { SettingsScreen() }
+            composable<ActivityRoute> { ActivityScreen() }
+            composable<SettingsRoute> { SettingsScreen(onOpenAdmin = { nav.navigate(AdminRoute) }) }
+            composable<AdminRoute> { AdminScreen() }
         }
     }
 
@@ -140,14 +143,4 @@ fun NavHostController.navigateTop(route: Any) = navigate(route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }
     launchSingleTop = true
     restoreState = true
-}
-
-@Composable
-private fun NotYet(title: Int) {
-    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(stringResource(title))
-            Text(stringResource(R.string.common_not_yet), color = PortalColors.TextDim)
-        }
-    }
 }

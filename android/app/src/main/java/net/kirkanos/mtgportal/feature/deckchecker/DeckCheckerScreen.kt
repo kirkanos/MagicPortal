@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -115,13 +116,14 @@ fun DeckCheckerScreen() {
     val wished by c.wishlist.names.collectAsStateWithLifecycle()
     val unlocked = isUnlocked()
     val context = LocalContext.current
+    val res = LocalResources.current
     var text by rememberSaveable { mutableStateOf("") }
     var confirm by remember { mutableStateOf<List<String>?>(null) }
     val allThere = stringResource(R.string.dc_bulk_all_there)
 
     st.bulkResult?.let { (ok, failed) ->
         LaunchedEffect(ok, failed) {
-            val msg = if (failed > 0) context.getString(R.string.dc_bulk_failed, failed) else context.getString(R.string.dc_bulk_done, ok)
+            val msg = if (failed > 0) res.getString(R.string.dc_bulk_failed, failed) else res.getString(R.string.dc_bulk_done, ok)
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             vm.clearBulkResult()
         }

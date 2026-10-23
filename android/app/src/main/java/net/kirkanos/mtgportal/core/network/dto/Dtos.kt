@@ -372,3 +372,23 @@ data class MoverDto(
     val pct: Double = 0.0,
     val valueImpact: Double = 0.0,
 )
+
+@Serializable
+data class ActivityDto(
+    val ts: String = "",
+    val level: String = "info",
+    val source: String = "",
+    val message: String = "",
+)
+
+/** Body of POST /api/config: the admin's three UI settings. */
+@Serializable
+data class UiConfigInputDto(
+    val randomEnabled: Boolean,
+    val randomCount: Int,
+    val hiddenNav: List<String>,
+)
+
+/** Answer of POST /api/upload: the import is a full replace of the collection. */
+@Serializable
+data class ImportResultDto(val added: Int = 0, val updated: Int = 0, val total: Int = 0)

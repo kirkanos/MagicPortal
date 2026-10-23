@@ -36,3 +36,13 @@ inline fun <T, R> ApiResult<T>.map(f: (T) -> R): ApiResult<R> = when (this) {
     is ApiResult.HttpError -> this
     is ApiResult.NetworkError -> this
 }
+
+/**
+ * For endpoints that answer with a status and nothing worth reading
+ * (POST /api/sync, /api/backup, ...): a non-2xx status becomes an HttpError
+ * like everywhere else, with the backend's plain-text message.
+ */
+suspend fun safeStatus(block: suspend () -> retrofit2.Response<Unit>): ApiResult<Unit> = safeCall {
+    val r = block()
+    if (!r.isSuccessful) throw HttpException(r)
+}

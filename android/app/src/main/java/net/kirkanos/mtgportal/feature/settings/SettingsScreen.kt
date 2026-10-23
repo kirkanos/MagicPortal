@@ -84,7 +84,7 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
 }
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onOpenAdmin: () -> Unit) {
     val vm = containerViewModel { SettingsViewModel(it) }
     val baseUrl by vm.baseUrl.collectAsStateWithLifecycle()
     val auth by vm.auth.collectAsStateWithLifecycle()
@@ -134,6 +134,10 @@ fun SettingsScreen() {
             AuthState.Unlocked ->
                 OutlinedButton(onClick = { vm.lock() }) { Text(stringResource(R.string.settings_lock)) }
             AuthState.Open -> Unit
+        }
+        // Like the gear in the web's nav bar: only with write access.
+        if (auth == AuthState.Open || auth == AuthState.Unlocked) {
+            Button(onClick = onOpenAdmin) { Text(stringResource(R.string.admin_open)) }
         }
 
         Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleMedium)

@@ -2,7 +2,7 @@
 <!-- German is the default, as in the web UI. English lives in values-en.
      Texts are taken over from app/js and app/*.html wherever they exist there. -->
 <resources>
-    <string name="app_name">Magic Portal</string>
+    <string name="app_name" translatable="false">Magic Portal</string>
 
     <!-- Navigation (NAV_ITEMS in shared.js) -->
     <string name="nav_cards">Karten</string>
@@ -21,7 +21,6 @@
     <!-- Common -->
     <string name="common_retry">Erneut versuchen</string>
     <string name="common_cancel">Abbrechen</string>
-    <string name="common_not_yet">Diese Seite kommt in einem der nächsten Schritte.</string>
     <string name="common_wrong_password">Falsches oder fehlendes Passwort</string>
     <string name="common_server_unreachable">Server nicht erreichbar: %1$s</string>
     <string name="common_server_error">Fehler vom Server (HTTP %1$d): %2$s</string>
@@ -81,7 +80,6 @@
     <string name="cards_result_count">%1$s von %2$s Karten</string>
     <string name="cards_random_title">Zufällige Karten aus deiner Sammlung</string>
     <string name="cards_no_image">Kein Bild</string>
-    <string name="cards_error_loading">Fehler beim Laden: %1$s</string>
     <string name="cards_empty">Keine Karten gefunden.</string>
     <string name="cards_collection_empty">Die Sammlung ist noch leer. Melde dich an und lade im Web deinen ManaBox-Export hoch.</string>
     <string name="color_w">Weiß</string>
@@ -162,7 +160,6 @@
     <string name="wl_export">📋 Für Cardmarket kopieren</string>
     <string name="wl_export_copied">In die Zwischenablage kopiert – und hier zum Nachlesen:</string>
     <string name="wl_export_empty">Nichts zu exportieren.</string>
-    <string name="wl_export_failed">Export fehlgeschlagen: %1$s</string>
     <string name="wl_howto_title">Wie es zu Cardmarket kommt</string>
     <string name="wl_howto">Cardmarkets API nimmt keine neuen Antragsteller mehr an, und der Shopping Wizard lässt sich nicht per URL steuern. Was funktioniert, ist das Decklisten-Einfügefeld:\n\n1. Liste mit dem Button oben kopieren.\n2. Bei Cardmarket „Buying → My Wants → Add Decklist“ öffnen.\n3. Pro Wants-Liste einen Block einfügen – der Export ist schon nach Mindestzustand gruppiert und auf 150 Einträge gestückelt, das ist Cardmarkets Grenze pro Liste.\n4. Den Mindestzustand einmal für die Liste setzen, dann von dort den Shopping Wizard starten.\n\nFestgelegte Drucke werden mit ihrer Edition exportiert. Die Sammlernummer bleibt bewusst weg: Cardmarkets „(V.1)“ ist ein Versionszähler innerhalb einer Edition, keine Sammlernummer.</string>
     <string name="wl_result_count">%1$d von %2$d Einträgen</string>
@@ -170,8 +167,6 @@
     <string name="wl_empty">Noch nichts auf der Wunschliste. Markiere Karten mit dem ☆ in der Reserved List, in einer Edition oder im Deck-Checker.</string>
     <string name="wl_unknown_name">unbekannter Name</string>
     <string name="wl_no_price">kein Preis</string>
-    <string name="wl_pinned">festgelegter Druck</string>
-    <string name="wl_cheapest">günstigster Druck</string>
     <string name="wl_not_owned">nicht vorhanden</string>
     <string name="wl_unknown_condition">unbekannt</string>
     <string name="wl_upgrade_tag">Upgrade</string>
@@ -296,7 +291,6 @@
     <string name="db_added_month">Zugänge pro Monat</string>
     <string name="db_rarity_table">Rarität im Detail</string>
     <string name="db_set_table">Editionen im Detail (Top nach Wert)</string>
-    <string name="db_col_entries">Einträge</string>
     <string name="db_col_copies">Exemplare</string>
     <string name="db_col_avg">Ø/Karte</string>
     <string name="db_col_share">Wertanteil</string>
@@ -304,4 +298,42 @@
     <string name="db_legend_purchase">Kaufwert</string>
     <string name="db_unknown">unbekannt</string>
     <string name="color_multi">Mehrfarbig</string>
+    <!-- Activity (activity.html / activity.js) -->
+    <string name="act_refresh">⟳ Aktualisieren</string>
+    <string name="act_clear">Protokoll leeren</string>
+    <string name="act_clear_confirm">Protokoll wirklich leeren? Die bisherigen Einträge werden gelöscht.</string>
+    <string name="act_empty">Noch keine Einträge.</string>
+    <string name="act_login_needed">Bitte zuerst in den Einstellungen anmelden, um das Protokoll zu sehen.</string>
+    <string name="act_src_restore">Wiederherstellung</string>
+    <string name="act_src_reset">Leeren</string>
+    <string name="act_src_log">Protokoll</string>
+
+    <!-- Admin (buildAdminOverlay / initCollectionUpload in shared.js) -->
+    <string name="admin_open">⚙ Verwaltung</string>
+    <string name="admin_random">Zufallskarten</string>
+    <string name="admin_random_enabled">Zufällige Karten auf der Karten-Seite anzeigen</string>
+    <string name="admin_random_count">Anzahl</string>
+    <string name="admin_menu">Menüpunkte</string>
+    <string name="admin_menu_hint">Abgewählte Punkte werden im Menü ausgeblendet.</string>
+    <string name="admin_save">Speichern</string>
+    <string name="admin_saved">Gespeichert.</string>
+    <string name="admin_data">Daten</string>
+    <string name="admin_sync">🔄 Kartendaten &amp; Preise aktualisieren</string>
+    <string name="admin_sync_hint">Kartendaten &amp; Preise von Scryfall aktualisieren – prüft zusätzlich auf einen neuen CSV-Import aus Nextcloud/Google Drive (falls konfiguriert).</string>
+    <string name="admin_syncing">Aktualisiere Kartendaten…</string>
+    <string name="admin_card_data">Kartendaten: %1$s</string>
+    <string name="admin_sync_error">Letzter Sync-Fehler: %1$s</string>
+    <string name="admin_counts">Sammlung: %1$s · Karten-DB: %2$s · Sets: %3$s</string>
+    <string name="admin_upload">⬆ CSV hochladen</string>
+    <string name="admin_upload_confirm">Die hochgeladene Datei ersetzt die gesamte Sammlung. Fortfahren?</string>
+    <string name="admin_upload_done">Import: %1$d Karten (%2$d neu, %3$d aktualisiert).</string>
+    <string name="admin_images">Bildspiegel jetzt aktualisieren</string>
+    <string name="admin_maintenance">Wartung</string>
+    <string name="admin_reset">Sammlung leeren</string>
+    <string name="admin_reset_confirm">Gesamte Sammlung leeren? Danach kannst du eine neue CSV hochladen.</string>
+    <string name="admin_backup">💾 Backup</string>
+    <string name="admin_restore">⟲ Wiederherstellen</string>
+    <string name="admin_restore_confirm">Neuestes Backup wiederherstellen? Die aktuelle Sammlung und Wert-Historie werden ersetzt.</string>
+    <string name="admin_started">Gestartet.</string>
+    <string name="admin_done">Erledigt.</string>
 </resources>

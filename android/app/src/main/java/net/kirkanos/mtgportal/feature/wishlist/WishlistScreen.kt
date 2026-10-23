@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -83,10 +84,11 @@ fun WishlistScreen() {
     val vm = containerViewModel { WishlistViewModel(it) }
     val st by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val res = LocalResources.current
 
     LaunchedEffect(st.message) {
         st.message?.let {
-            Toast.makeText(context, context.getString(R.string.wl_save_failed, it), Toast.LENGTH_LONG).show()
+            Toast.makeText(context, res.getString(R.string.wl_save_failed, it), Toast.LENGTH_LONG).show()
             vm.clearMessage()
         }
     }
