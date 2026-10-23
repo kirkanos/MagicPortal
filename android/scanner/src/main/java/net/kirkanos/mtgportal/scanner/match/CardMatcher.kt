@@ -134,17 +134,18 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
     }
 
     /**
-     * Hash distances (of 128 bits). First camera measurements (Victual
-     * Sliver, three hand-held frames): 22-28 to its scan, 31-36 to the same
-     * art in a later frame, 56 and more to any other card.
+     * Hash distances (of 128 bits), measured on 49 hand-held camera frames
+     * of a German Victual Sliver against 10,000 indexed scans: 11-16 for a
+     * steady card, up to 29 for a slightly blurred one; the nearest wrong
+     * card never came closer than 33, mostly 36-43.
      */
     object HashThresholds {
         /** Farther than this is not the same picture. */
-        const val MATCH = 34
+        const val MATCH = 30
         /** Up to this the picture alone is trusted. */
-        const val ACCEPT = 26
+        const val ACCEPT = 24
         /** How much closer than any other card the best one must be. */
-        const val GAP = 10
+        const val GAP = 8
     }
 
     private companion object {
@@ -172,7 +173,9 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
 
     private fun byArtwork(hash: CardHash?): Match? {
         val h = hashes ?: return null
-        val hits = h.nearest(hash ?: return null, 40)
+        // Side sets (gold-bordered copies, blank cards, tokens) are never
+        // guessed from the picture alone.
+        val hits = h.nearest(hash ?: return null, 60).filter { index.sets[index.printing(it.printing).setCode]?.setType !in SIDE_SET_TYPES }
         val best = hits.firstOrNull() ?: return null
         val name = index.printing(best.printing).name
         // The nearest scan of a different card: without a clear gap the

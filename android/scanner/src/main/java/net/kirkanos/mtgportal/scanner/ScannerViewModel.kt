@@ -90,7 +90,9 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
                 val raw = CardReadingParser.parse(ocr.read(card))
                 val reading = fusion.fuse(raw)
                 val (hash, outline) = artwork(frame)
-                val match = matcher?.match(reading, hash)
+                // Without a card outline the hash describes the table or a
+                // misplaced card; it would only produce false matches.
+                val match = matcher?.match(reading, hash.takeIf { outline != null })
                 Log.d(TAG, "$reading -> ${match?.printing?.let { "${it.setCode}/${it.collectorNumber} ${it.name}" }} ${match?.source} ${match?.confidence}")
                 dump(frame, raw.name ?: match?.printing?.name ?: "none")
                 val added = session.offer(match, reading.language)

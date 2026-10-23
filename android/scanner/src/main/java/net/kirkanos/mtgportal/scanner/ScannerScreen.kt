@@ -1,6 +1,11 @@
 package net.kirkanos.mtgportal.scanner
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
@@ -82,6 +87,8 @@ import java.util.concurrent.Executors
  * catalog comes from and, in debug builds, where to dump frames.
  */
 class CameraScanner(private val store: CatalogStore, private val dumpDir: File? = null) : ScannerEntry {
+    // The orientation lock is deliberate, see below.
+    @SuppressLint("SourceLockedOrientationActivity")
     @Composable
     override fun Screen(onResult: (ScanSessionResult) -> Unit, onClose: () -> Unit) {
         val vm: ScannerViewModel = viewModel(factory = viewModelFactory { initializer { ScannerViewModel(store, dumpDir) } })
@@ -90,9 +97,24 @@ class CameraScanner(private val store: CatalogStore, private val dumpDir: File? 
             mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
         }
         val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
+        // Held flat over a table, the phone flips to landscape at random -
+        // seen on the device, half the frames came sideways. Card, frame and
+        // text all assume portrait, so the scanner keeps it.
+        val activity = context.findActivity()
+        DisposableEffect(activity) {
+            val before = activity?.requestedOrientation
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            onDispose { if (before != null) activity.requestedOrientation = before }
+        }
         LaunchedEffect(Unit) { if (!granted) ask.launch(Manifest.permission.CAMERA) }
         ScannerContent(vm, granted, onAskPermission = { ask.launch(Manifest.permission.CAMERA) }, onDone = { onResult(vm.result()) }, onClose = onClose)
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 private val LANGUAGES = listOf("en", "de", "fr", "it", "es", "pt", "ja", "ko", "ru", "zhs", "zht")
