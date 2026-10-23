@@ -140,4 +140,15 @@ class CardMatcherTest {
         assertNotNull(matcher.bestNames("Maze ofShadows"))
         assertNotNull(matcher.bestNames("Valor"))
     }
+
+    @Test
+    fun aSinglePossiblePrintingIsNotMarkedUncertain() {
+        val wwk = matcher.match(reading("Quicksand", year = 2010))!!
+        assertEquals("wwk/140", "${wwk.printing.setCode}/${wwk.printing.collectorNumber}")
+        assertTrue(wwk.confidence >= 0.6f)
+        // Without the year Quicksand has many printings: a guess.
+        assertTrue(matcher.match(reading("Quicksand"))!!.confidence < 0.6f)
+        val maze = matcher.match(reading("Maze of Shadows"))!!
+        assertTrue(maze.confidence >= 0.6f)
+    }
 }

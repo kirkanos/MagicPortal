@@ -105,9 +105,19 @@ class CardMatcher(private val index: CatalogIndex) {
         // in or before that year.
         val year = r.year
         val pick = year?.let { y -> printings.firstOrNull { (index.sets[it.setCode]?.year ?: 0) <= y } } ?: printings.first()
-        // Without a year the printing is a guess; a later frame that reads
-        // the year must be able to outrank it (see ScanSession).
-        return Match(pick, (if (year != null) 0.55f else 0.5f) * sim, MatchSource.OCR_NAME, printings.filter { it != pick }.take(12))
+        // Regular printings the evidence allows: all of them without a year,
+        // those of that year with one. A single one is as good as a number
+        // (Quicksand in 2010 is Worldwake, Maze of Shadows only Tempest).
+        val regular = printings.filter { index.sets[it.setCode]?.setType !in SIDE_SET_TYPES }
+        val candidates = if (year == null) regular else regular.filter { index.sets[it.setCode]?.year == year }
+        val conf = when {
+            candidates.size == 1 && candidates[0] == pick -> 0.75f
+            // Without a year the printing is a guess; a later frame that
+            // reads the year must be able to outrank it (see ScanSession).
+            year != null -> 0.55f
+            else -> 0.5f
+        }
+        return Match(pick, conf * sim, MatchSource.OCR_NAME, printings.filter { it != pick }.take(12))
     }
 
     private companion object {
