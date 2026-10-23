@@ -82,4 +82,50 @@ class ScanSessionTest {
         s.remove(id)
         assertEquals(0, s.result().items.size)
     }
+
+    private fun quicksand(set: String, conf: Float, i: Int) =
+        Match(Printing(i, set, "140", "Quicksand", "id$i", true), conf, MatchSource.OCR_NAME)
+
+    @Test
+    fun aBetterPrintingCorrectsTheLineInsteadOfAddingOne() {
+        // As on the device: no year at first (a guess), then 2010 read.
+        val s = ScanSession()
+        repeat(2) { s.offer(quicksand("plst", 0.5f, 1), "en") }
+        repeat(2) { s.offer(quicksand("wwk", 0.55f, 2), "en") }
+        val item = s.items.single()
+        assertEquals("wwk", item.printing.setCode)
+        assertEquals(1, item.quantity)
+        assertEquals(listOf("plst"), item.alternatives.map { it.setCode })
+    }
+
+    @Test
+    fun aWorseMatchDoesNotUndoIt() {
+        val s = ScanSession()
+        repeat(2) { s.offer(quicksand("wwk", 0.55f, 2), "en") }
+        s.offer(quicksand("plst", 0.5f, 1), "en")
+        assertEquals("wwk", s.items.single().printing.setCode)
+    }
+
+    @Test
+    fun theUsersChoiceIsNotOverwritten() {
+        val s = ScanSession()
+        repeat(2) { s.offer(quicksand("plst", 0.5f, 1), "en") }
+        val id = s.items.single().id
+        s.update(id) { it.copy(printing = Printing(3, "vis", "166", "Quicksand", "id3", true), source = MatchSource.MANUAL, confidence = 1f) }
+        s.offer(quicksand("wwk", 0.55f, 2), "en")
+        assertEquals("vis", s.items.single().printing.setCode)
+    }
+
+    @Test
+    fun aCorrectedLineJoinsItsTwin() {
+        val s = ScanSession()
+        repeat(2) { s.offer(quicksand("wwk", 0.55f, 2), "en") }
+        repeat(3) { s.offer(null, null) }
+        // The second copy is first guessed, then read properly.
+        repeat(2) { s.offer(quicksand("plst", 0.5f, 1), "en") }
+        repeat(2) { s.offer(quicksand("wwk", 0.55f, 2), "en") }
+        val item = s.items.single()
+        assertEquals("wwk", item.printing.setCode)
+        assertEquals(2, item.quantity)
+    }
 }

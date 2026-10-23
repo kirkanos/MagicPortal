@@ -105,7 +105,9 @@ class CardMatcher(private val index: CatalogIndex) {
         // in or before that year.
         val year = r.year
         val pick = year?.let { y -> printings.firstOrNull { (index.sets[it.setCode]?.year ?: 0) <= y } } ?: printings.first()
-        return Match(pick, 0.55f * sim, MatchSource.OCR_NAME, printings.filter { it != pick }.take(12))
+        // Without a year the printing is a guess; a later frame that reads
+        // the year must be able to outrank it (see ScanSession).
+        return Match(pick, (if (year != null) 0.55f else 0.5f) * sim, MatchSource.OCR_NAME, printings.filter { it != pick }.take(12))
     }
 
     private companion object {
