@@ -31,6 +31,7 @@ class AppContainer(context: Context) {
         baseUrl = { settings.baseUrl.value },
         secret = { settings.secret.value },
         debug = BuildConfig.DEBUG,
+        userAgent = "MagicPortal-Android/${BuildConfig.VERSION_NAME} (+https://github.com/kirkanos/mtg-portal)",
     )
 
     val api = http.portalApi
@@ -44,6 +45,8 @@ class AppContainer(context: Context) {
             add(OkHttpNetworkFetcherFactory(callFactory = { http.images }))
             add(SvgDecoder.Factory())
         }
+        // Why an image stays empty is otherwise invisible.
+        .apply { if (BuildConfig.DEBUG) logger(coil3.util.DebugLogger()) }
         .build()
 
     init {

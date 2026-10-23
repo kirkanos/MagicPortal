@@ -28,6 +28,7 @@ class HttpClients(
     baseUrl: () -> String,
     secret: () -> String?,
     debug: Boolean,
+    userAgent: String = "MagicPortal-Android (+https://github.com/kirkanos/mtg-portal)",
 ) {
     val json = Json {
         ignoreUnknownKeys = true
@@ -37,6 +38,7 @@ class HttpClients(
 
     val api: OkHttpClient = OkHttpClient.Builder()
         .cache(Cache(File(cacheDir, "http-api"), 50L * 1024 * 1024))
+        .addInterceptor(UserAgentInterceptor(userAgent))
         .addInterceptor(BaseUrlInterceptor(baseUrl))
         .addInterceptor(AuthInterceptor(baseUrl, secret))
         .apply {
@@ -54,6 +56,7 @@ class HttpClients(
         .build()
 
     val images: OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(UserAgentInterceptor(userAgent))
         .cache(Cache(File(cacheDir, "http-images"), 250L * 1024 * 1024))
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)

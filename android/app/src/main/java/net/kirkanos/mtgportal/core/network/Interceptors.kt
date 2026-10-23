@@ -75,3 +75,15 @@ class AuthInterceptor(
         const val HEADER = "X-Upload-Password"
     }
 }
+
+/**
+ * Names the app on every request. Scryfall asks clients to identify
+ * themselves, and its image CDN enforces it: a generic "okhttp/5.x" gets an
+ * HTTP 400 instead of the image. That hit every card the portal's mirror does
+ * not hold (nginx passes the User-Agent through when it fetches from Scryfall),
+ * and with the mirror off it would hit all of them.
+ */
+class UserAgentInterceptor(private val userAgent: String) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response =
+        chain.proceed(chain.request().newBuilder().header("User-Agent", userAgent).build())
+}

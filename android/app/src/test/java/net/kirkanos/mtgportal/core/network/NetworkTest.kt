@@ -80,7 +80,10 @@ class PortalApiTest {
         // The image client has no interceptor at all.
         server.enqueue(MockResponse.Builder().code(200).body("img").build())
         clients.images.newCall(okhttp3.Request.Builder().url(server.url("/img/cards/x.jpg")).build()).execute().close()
-        assertNull(server.takeRequest().headers[AuthInterceptor.HEADER])
+        val img = server.takeRequest()
+        assertNull(img.headers[AuthInterceptor.HEADER])
+        // Scryfall's CDN answers 400 to a generic okhttp User-Agent.
+        assertTrue(img.headers["User-Agent"]!!.startsWith("MagicPortal-Android"))
     }
 
     @Test
