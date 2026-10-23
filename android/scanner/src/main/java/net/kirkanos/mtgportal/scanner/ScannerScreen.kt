@@ -54,6 +54,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -71,6 +72,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import net.kirkanos.mtgportal.scanner.camera.CardFrameAnalyzer
 import net.kirkanos.mtgportal.scanner.camera.GuideFrame
+import net.kirkanos.mtgportal.scanner.camera.Quad
 import net.kirkanos.mtgportal.scanner.catalog.CatalogStore
 import java.io.File
 import java.util.concurrent.Executors
@@ -126,7 +128,7 @@ private fun ScannerContent(
 
         Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).background(Color.Black)) {
             if (granted) CameraPreview(vm, state.torch) else PermissionHint(onAskPermission)
-            GuideOverlay(Modifier.fillMaxSize())
+            GuideOverlay(Modifier.fillMaxSize(), state.outline)
             Row(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
                 if (granted) OutlinedButton(onClick = vm::toggleTorch) { Text(if (state.torch) "🔦 ✓" else "🔦") }
             }
@@ -191,9 +193,13 @@ private fun CameraPreview(vm: ScannerViewModel, torch: Boolean) {
     )
 }
 
-/** Darkens everything but the card frame, like the guides of other scanners. */
+/**
+ * Darkens everything but the card frame, like the guides of other scanners,
+ * and draws the card outline the cropper found, so the user sees when the
+ * card is picked up.
+ */
 @Composable
-private fun GuideOverlay(modifier: Modifier) {
+private fun GuideOverlay(modifier: Modifier, outline: Quad?) {
     Canvas(modifier) {
         val g = GuideFrame.rect(size.width, size.height)
         val shade = Color.Black.copy(alpha = 0.45f)
@@ -208,6 +214,16 @@ private fun GuideOverlay(modifier: Modifier) {
             CornerRadius(g.width * 0.045f),
             style = Stroke(width = 2.dp.toPx()),
         )
+        if (outline != null) {
+            val path = Path().apply {
+                moveTo(outline.tl.x * size.width, outline.tl.y * size.height)
+                lineTo(outline.tr.x * size.width, outline.tr.y * size.height)
+                lineTo(outline.br.x * size.width, outline.br.y * size.height)
+                lineTo(outline.bl.x * size.width, outline.bl.y * size.height)
+                close()
+            }
+            drawPath(path, Color(0xFF4CAF50), style = Stroke(width = 3.dp.toPx()))
+        }
     }
 }
 

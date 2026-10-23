@@ -17,6 +17,10 @@ import net.kirkanos.mtgportal.scanner.match.CardMatcher
 import net.kirkanos.mtgportal.scanner.ocr.CardReadingParser
 import net.kirkanos.mtgportal.scanner.ocr.OcrEngine
 import net.kirkanos.mtgportal.scanner.ocr.ReadingFusion
+import net.kirkanos.mtgportal.scanner.camera.CardCropper
+import net.kirkanos.mtgportal.scanner.camera.GuideFrame
+import net.kirkanos.mtgportal.scanner.camera.Pt
+import net.kirkanos.mtgportal.scanner.camera.Quad
 import net.kirkanos.mtgportal.scanner.camera.cutCard
 import net.kirkanos.mtgportal.scanner.hash.CardHash
 import net.kirkanos.mtgportal.scanner.hash.DHash
@@ -34,12 +38,14 @@ data class ScannerUiState(
     val items: List<SessionItem> = emptyList(),
     /** What the camera sees right now, before voting: feedback while aiming. */
     val seeing: String? = null,
+    /** The card outline found in the last frame, as fractions of the frame; null = none. */
+    val outline: Quad? = null,
     val torch: Boolean = false,
 )
 
 /**
- * [dumpDir]: debug builds save camera frames there (at most one a second,
- * only frames where a title was read) to tune the scanner offline.
+ * [dumpDir]: debug builds save camera frames there (at most one a second)
+ * to tune the scanner offline.
  */
 class ScannerViewModel(private val store: CatalogStore, private val dumpDir: File? = null) : ViewModel() {
     private val _state = MutableStateFlow(ScannerUiState())
@@ -83,11 +89,12 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
             try {
                 val raw = CardReadingParser.parse(ocr.read(card))
                 val reading = fusion.fuse(raw)
-                val match = matcher?.match(reading, artworkHash(card))
+                val (hash, outline) = artwork(frame)
+                val match = matcher?.match(reading, hash)
                 Log.d(TAG, "$reading -> ${match?.printing?.let { "${it.setCode}/${it.collectorNumber} ${it.name}" }} ${match?.source} ${match?.confidence}")
-                if (raw.name != null) dump(frame, raw.name)
+                dump(frame, raw.name ?: match?.printing?.name ?: "none")
                 val added = session.offer(match, reading.language)
-                _state.update { it.copy(items = session.items, seeing = match?.printing?.name) }
+                _state.update { it.copy(items = session.items, seeing = match?.printing?.name, outline = outline) }
                 if (added != null) _accepted.tryEmit(added)
             } catch (e: Exception) {
                 Log.w(TAG, "frame failed", e)
@@ -100,17 +107,26 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
     }
 
     /**
-     * The card's artwork hash, computed on a copy at about the size of
-     * Scryfall's small scans: the box average over 1,200 camera pixels and
-     * over 146 scan pixels then see the same detail.
+     * The card's artwork hash, from the card straightened by [CardCropper]
+     * (the guide frame when no outline is found), at about the size of
+     * Scryfall's small scans. Also returns the outline for the overlay.
      */
-    private fun artworkHash(card: Bitmap): CardHash {
-        val small = Bitmap.createScaledBitmap(card, 292, 408, true)
-        val px = IntArray(small.width * small.height)
-        small.getPixels(px, 0, small.width, 0, 0, small.width, small.height)
-        if (small !== card) small.recycle()
-        return DHash.of(DHash.gray(px), 292, 408)
+    private fun artwork(frame: Bitmap): Pair<CardHash, Quad?> {
+        val sw = 480
+        val sh = frame.height * sw / frame.width
+        val small = Bitmap.createScaledBitmap(frame, sw, sh, true)
+        val px = IntArray(sw * sh)
+        small.getPixels(px, 0, sw, 0, 0, sw, sh)
+        if (small !== frame) small.recycle()
+        val gray = DHash.gray(px)
+        val guide = GuideFrame.rect(sw.toFloat(), sh.toFloat())
+        val found = CardCropper.find(gray, sw, sh, guide)
+        val quad = found ?: Quad(Pt(guide.left, guide.top), Pt(guide.right, guide.top), Pt(guide.right, guide.bottom), Pt(guide.left, guide.bottom))
+        val card = CardCropper.warp(gray, sw, sh, quad, 292, 408)
+        return DHash.of(card, 292, 408) to found?.let { Quad(it.tl.frac(sw, sh), it.tr.frac(sw, sh), it.br.frac(sw, sh), it.bl.frac(sw, sh)) }
     }
+
+    private fun Pt.frac(w: Int, h: Int) = Pt(x / w, y / h)
 
     private var lastDump = 0L
     private var dumped = 0

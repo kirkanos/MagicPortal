@@ -133,14 +133,18 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
         return Match(pick, conf * sim, MatchSource.OCR_NAME, printings.filter { it != pick }.take(12))
     }
 
-    /** Hash distances (of 128 bits); tuned on camera images of real cards. */
+    /**
+     * Hash distances (of 128 bits). First camera measurements (Victual
+     * Sliver, three hand-held frames): 22-28 to its scan, 31-36 to the same
+     * art in a later frame, 56 and more to any other card.
+     */
     object HashThresholds {
         /** Farther than this is not the same picture. */
-        const val MATCH = 28
+        const val MATCH = 34
         /** Up to this the picture alone is trusted. */
-        const val ACCEPT = 20
+        const val ACCEPT = 26
         /** How much closer than any other card the best one must be. */
-        const val GAP = 8
+        const val GAP = 10
     }
 
     private companion object {
