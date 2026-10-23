@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"database/sql"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -221,14 +222,65 @@ func restoreFromGz(gzData []byte) error {
 			log.Printf("[backup] restore: table %s not in the backup, skipped", tbl)
 			continue
 		}
+		cols, err := commonColumns(tx, tbl)
+		if err != nil {
+			return fmt.Errorf("table %s: %w", tbl, err)
+		}
 		if _, err := tx.Exec(`DELETE FROM main.` + tbl); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(`INSERT INTO main.` + tbl + ` SELECT * FROM rst.` + tbl); err != nil {
+		if _, err := tx.Exec(`INSERT INTO main.` + tbl + ` (` + cols + `) SELECT ` + cols + ` FROM rst.` + tbl); err != nil {
 			return fmt.Errorf("table %s: %w", tbl, err)
 		}
 	}
 	return tx.Commit()
+}
+
+// commonColumns lists the columns a table has both in the live schema and in
+// the backup, quoted and comma-separated.
+//
+// The copy used to be "INSERT ... SELECT *", which matches columns by
+// position. That breaks the moment a release adds a column: every backup taken
+// before it has one column fewer and fails with "has N columns but N-1 values
+// were supplied" - and an older backup is exactly the one you restore in an
+// emergency. Matching by name lets an old backup fill what it has and leave the
+// new columns at their defaults, and a newer backup restored into an older
+// binary simply drops what that binary does not know.
+func commonColumns(tx *sql.Tx, tbl string) (string, error) {
+	backup := map[string]bool{}
+	rows, err := tx.Query(`SELECT name FROM pragma_table_info(?, 'rst')`, tbl)
+	if err != nil {
+		return "", err
+	}
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			rows.Close()
+			return "", err
+		}
+		backup[name] = true
+	}
+	rows.Close()
+
+	rows, err = tx.Query(`SELECT name FROM pragma_table_info(?, 'main') ORDER BY cid`, tbl)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var cols []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return "", err
+		}
+		if backup[name] {
+			cols = append(cols, `"`+name+`"`)
+		}
+	}
+	if len(cols) == 0 {
+		return "", fmt.Errorf("no column in common with the backup")
+	}
+	return strings.Join(cols, ", "), nil
 }
 
 // maybeAutoRestore restores the newest remote backup when the local DB has no
