@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- German is the default, as in the web UI. English lives in values-en. -->
+<resources>
+    <string name="app_name">Magic Portal</string>
+    <string name="setup_title">Verbindung zum Backend</string>
+    <string name="setup_base_url">Server: %1$s</string>
+    <string name="setup_test">Verbindung testen</string>
+    <string name="setup_testing">Prüfe …</string>
+    <string name="setup_ok">Backend erreichbar (%1$d ms)</string>
+    <string name="setup_http_error">Backend antwortet mit HTTP %1$d</string>
+    <string name="setup_network_error">Nicht erreichbar: %1$s</string>
+</resources>

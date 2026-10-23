@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only the window around Compose; the UI itself is themed in
+         core/ui/theme. AppCompat because per-app languages below Android 13
+         need AppCompatActivity. -->
+    <style name="Theme.MtgPortal" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

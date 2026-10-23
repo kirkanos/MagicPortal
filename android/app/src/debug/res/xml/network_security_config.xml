@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug overlay: the local stack is plain HTTP, reached either via
+     "adb reverse" on 127.0.0.1 or, as a fallback, via the Mac's LAN address.
+     Ranges can't be expressed here, so debug allows cleartext everywhere. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

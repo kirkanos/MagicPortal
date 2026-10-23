@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_title">Backend connection</string>
+    <string name="setup_base_url">Server: %1$s</string>
+    <string name="setup_test">Test connection</string>
+    <string name="setup_testing">Checking …</string>
+    <string name="setup_ok">Backend reachable (%1$d ms)</string>
+    <string name="setup_http_error">Backend answers HTTP %1$d</string>
+    <string name="setup_network_error">Not reachable: %1$s</string>
+</resources>
