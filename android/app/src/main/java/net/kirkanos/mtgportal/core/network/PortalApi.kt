@@ -3,6 +3,9 @@ package net.kirkanos.mtgportal.core.network
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.dto.CardGroupDto
 import net.kirkanos.mtgportal.core.network.dto.CardsPageDto
+import net.kirkanos.mtgportal.core.network.dto.DashboardDto
+import net.kirkanos.mtgportal.core.network.dto.MoversDto
+import net.kirkanos.mtgportal.core.network.dto.ValuePointDto
 import net.kirkanos.mtgportal.core.network.dto.EditionDto
 import net.kirkanos.mtgportal.core.network.dto.FacetsDto
 import net.kirkanos.mtgportal.core.network.dto.OwnedByNameRequest
@@ -112,4 +115,13 @@ interface PortalApi {
 
     @GET("reserved")
     suspend fun reserved(): ReservedDto
+
+    @GET("dashboard")
+    suspend fun dashboard(): DashboardDto
+
+    @GET("value-history")
+    suspend fun valueHistory(): List<ValuePointDto>
+
+    @GET("value-movers")
+    suspend fun valueMovers(@Query("days") days: Int): MoversDto
 }

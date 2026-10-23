@@ -296,3 +296,79 @@ data class ReservedCardDto(
     val rarity: String = "",
     val cardmarketUri: String = "",
 )
+
+/** /api/dashboard (dashboardOut in backend/dashboard.go). Keys only, never labels. */
+@Serializable
+data class DashboardDto(
+    val stats: DashStatsDto = DashStatsDto(),
+    val rarity: List<KeyQty> = emptyList(),
+    val color: List<KeyQty> = emptyList(),
+    val sets: List<KeyQty> = emptyList(),
+    val setValue: List<SetValueDto> = emptyList(),
+    val foil: List<KeyQty> = emptyList(),
+    val purchaseByMonth: List<MonthValue> = emptyList(),
+    val topPurchase: List<NamedValue> = emptyList(),
+    val topMarket: List<NamedValue> = emptyList(),
+    val types: List<KeyQty> = emptyList(),
+    val language: List<KeyQty> = emptyList(),
+    val condition: List<KeyQty> = emptyList(),
+    val cmc: List<KeyQty> = emptyList(),
+    val valueDist: List<Int> = emptyList(),
+    val valueByColor: List<KeyValue> = emptyList(),
+    val valueByRarity: List<KeyValue> = emptyList(),
+    val addedPerMonth: List<MonthQty> = emptyList(),
+    val rarityTable: List<RarityRowDto> = emptyList(),
+    val setTable: List<SetTableRowDto> = emptyList(),
+)
+
+@Serializable
+data class DashStatsDto(
+    val entries: Int = 0,
+    val distinct: Int = 0,
+    val totalQty: Int = 0,
+    val purchaseValue: Double = 0.0,
+    val marketValue: Double = 0.0,
+    val setCount: Int = 0,
+    val binderCount: Int = 0,
+    val foilQty: Int = 0,
+    val topCardName: String = "",
+    val topCardPrice: Double = 0.0,
+)
+
+@Serializable data class KeyQty(val key: String = "", val qty: Int = 0)
+@Serializable data class KeyValue(val key: String = "", val value: Double = 0.0)
+@Serializable data class MonthValue(val month: String = "", val value: Double = 0.0)
+@Serializable data class MonthQty(val month: String = "", val qty: Int = 0)
+@Serializable data class NamedValue(val name: String = "", val value: Double = 0.0)
+@Serializable data class SetValueDto(val code: String = "", val name: String = "", val value: Double = 0.0)
+@Serializable data class RarityRowDto(val key: String = "", val entries: Int = 0, val qty: Int = 0, val market: Double = 0.0)
+@Serializable data class SetTableRowDto(val code: String = "", val name: String = "", val entries: Int = 0, val qty: Int = 0, val market: Double = 0.0)
+
+@Serializable
+data class ValuePointDto(
+    val date: String,
+    val marketEur: Double = 0.0,
+    val purchaseEur: Double = 0.0,
+    val cardCount: Int = 0,
+    val distinctCount: Int = 0,
+)
+
+@Serializable
+data class MoversDto(
+    val days: Int = 30,
+    val baseDate: String = "",
+    val latestDate: String = "",
+    val gainers: List<MoverDto> = emptyList(),
+    val losers: List<MoverDto> = emptyList(),
+)
+
+@Serializable
+data class MoverDto(
+    val name: String,
+    val quantity: Int = 0,
+    val priceThen: Double = 0.0,
+    val priceNow: Double = 0.0,
+    val delta: Double = 0.0,
+    val pct: Double = 0.0,
+    val valueImpact: Double = 0.0,
+)
