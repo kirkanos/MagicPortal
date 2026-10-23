@@ -1,8 +1,8 @@
 FROM golang:1.27-alpine AS build
 WORKDIR /src
-COPY go.mod ./
+COPY go.mod go.sum ./
 COPY *.go ./
-RUN go mod tidy && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /server .
+RUN go mod download && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /server .
 
 FROM alpine:3.24
 RUN apk add --no-cache ca-certificates \
