@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -40,6 +42,7 @@ import net.kirkanos.mtgportal.feature.binders.BindersScreen
 import net.kirkanos.mtgportal.feature.cards.CardsScreen
 import net.kirkanos.mtgportal.feature.decks.DecksScreen
 import net.kirkanos.mtgportal.feature.reserved.ReservedScreen
+import net.kirkanos.mtgportal.feature.wishlist.WishlistScreen
 import net.kirkanos.mtgportal.feature.settings.SettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,14 +79,20 @@ fun AppShell() {
             }
         },
     ) { padding ->
-        NavHost(nav, startDestination = CardsRoute(), modifier = Modifier.padding(padding)) {
+        // imePadding: edge-to-edge, Android no longer shrinks the window for the
+        // keyboard, so without it the keyboard covers whatever is below a field.
+        NavHost(
+            nav,
+            startDestination = CardsRoute(),
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding).imePadding(),
+        ) {
             composable<CardsRoute> { entry ->
                 val r = entry.toRoute<CardsRoute>()
                 CardsScreen(binder = r.binder, set = r.set)
             }
             composable<EditionsRoute> { NotYet(R.string.nav_editions) }
             composable<ReservedRoute> { ReservedScreen() }
-            composable<WishlistRoute> { NotYet(R.string.nav_wishlist) }
+            composable<WishlistRoute> { WishlistScreen() }
             composable<BindersRoute> { entry ->
                 // Like index.html?binder=: the grid, filtered to that folder.
                 BindersScreen(entry.toRoute<BindersRoute>().type, onOpen = { nav.navigate(CardsRoute(binder = it)) })
