@@ -31,36 +31,40 @@ object GuideFrame {
 }
 
 /**
- * Cuts the card out of each camera frame: the visible part (the crop rect
- * CameraX sets from the preview's viewport), turned upright, then the guide
- * frame. Frames arriving while the previous card is still being read are
- * dropped right here, before any copying.
+ * Hands over the visible part of each camera frame (the crop rect CameraX
+ * sets from the preview's viewport), turned upright; the guide frame is cut
+ * from it by the caller. Frames arriving while the previous one is still
+ * being read are dropped right here, before any copying.
  */
 class CardFrameAnalyzer(
     private val busy: AtomicBoolean,
-    private val onCard: (Bitmap) -> Unit,
+    private val onFrame: (Bitmap) -> Unit,
 ) : ImageAnalysis.Analyzer {
     override fun analyze(image: ImageProxy) {
         image.use {
             if (!busy.compareAndSet(false, true)) return
-            val card = try {
-                cut(image)
+            val frame = try {
+                visible(image)
             } catch (e: RuntimeException) {
                 busy.set(false)
                 return
             }
-            onCard(card)
+            onFrame(frame)
         }
     }
 
-    private fun cut(image: ImageProxy): Bitmap {
+    private fun visible(image: ImageProxy): Bitmap {
         val full = image.toBitmap()
         val c = image.cropRect
         val turn = Matrix().apply { postRotate(image.imageInfo.rotationDegrees.toFloat()) }
         val visible = Bitmap.createBitmap(full, c.left, c.top, c.width(), c.height(), turn, true)
-        val g = GuideFrame.rect(visible.width.toFloat(), visible.height.toFloat())
-        val card = Bitmap.createBitmap(visible, g.left.toInt(), g.top.toInt(), g.width.toInt(), g.height.toInt())
         if (visible !== full) full.recycle()
-        return card
+        return visible
     }
+}
+
+/** The guide frame's part of a visible frame. */
+fun cutCard(frame: Bitmap): Bitmap {
+    val g = GuideFrame.rect(frame.width.toFloat(), frame.height.toFloat())
+    return Bitmap.createBitmap(frame, g.left.toInt(), g.top.toInt(), g.width.toInt(), g.height.toInt())
 }

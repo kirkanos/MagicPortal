@@ -72,13 +72,17 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import net.kirkanos.mtgportal.scanner.camera.CardFrameAnalyzer
 import net.kirkanos.mtgportal.scanner.camera.GuideFrame
 import net.kirkanos.mtgportal.scanner.catalog.CatalogStore
+import java.io.File
 import java.util.concurrent.Executors
 
-/** The camera scanner behind [ScannerEntry]; the app hands in where the catalog comes from. */
-class CameraScanner(private val store: CatalogStore) : ScannerEntry {
+/**
+ * The camera scanner behind [ScannerEntry]; the app hands in where the
+ * catalog comes from and, in debug builds, where to dump frames.
+ */
+class CameraScanner(private val store: CatalogStore, private val dumpDir: File? = null) : ScannerEntry {
     @Composable
     override fun Screen(onResult: (ScanSessionResult) -> Unit, onClose: () -> Unit) {
-        val vm: ScannerViewModel = viewModel(factory = viewModelFactory { initializer { ScannerViewModel(store) } })
+        val vm: ScannerViewModel = viewModel(factory = viewModelFactory { initializer { ScannerViewModel(store, dumpDir) } })
         val context = LocalContext.current
         var granted by remember {
             mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
@@ -165,7 +169,7 @@ private fun CameraPreview(vm: ScannerViewModel, torch: Boolean) {
                 .build()
             imageAnalysisBackpressureStrategy = ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST
             imageAnalysisOutputImageFormat = ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888
-            setImageAnalysisAnalyzer(executor, CardFrameAnalyzer(vm.busy, vm::onCard))
+            setImageAnalysisAnalyzer(executor, CardFrameAnalyzer(vm.busy, vm::onFrame))
         }
     }
     DisposableEffect(owner) {

@@ -54,6 +54,11 @@ class CatalogIndex private constructor(
 
     fun hasSet(code: String) = code in sets
 
+    private val byId: HashMap<String, Int> by lazy { HashMap<String, Int>(ids.size * 2).apply { ids.forEachIndexed { i, id -> put(id, i) } } }
+
+    /** Printing by Scryfall ID (lowercase, with dashes), for the hash index. */
+    fun indexOfId(id: String): Int? = byId[id]
+
     companion object {
         private fun key(set: String, number: String) = set.lowercase() + "|" + number.lowercase()
 

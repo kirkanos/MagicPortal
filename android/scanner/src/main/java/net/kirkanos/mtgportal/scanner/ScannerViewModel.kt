@@ -17,6 +17,10 @@ import net.kirkanos.mtgportal.scanner.match.CardMatcher
 import net.kirkanos.mtgportal.scanner.ocr.CardReadingParser
 import net.kirkanos.mtgportal.scanner.ocr.OcrEngine
 import net.kirkanos.mtgportal.scanner.ocr.ReadingFusion
+import net.kirkanos.mtgportal.scanner.camera.cutCard
+import net.kirkanos.mtgportal.scanner.hash.CardHash
+import net.kirkanos.mtgportal.scanner.hash.DHash
+import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 sealed interface CatalogState {
@@ -33,7 +37,11 @@ data class ScannerUiState(
     val torch: Boolean = false,
 )
 
-class ScannerViewModel(private val store: CatalogStore) : ViewModel() {
+/**
+ * [dumpDir]: debug builds save camera frames there (at most one a second,
+ * only frames where a title was read) to tune the scanner offline.
+ */
+class ScannerViewModel(private val store: CatalogStore, private val dumpDir: File? = null) : ViewModel() {
     private val _state = MutableStateFlow(ScannerUiState())
     val state: StateFlow<ScannerUiState> = _state
 
@@ -58,7 +66,7 @@ class ScannerViewModel(private val store: CatalogStore) : ViewModel() {
         viewModelScope.launch {
             when (val r = store.load()) {
                 is CatalogStore.Result.Ready -> {
-                    matcher = CardMatcher(r.index)
+                    matcher = CardMatcher(r.index, r.hashes)
                     _state.update { it.copy(catalog = CatalogState.Ready(r.index.size, r.current)) }
                     busy.set(false)
                 }
@@ -69,12 +77,15 @@ class ScannerViewModel(private val store: CatalogStore) : ViewModel() {
     }
 
     /** Called from the analyzer thread with [busy] already set. */
-    fun onCard(card: Bitmap) {
+    fun onFrame(frame: Bitmap) {
         viewModelScope.launch(Dispatchers.Default) {
+            val card = cutCard(frame)
             try {
-                val reading = fusion.fuse(CardReadingParser.parse(ocr.read(card)))
-                val match = matcher?.match(reading)
+                val raw = CardReadingParser.parse(ocr.read(card))
+                val reading = fusion.fuse(raw)
+                val match = matcher?.match(reading, artworkHash(card))
                 Log.d(TAG, "$reading -> ${match?.printing?.let { "${it.setCode}/${it.collectorNumber} ${it.name}" }} ${match?.source} ${match?.confidence}")
+                if (raw.name != null) dump(frame, raw.name)
                 val added = session.offer(match, reading.language)
                 _state.update { it.copy(items = session.items, seeing = match?.printing?.name) }
                 if (added != null) _accepted.tryEmit(added)
@@ -82,8 +93,38 @@ class ScannerViewModel(private val store: CatalogStore) : ViewModel() {
                 Log.w(TAG, "frame failed", e)
             } finally {
                 card.recycle()
+                frame.recycle()
                 busy.set(false)
             }
+        }
+    }
+
+    /**
+     * The card's artwork hash, computed on a copy at about the size of
+     * Scryfall's small scans: the box average over 1,200 camera pixels and
+     * over 146 scan pixels then see the same detail.
+     */
+    private fun artworkHash(card: Bitmap): CardHash {
+        val small = Bitmap.createScaledBitmap(card, 292, 408, true)
+        val px = IntArray(small.width * small.height)
+        small.getPixels(px, 0, small.width, 0, 0, small.width, small.height)
+        if (small !== card) small.recycle()
+        return DHash.of(DHash.gray(px), 292, 408)
+    }
+
+    private var lastDump = 0L
+    private var dumped = 0
+
+    private fun dump(frame: Bitmap, title: String) {
+        val dir = dumpDir ?: return
+        val now = System.currentTimeMillis()
+        if (now - lastDump < 1000 || dumped >= 300) return
+        lastDump = now
+        dumped++
+        runCatching {
+            dir.mkdirs()
+            val safe = title.replace(Regex("[^A-Za-z0-9]+"), "_").take(40)
+            File(dir, "${now}_$safe.jpg").outputStream().use { frame.compress(Bitmap.CompressFormat.JPEG, 92, it) }
         }
     }
 

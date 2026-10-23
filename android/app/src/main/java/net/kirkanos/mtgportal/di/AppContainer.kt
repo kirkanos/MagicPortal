@@ -47,7 +47,13 @@ class AppContainer(context: Context) {
 
     /** The camera scanner; its catalog comes through the API client like everything else. */
     val scanner: ScannerEntry = CameraScanner(
-        CatalogStore(File(context.noBackupFilesDir, "catalog"), http.api, PLACEHOLDER_BASE + "catalog/index"),
+        CatalogStore(
+            File(context.noBackupFilesDir, "catalog"),
+            http.api,
+            PLACEHOLDER_BASE + "catalog/index",
+            PLACEHOLDER_BASE + "catalog/hashes",
+        ),
+        dumpDir = if (BuildConfig.DEBUG) context.getExternalFilesDir("scans") else null,
     )
 
     /** The last finished scan session, until it is taken into the collection. */

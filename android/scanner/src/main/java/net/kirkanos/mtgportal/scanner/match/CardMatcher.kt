@@ -4,6 +4,8 @@ import net.kirkanos.mtgportal.scanner.MatchSource
 import net.kirkanos.mtgportal.scanner.catalog.CatalogIndex
 import net.kirkanos.mtgportal.scanner.catalog.NameNormalizer
 import net.kirkanos.mtgportal.scanner.catalog.Printing
+import net.kirkanos.mtgportal.scanner.hash.CardHash
+import net.kirkanos.mtgportal.scanner.hash.HashIndex
 import net.kirkanos.mtgportal.scanner.ocr.CardReading
 
 /** The best printing for a reading, how sure the matcher is, and the alternatives. */
@@ -23,12 +25,20 @@ data class Match(
  * B. Number without set code (2003-2014 frames): the name gives the card, the
  *    number - and the set size printed next to it - the printing.
  * C. Name only (1993-1997 frames, or a number OCR could not read): the card by
- *    name, the printing by the copyright year. Old printings of one card
- *    often share their art; the image hash stage will narrow that down later.
+ *    name, the printing by its artwork when the hash index has it, otherwise
+ *    by the copyright year.
+ * D. Artwork only: foreign cards (the catalog knows English names) and
+ *    unreadable titles. Taken only when the nearest scan is close and clearly
+ *    closer than any other card's.
+ *
+ * Old printings of one card often share their art (Alpha, Beta, Revised);
+ * the hash then finds the card, not the printing, and the user picks.
  */
-class CardMatcher(private val index: CatalogIndex) {
+class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex? = null) {
 
-    fun match(r: CardReading): Match? = bySetAndNumber(r) ?: byNameAndNumber(r) ?: byName(r)
+    /** [hash] is the camera image's artwork hash, null without a hash index. */
+    fun match(r: CardReading, hash: CardHash? = null): Match? =
+        bySetAndNumber(r) ?: byNameAndNumber(r, hash) ?: byName(r, hash) ?: byArtwork(hash)
 
     // ---- A ----
 
@@ -61,7 +71,7 @@ class CardMatcher(private val index: CatalogIndex) {
 
     // ---- B ----
 
-    private fun byNameAndNumber(r: CardReading): Match? {
+    private fun byNameAndNumber(r: CardReading, hash: CardHash?): Match? {
         if (r.numbers.isEmpty()) return null
         val (cards, sim) = bestNames(r.name ?: return null) ?: return null
         val printings = cards.map(index::printing)
@@ -72,8 +82,10 @@ class CardMatcher(private val index: CatalogIndex) {
                 .filter { p -> n.total == null || index.sets[p.setCode]?.cardCount?.let { n.total <= it + 10 } ?: true }
                 .sortedBy { p -> if (n.total == null) 0 else index.sets[p.setCode]?.cardCount?.minus(n.total) ?: Int.MAX_VALUE }
             if (hits.isNotEmpty()) {
+                // Same number in several sets (reprints): the artwork decides.
+                val ranked = if (hits.size > 1 && hash != null) rankByArtwork(hits, hash) else hits
                 val conf = if (hits.size == 1) 0.85f * sim else 0.6f * sim
-                return Match(hits.first(), conf, MatchSource.OCR_NAME, (hits.drop(1) + printings.filter { it !in hits }).take(12))
+                return Match(ranked.first(), conf, MatchSource.OCR_NAME, (ranked.drop(1) + printings.filter { it !in hits }).take(12))
             }
             // The set size is the smallest print on the card and misread
             // most ("140/445" for 140/145); the number alone still beats
@@ -88,8 +100,9 @@ class CardMatcher(private val index: CatalogIndex) {
 
     // ---- C ----
 
-    private fun byName(r: CardReading): Match? {
+    private fun byName(r: CardReading, hash: CardHash?): Match? {
         val (cards, sim) = bestNames(r.name ?: return null) ?: return null
+        if (hash != null && hashes != null) byNameAndArtwork(cards.map(index::printing), sim, hash)?.let { return it }
         val printings = cards.map(index::printing).sortedWith(
             compareBy<Printing> { if (index.sets[it.setCode]?.setType in SIDE_SET_TYPES) 1 else 0 }
                 .thenByDescending { index.sets[it.setCode]?.year ?: 0 }
@@ -120,9 +133,51 @@ class CardMatcher(private val index: CatalogIndex) {
         return Match(pick, conf * sim, MatchSource.OCR_NAME, printings.filter { it != pick }.take(12))
     }
 
+    /** Hash distances (of 128 bits); tuned on camera images of real cards. */
+    object HashThresholds {
+        /** Farther than this is not the same picture. */
+        const val MATCH = 28
+        /** Up to this the picture alone is trusted. */
+        const val ACCEPT = 20
+        /** How much closer than any other card the best one must be. */
+        const val GAP = 8
+    }
+
     private companion object {
         /** Sets whose cards are rarely what someone scans: gold borders, promos, tokens, joke sets. */
         val SIDE_SET_TYPES = setOf("memorabilia", "promo", "token", "funny", "minigame", "alchemy", "vanguard", "treasure_chest")
+    }
+
+    // ---- artwork ----
+
+    /** Among the printings of one name, the one whose scan looks most like the camera image. */
+    private fun byNameAndArtwork(printings: List<Printing>, sim: Float, hash: CardHash): Match? {
+        val h = hashes ?: return null
+        val scored = printings.mapNotNull { p -> h.distance(hash, p.i)?.let { p to it } }.sortedBy { it.second }
+        val (best, d) = scored.firstOrNull() ?: return null
+        if (d > HashThresholds.MATCH) return null
+        val conf = (if (d <= HashThresholds.ACCEPT) 0.85f else 0.65f) * sim
+        val rest = scored.drop(1).map { it.first } + printings.filter { p -> scored.none { it.first == p } }
+        return Match(best, conf, MatchSource.HASH, rest.take(12))
+    }
+
+    private fun rankByArtwork(ps: List<Printing>, hash: CardHash): List<Printing> {
+        val h = hashes ?: return ps
+        return ps.sortedBy { h.distance(hash, it.i) ?: Int.MAX_VALUE }
+    }
+
+    private fun byArtwork(hash: CardHash?): Match? {
+        val h = hashes ?: return null
+        val hits = h.nearest(hash ?: return null, 40)
+        val best = hits.firstOrNull() ?: return null
+        val name = index.printing(best.printing).name
+        // The nearest scan of a different card: without a clear gap the
+        // picture is ambiguous (or no card at all) and nothing is taken.
+        val other = hits.firstOrNull { index.printing(it.printing).name != name }?.distance ?: Int.MAX_VALUE
+        if (best.distance > HashThresholds.MATCH || other - best.distance < HashThresholds.GAP) return null
+        val same = hits.filter { index.printing(it.printing).name == name }.map { index.printing(it.printing) }
+        val conf = if (best.distance <= HashThresholds.ACCEPT) 0.8f else 0.55f
+        return Match(same.first(), conf, MatchSource.HASH, same.drop(1).take(12))
     }
 
     // ---- names ----
