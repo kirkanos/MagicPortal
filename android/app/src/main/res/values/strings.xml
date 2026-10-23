@@ -1,12 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- German is the default, as in the web UI. English lives in values-en. -->
+<!-- German is the default, as in the web UI. English lives in values-en.
+     Texts are taken over from app/js and app/*.html wherever they exist there. -->
 <resources>
     <string name="app_name">Magic Portal</string>
-    <string name="setup_title">Verbindung zum Backend</string>
-    <string name="setup_base_url">Server: %1$s</string>
-    <string name="setup_test">Verbindung testen</string>
-    <string name="setup_testing">Prüfe …</string>
-    <string name="setup_ok">Backend erreichbar (%1$d ms)</string>
-    <string name="setup_http_error">Backend antwortet mit HTTP %1$d</string>
-    <string name="setup_network_error">Nicht erreichbar: %1$s</string>
+
+    <!-- Navigation (NAV_ITEMS in shared.js) -->
+    <string name="nav_cards">Karten</string>
+    <string name="nav_editions">Editionen</string>
+    <string name="nav_reserved">Reserved List</string>
+    <string name="nav_wishlist">Wunschliste</string>
+    <string name="nav_binders">Ordner</string>
+    <string name="nav_lists">Listen</string>
+    <string name="nav_decks">Decks</string>
+    <string name="nav_dashboard">Statistik</string>
+    <string name="nav_deck_checker">Deck-Checker</string>
+    <string name="nav_activity">Aktivität</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="nav_more">Mehr</string>
+
+    <!-- Common -->
+    <string name="common_retry">Erneut versuchen</string>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_not_yet">Diese Seite kommt in einem der nächsten Schritte.</string>
+    <string name="common_wrong_password">Falsches oder fehlendes Passwort</string>
+    <string name="common_server_unreachable">Server nicht erreichbar: %1$s</string>
+    <string name="common_server_error">Fehler vom Server (HTTP %1$d): %2$s</string>
+
+    <!-- Settings -->
+    <string name="settings_server">Server</string>
+    <string name="settings_server_hint">Adresse des Magic Portal, z. B. https://mtg.kirkanos.net</string>
+    <string name="settings_save_test">Speichern und testen</string>
+    <string name="settings_testing">Prüfe …</string>
+    <string name="settings_ok">Backend erreichbar (%1$d ms)</string>
+    <string name="settings_http_error">Backend antwortet mit HTTP %1$d</string>
+    <string name="settings_network_error">Nicht erreichbar: %1$s</string>
+    <string name="settings_language">Sprache</string>
+    <string name="settings_access">Schreibzugriff</string>
+    <string name="settings_state_unknown">Server nicht geprüft oder nicht erreichbar</string>
+    <string name="settings_state_open">Der Server hat kein Passwort – alles ist änderbar.</string>
+    <string name="settings_state_locked">Gesperrt – Anmelden, um Wunschliste, Upload und Einstellungen zu ändern.</string>
+    <string name="settings_state_unlocked">Angemeldet</string>
+    <string name="settings_unlock">🔑 Login</string>
+    <string name="settings_lock">Abmelden</string>
+    <string name="settings_version">Version %1$s</string>
+
+    <!-- Unlock dialog -->
+    <string name="unlock_title">Anmelden</string>
+    <string name="unlock_password">Passwort</string>
+    <string name="unlock_submit">Anmelden</string>
+    <string name="unlock_wrong">Falsches Passwort.</string>
+    <string name="unlock_failed">Passwortprüfung fehlgeschlagen: %1$s</string>
+
+    <!-- Cards grid (index.html / grid.js) -->
+    <string name="cards_search">Name, Text, Mana suchen...</string>
+    <string name="cards_filter">Filter</string>
+    <string name="cards_filter_active">Filter (%1$d)</string>
+    <string name="cards_filter_reset">Zurücksetzen</string>
+    <string name="cards_all_sets">Alle Sets</string>
+    <string name="cards_search_set">Set suchen...</string>
+    <string name="cards_all_rarities">Alle Raritäten</string>
+    <string name="cards_all_colors">Alle Farben</string>
+    <string name="cards_all_foils">Normal &amp; Foil</string>
+    <string name="cards_all_binders">Alle Ordner &amp; Listen</string>
+    <string name="cards_all_types">Alle Kartentypen</string>
+    <string name="cards_all_subtypes">Alle Untertypen</string>
+    <string name="cards_sort_name">Sortieren: Name</string>
+    <string name="cards_sort_set">Sortieren: Set</string>
+    <string name="cards_sort_value_desc">Sortieren: Einzelkartenwert (hoch → niedrig)</string>
+    <string name="cards_sort_value_asc">Sortieren: Einzelkartenwert (niedrig → hoch)</string>
+    <string name="cards_sort_price_desc">Sortieren: Kaufpreis (hoch → niedrig)</string>
+    <string name="cards_sort_price_asc">Sortieren: Kaufpreis (niedrig → hoch)</string>
+    <string name="cards_sort_rarity">Sortieren: Rarität</string>
+    <string name="cards_sort_released_desc">Sortieren: Erscheinung (neueste zuerst)</string>
+    <string name="cards_sort_released_asc">Sortieren: Erscheinung (älteste zuerst)</string>
+    <string name="cards_sort_added_desc">Sortieren: zuletzt hinzugefügt</string>
+    <string name="cards_stat_distinct">Verschiedene Karten</string>
+    <string name="cards_stat_total">Karten gesamt</string>
+    <string name="cards_stat_purchase">Kaufwert</string>
+    <string name="cards_stat_market">Marktwert (Scryfall)</string>
+    <string name="cards_result_count">%1$s von %2$s Karten</string>
+    <string name="cards_random_title">Zufällige Karten aus deiner Sammlung</string>
+    <string name="cards_no_image">Kein Bild</string>
+    <string name="cards_error_loading">Fehler beim Laden: %1$s</string>
+    <string name="cards_empty">Keine Karten gefunden.</string>
+    <string name="cards_collection_empty">Die Sammlung ist noch leer. Melde dich an und lade im Web deinen ManaBox-Export hoch.</string>
+    <string name="color_w">Weiß</string>
+    <string name="color_u">Blau</string>
+    <string name="color_b">Schwarz</string>
+    <string name="color_r">Rot</string>
+    <string name="color_g">Grün</string>
+    <string name="color_c">Farblos</string>
 </resources>
