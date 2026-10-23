@@ -266,3 +266,33 @@ data class WishlistInputDto(
     val note: String = "",
     val priority: Int = 0,
 )
+
+/** /api/reserved (backend/reserved.go). Keyed by card name: any printing counts. */
+@Serializable
+data class ReservedDto(
+    val summary: ReservedSummaryDto = ReservedSummaryDto(),
+    val cards: List<ReservedCardDto> = emptyList(),
+)
+
+@Serializable
+data class ReservedSummaryDto(
+    val total: Int = 0,
+    val owned: Int = 0,
+    val missing: Int = 0,
+    val ownedValue: Double = 0.0,
+    val costToComplete: Double = 0.0,
+    val missingUnpriced: Int = 0,
+)
+
+@Serializable
+data class ReservedCardDto(
+    val name: String,
+    val owned: Boolean = false,
+    val quantity: Int = 0,
+    val ownedValue: Double = 0.0,
+    /** Cheapest printing, null when none has a price. */
+    val cheapestPrice: Double? = null,
+    val imageId: String = "",
+    val rarity: String = "",
+    val cardmarketUri: String = "",
+)

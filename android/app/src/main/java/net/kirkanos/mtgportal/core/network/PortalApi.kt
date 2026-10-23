@@ -7,6 +7,7 @@ import net.kirkanos.mtgportal.core.network.dto.EditionDto
 import net.kirkanos.mtgportal.core.network.dto.FacetsDto
 import net.kirkanos.mtgportal.core.network.dto.OwnedByNameRequest
 import net.kirkanos.mtgportal.core.network.dto.PrintDto
+import net.kirkanos.mtgportal.core.network.dto.ReservedDto
 import net.kirkanos.mtgportal.core.network.dto.SetCardDto
 import net.kirkanos.mtgportal.core.network.dto.SetDto
 import net.kirkanos.mtgportal.core.network.dto.StatusDto
@@ -108,4 +109,7 @@ interface PortalApi {
     /** Cardmarket decklist format, text/plain. */
     @GET("wishlist/export")
     suspend fun wishlistExport(): String
+
+    @GET("reserved")
+    suspend fun reserved(): ReservedDto
 }

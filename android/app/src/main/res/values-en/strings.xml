@@ -93,4 +93,36 @@
     <string name="detail_added">Added %1$s</string>
     <string name="detail_price_hint">Market value = Cardmarket price trend, pulled from Scryfall once a day – not the current lowest buy price.</string>
     <string name="wish_save_failed">Could not save the wishlist: %1$s</string>
+    <string name="binders_count_binder">%1$d folders</string>
+    <string name="binders_count_list">%1$d lists</string>
+    <string name="binders_cards">%1$s cards</string>
+    <string name="binders_empty">Nothing here yet – upload a ManaBox CSV that contains folders/lists.</string>
+
+    <string name="reserved_total">Reserved List total</string>
+    <string name="reserved_collected">Collected</string>
+    <string name="reserved_missing">Missing</string>
+    <string name="reserved_completion">Completion</string>
+    <string name="reserved_collected_value">Collected value</string>
+    <string name="reserved_cost_to_complete">Cost to complete</string>
+    <string name="reserved_unpriced">+%1$d unpriced</string>
+    <string name="reserved_search">Search card...</string>
+    <string name="reserved_all">All cards</string>
+    <string name="reserved_only_owned">Only collected</string>
+    <string name="reserved_only_missing">Only missing</string>
+    <string name="reserved_sort_price_desc">Sort: Price (high → low)</string>
+    <string name="reserved_sort_price_asc">Sort: Price (low → high)</string>
+    <string name="reserved_sort_name">Sort: Name (A → Z)</string>
+    <string name="reserved_hint">The Reserved List is Wizards\' list of cards that will never be reprinted. A card counts as collected once you own any printing/language of it. \"Cost to complete\" sums the cheapest available printing of every missing card.</string>
+    <string name="reserved_value">Value: %1$s</string>
+    <string name="reserved_from">from %1$s</string>
+    <string name="reserved_no_price">no price</string>
+    <string name="reserved_missing_tag">missing</string>
+    <string name="reserved_result_count">%1$d of %2$d cards</string>
+    <string name="reserved_empty_filter">No cards for this filter.</string>
+    <string name="cardmarket">Cardmarket ↗</string>
+
+    <string name="decks_title">Decks – coming soon</string>
+    <string name="decks_text">Here you\'ll be able to import and export decks. Since the exact import format is still being worked out, the buttons below are not active yet.</string>
+    <string name="decks_import">⬇ Import deck</string>
+    <string name="decks_export">⬆ Export deck</string>
 </resources>

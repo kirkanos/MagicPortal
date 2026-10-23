@@ -24,7 +24,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,9 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
-import net.kirkanos.mtgportal.core.data.AuthState
 import net.kirkanos.mtgportal.core.model.Condition
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.model.Language
@@ -53,7 +50,7 @@ import net.kirkanos.mtgportal.core.ui.components.CardImage
 import net.kirkanos.mtgportal.core.ui.components.ManaCostRow
 import net.kirkanos.mtgportal.core.ui.components.OracleText
 import net.kirkanos.mtgportal.core.ui.components.SetSymbol
-import net.kirkanos.mtgportal.core.ui.components.errorText
+import net.kirkanos.mtgportal.core.ui.components.WishStar
 import net.kirkanos.mtgportal.core.ui.components.rarityColor
 import net.kirkanos.mtgportal.core.ui.components.rarityLabel
 import net.kirkanos.mtgportal.core.ui.theme.PortalColors
@@ -69,11 +66,6 @@ import net.kirkanos.mtgportal.core.ui.theme.PortalColors
 fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
     val c = appContainer()
     val images by c.config.imageUrls.collectAsStateWithLifecycle()
-    val auth by c.auth.state.collectAsStateWithLifecycle()
-    val wished by c.wishlist.names.collectAsStateWithLifecycle()
-    val unlocked = auth == AuthState.Open || auth == AuthState.Unlocked
-    val scope = rememberCoroutineScope()
-    var wishError by remember { mutableStateOf<ApiResult<Nothing>?>(null) }
 
     var prints by remember(g.key) { mutableStateOf<List<PrintDto>?>(null) }
     LaunchedEffect(g.key) {
@@ -108,17 +100,7 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
             Fact(stringResource(R.string.detail_market_total), Format.eur(totalMarket))
             Text(stringResource(R.string.detail_price_hint), fontSize = 11.sp, color = PortalColors.TextDim)
 
-            // Marking is a write: only with write access, like the CSS gate on the web.
-            if (unlocked) {
-                val on = g.name.lowercase() in wished
-                TextButton(onClick = {
-                    scope.launch {
-                        val r = c.wishlist.set(g.name, !on)
-                        wishError = r as? ApiResult.HttpError ?: r as? ApiResult.NetworkError
-                    }
-                }) { Text((if (on) "★ " else "☆ ") + stringResource(R.string.detail_wishlist)) }
-                wishError?.let { Text(stringResource(R.string.wish_save_failed, errorText(it)), color = PortalColors.Red) }
-            }
+            WishStar(g.name, stringResource(R.string.detail_wishlist))
 
             Text(stringResource(R.string.detail_languages), style = MaterialTheme.typography.titleSmall)
             variants.forEach { v ->

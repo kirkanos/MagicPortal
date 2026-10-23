@@ -24,6 +24,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -139,6 +142,17 @@ fun SettingsScreen() {
         Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME), color = PortalColors.TextDim)
     }
 
+    // The dialog is its own window: hiding the keyboard from inside it does
+    // not stick, the activity window takes it over when the dialog closes and
+    // it covers the bottom bar. Hide it from here, after the dialog is gone.
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focus = LocalFocusManager.current
+    LaunchedEffect(unlockOpen) {
+        if (!unlockOpen) {
+            focus.clearFocus()
+            keyboard?.hide()
+        }
+    }
     if (unlockOpen) UnlockDialog(onUnlock = vm::unlock, onDismiss = { unlockOpen = false })
 }
 

@@ -103,4 +103,39 @@
     <string name="detail_added">Hinzugefügt %1$s</string>
     <string name="detail_price_hint">Marktwert = Cardmarket-Preistrend, von Scryfall einmal täglich übernommen – nicht der aktuell günstigste Kaufpreis.</string>
     <string name="wish_save_failed">Wunschliste konnte nicht gespeichert werden: %1$s</string>
+    <!-- Folders / lists (binders.js) -->
+    <string name="binders_count_binder">%1$d Ordner</string>
+    <string name="binders_count_list">%1$d Listen</string>
+    <string name="binders_cards">%1$s Karten</string>
+    <string name="binders_empty">Noch nichts vorhanden – lade eine ManaBox-CSV hoch, die Ordner/Listen enthält.</string>
+
+    <!-- Reserved List (reserved.html / reserved.js) -->
+    <string name="reserved_total">Reserved List gesamt</string>
+    <string name="reserved_collected">Gesammelt</string>
+    <string name="reserved_missing">Fehlt</string>
+    <string name="reserved_completion">Vollständigkeit</string>
+    <string name="reserved_collected_value">Wert gesammelt</string>
+    <string name="reserved_cost_to_complete">Investition für den Rest</string>
+    <string name="reserved_unpriced">+%1$d ohne Preis</string>
+    <string name="reserved_search">Karte suchen...</string>
+    <string name="reserved_all">Alle Karten</string>
+    <string name="reserved_only_owned">Nur gesammelte</string>
+    <string name="reserved_only_missing">Nur fehlende</string>
+    <string name="reserved_sort_price_desc">Sortieren: Preis (hoch → niedrig)</string>
+    <string name="reserved_sort_price_asc">Sortieren: Preis (niedrig → hoch)</string>
+    <string name="reserved_sort_name">Sortieren: Name (A → Z)</string>
+    <string name="reserved_hint">Die Reserved List ist die Liste von Karten, die von Wizards nie wieder nachgedruckt werden. Eine Karte gilt als gesammelt, sobald du irgendeine Version/Sprache davon besitzt. „Investition für den Rest\" summiert die jeweils günstigste verfügbare Version jeder fehlenden Karte.</string>
+    <string name="reserved_value">Wert: %1$s</string>
+    <string name="reserved_from">ab %1$s</string>
+    <string name="reserved_no_price">kein Preis</string>
+    <string name="reserved_missing_tag">fehlt</string>
+    <string name="reserved_result_count">%1$d von %2$d Karten</string>
+    <string name="reserved_empty_filter">Keine Karten für diesen Filter.</string>
+    <string name="cardmarket">Cardmarket ↗</string>
+
+    <!-- Decks (decks.html) -->
+    <string name="decks_title">Decks – in Vorbereitung</string>
+    <string name="decks_text">Hier kannst du künftig Decks importieren und exportieren. Da der genaue Import-Ablauf noch nicht feststeht, sind die Schaltflächen unten noch ohne Funktion.</string>
+    <string name="decks_import">⬇ Deck importieren</string>
+    <string name="decks_export">⬆ Deck exportieren</string>
 </resources>

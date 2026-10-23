@@ -36,7 +36,10 @@ import net.kirkanos.mtgportal.core.data.AuthState
 import net.kirkanos.mtgportal.core.ui.appContainer
 import net.kirkanos.mtgportal.core.ui.theme.PortalColors
 import androidx.navigation.toRoute
+import net.kirkanos.mtgportal.feature.binders.BindersScreen
 import net.kirkanos.mtgportal.feature.cards.CardsScreen
+import net.kirkanos.mtgportal.feature.decks.DecksScreen
+import net.kirkanos.mtgportal.feature.reserved.ReservedScreen
 import net.kirkanos.mtgportal.feature.settings.SettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,10 +82,13 @@ fun AppShell() {
                 CardsScreen(binder = r.binder, set = r.set)
             }
             composable<EditionsRoute> { NotYet(R.string.nav_editions) }
-            composable<ReservedRoute> { NotYet(R.string.nav_reserved) }
+            composable<ReservedRoute> { ReservedScreen() }
             composable<WishlistRoute> { NotYet(R.string.nav_wishlist) }
-            composable<BindersRoute> { NotYet(R.string.nav_binders) }
-            composable<DecksRoute> { NotYet(R.string.nav_decks) }
+            composable<BindersRoute> { entry ->
+                // Like index.html?binder=: the grid, filtered to that folder.
+                BindersScreen(entry.toRoute<BindersRoute>().type, onOpen = { nav.navigate(CardsRoute(binder = it)) })
+            }
+            composable<DecksRoute> { DecksScreen() }
             composable<DashboardRoute> { NotYet(R.string.nav_dashboard) }
             composable<DeckCheckerRoute> { NotYet(R.string.nav_deck_checker) }
             composable<ActivityRoute> { NotYet(R.string.nav_activity) }
