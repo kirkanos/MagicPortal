@@ -32,6 +32,9 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.coroutines.android)
+    implementation(libs.androidx.activity.compose)
+    // The app's API client is handed in: base URL, auth and user agent come with it.
+    implementation(libs.okhttp)
 
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
@@ -44,6 +47,8 @@ dependencies {
     testImplementation(libs.junit)
     // org.json for reading the fixtures; Android's own copy is a stub in JVM tests.
     testImplementation(libs.json)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.coroutines.test)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
 }

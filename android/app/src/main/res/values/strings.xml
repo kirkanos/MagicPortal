@@ -336,4 +336,13 @@
     <string name="admin_restore_confirm">Neuestes Backup wiederherstellen? Die aktuelle Sammlung und Wert-Historie werden ersetzt.</string>
     <string name="admin_started">Gestartet.</string>
     <string name="admin_done">Erledigt.</string>
+    <string name="nav_scanner" translatable="false">Scanner</string>
+    <plurals name="scan_result_title">
+        <item quantity="one">%d Karte gescannt</item>
+        <item quantity="other">%d Karten gescannt</item>
+    </plurals>
+    <string name="scan_result_note">Direkt in die Sammlung übernehmen kommt als Nächstes. Bis dahin lässt sich die Liste kopieren und z. B. in ManaBox oder Moxfield importieren.</string>
+    <string name="scan_result_copy">Als Liste kopieren</string>
+    <string name="scan_result_copied">Kopiert ✓</string>
+    <string name="scan_result_again">Weiter scannen</string>
 </resources>

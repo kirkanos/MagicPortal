@@ -18,6 +18,8 @@ import net.kirkanos.mtgportal.R
 @Serializable data object ActivityRoute
 @Serializable data object SettingsRoute
 @Serializable data object AdminRoute
+@Serializable data object ScannerRoute
+@Serializable data object ScanResultRoute
 
 /**
  * The navigation entries of the web UI (NAV_ITEMS in shared.js). [navKey] is

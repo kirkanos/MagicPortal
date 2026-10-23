@@ -50,6 +50,7 @@ import net.kirkanos.mtgportal.feature.wishlist.WishlistScreen
 import net.kirkanos.mtgportal.feature.activity.ActivityScreen
 import net.kirkanos.mtgportal.feature.settings.AdminScreen
 import net.kirkanos.mtgportal.feature.settings.SettingsScreen
+import net.kirkanos.mtgportal.feature.collection.ScanResultScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,10 +64,13 @@ fun AppShell() {
     val visible = NavItem.entries.filter { it.navKey !in config.hiddenNav }
     val unlocked = auth == AuthState.Open || auth == AuthState.Unlocked
 
+    val entry by nav.currentBackStackEntryAsState()
+    // The scanner wants every pixel for the camera and its list.
+    val scanning = entry?.destination?.hasRoute(ScannerRoute::class) == true
+
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                val entry by nav.currentBackStackEntryAsState()
+            if (!scanning) NavigationBar {
                 val dest = entry?.destination
                 visible.filter { it.primary }.forEach { item ->
                     NavigationBarItem(
@@ -110,6 +114,18 @@ fun AppShell() {
             composable<ActivityRoute> { ActivityScreen() }
             composable<SettingsRoute> { SettingsScreen(onOpenAdmin = { nav.navigate(AdminRoute) }) }
             composable<AdminRoute> { AdminScreen() }
+            composable<ScannerRoute> {
+                container.scanner.Screen(
+                    onResult = { result ->
+                        container.lastScan = result
+                        nav.navigate(ScanResultRoute) { popUpTo<ScannerRoute> { inclusive = true } }
+                    },
+                    onClose = { nav.popBackStack() },
+                )
+            }
+            composable<ScanResultRoute> {
+                ScanResultScreen(container.lastScan, onScanAgain = { nav.navigate(ScannerRoute) { popUpTo<ScanResultRoute> { inclusive = true } } })
+            }
         }
     }
 
@@ -117,6 +133,7 @@ fun AppShell() {
         ModalBottomSheet(onDismissRequest = { moreOpen = false }) {
             Column(Modifier.padding(bottom = 24.dp)) {
                 val go = { route: Any -> moreOpen = false; nav.navigateTop(route) }
+                MoreEntry("📷", stringResource(R.string.nav_scanner)) { moreOpen = false; nav.navigate(ScannerRoute) }
                 visible.filter { !it.primary }.forEach { item ->
                     MoreEntry(item.icon, stringResource(item.label)) { go(item.route) }
                 }

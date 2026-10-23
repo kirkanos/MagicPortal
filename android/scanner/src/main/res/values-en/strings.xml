@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scanner_close">Close</string>
+    <plurals name="scanner_done">
+        <item quantity="one">Done (%d)</item>
+        <item quantity="other">Done (%d)</item>
+    </plurals>
+    <string name="scanner_empty">Place a card in the frame. Recognised cards appear here; tap one to change it.</string>
+    <string name="scanner_hint">Place a card in the frame</string>
+    <string name="scanner_catalog_loading">Loading catalog …</string>
+    <string name="scanner_catalog_failed">Catalog unavailable: %s (tap to retry)</string>
+    <string name="scanner_catalog_offline">Offline – older catalog</string>
+    <string name="scanner_permission">The scanner needs access to the camera.</string>
+    <string name="scanner_permission_grant">Allow camera</string>
+    <string name="scanner_remove">Remove</string>
+    <string name="scanner_uncertain">Recognised by name only – please check the printing.</string>
+    <string name="scanner_other_printings">Other printings</string>
+    <string name="scanner_nonfoil">Non-foil</string>
+</resources>

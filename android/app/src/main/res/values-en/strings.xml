@@ -316,4 +316,12 @@
     <string name="admin_restore_confirm">Restore the latest backup? The current collection and value history will be replaced.</string>
     <string name="admin_started">Started.</string>
     <string name="admin_done">Done.</string>
+    <plurals name="scan_result_title">
+        <item quantity="one">%d card scanned</item>
+        <item quantity="other">%d cards scanned</item>
+    </plurals>
+    <string name="scan_result_note">Adding cards to the collection directly comes next. Until then, copy the list and import it into ManaBox or Moxfield, for example.</string>
+    <string name="scan_result_copy">Copy as list</string>
+    <string name="scan_result_copied">Copied ✓</string>
+    <string name="scan_result_again">Scan more</string>
 </resources>

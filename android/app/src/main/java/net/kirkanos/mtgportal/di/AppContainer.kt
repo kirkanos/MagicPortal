@@ -16,6 +16,12 @@ import net.kirkanos.mtgportal.core.data.SecretStore
 import net.kirkanos.mtgportal.core.data.SettingsRepository
 import net.kirkanos.mtgportal.core.data.WishlistRepository
 import net.kirkanos.mtgportal.core.network.HttpClients
+import net.kirkanos.mtgportal.core.network.PLACEHOLDER_BASE
+import net.kirkanos.mtgportal.scanner.CameraScanner
+import net.kirkanos.mtgportal.scanner.ScanSessionResult
+import net.kirkanos.mtgportal.scanner.ScannerEntry
+import net.kirkanos.mtgportal.scanner.catalog.CatalogStore
+import java.io.File
 
 /**
  * Manual dependency injection: everything the app needs, built once.
@@ -38,6 +44,14 @@ class AppContainer(context: Context) {
     val auth = AuthRepository(api, settings)
     val config = ConfigRepository(api, settings, appScope)
     val wishlist = WishlistRepository(api, auth)
+
+    /** The camera scanner; its catalog comes through the API client like everything else. */
+    val scanner: ScannerEntry = CameraScanner(
+        CatalogStore(File(context.noBackupFilesDir, "catalog"), http.api, PLACEHOLDER_BASE + "catalog/index"),
+    )
+
+    /** The last finished scan session, until it is taken into the collection. */
+    var lastScan: ScanSessionResult? = null
 
     /** Coil with SVG support (set and mana symbols) on the image-only client. */
     val imageLoader: ImageLoader = ImageLoader.Builder(context)
