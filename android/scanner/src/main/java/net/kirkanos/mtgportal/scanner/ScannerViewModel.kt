@@ -41,6 +41,13 @@ data class ScannerUiState(
     /** The card outline found in the last frame, as fractions of the frame; null = none. */
     val outline: Quad? = null,
     val torch: Boolean = false,
+    /**
+     * Applied to new cards: the camera cannot tell foil, and a card known
+     * only by its picture has no readable language. Null language = as read
+     * (English when nothing was read).
+     */
+    val defaultFoil: String = "normal",
+    val defaultLanguage: String? = null,
 )
 
 /**
@@ -95,7 +102,8 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
                 val match = matcher?.match(reading, hash.takeIf { outline != null })
                 Log.d(TAG, "$reading -> ${match?.printing?.let { "${it.setCode}/${it.collectorNumber} ${it.name}" }} ${match?.source} ${match?.confidence}")
                 dump(frame, raw.name ?: match?.printing?.name ?: "none")
-                val added = session.offer(match, reading.language)
+                val defaults = _state.value
+                val added = session.offer(match, reading.language ?: defaults.defaultLanguage, defaults.defaultFoil)
                 _state.update { it.copy(items = session.items, seeing = match?.printing?.name, outline = outline) }
                 if (added != null) _accepted.tryEmit(added)
             } catch (e: Exception) {
@@ -151,9 +159,13 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
     /** Manual search in the on-device catalog; empty until it is loaded. */
     fun search(query: String): List<List<Printing>> = matcher?.search(query).orEmpty()
 
+    fun setDefaultFoil(foil: String) = _state.update { it.copy(defaultFoil = foil) }
+    fun setDefaultLanguage(language: String?) = _state.update { it.copy(defaultLanguage = language) }
+
     fun addManual(printings: List<Printing>) {
         val first = printings.firstOrNull() ?: return
-        session.addManual(first, printings.drop(1).take(30))
+        val s = _state.value
+        session.addManual(first, printings.drop(1).take(30), s.defaultLanguage ?: "en", s.defaultFoil)
         _state.update { it.copy(items = session.items) }
     }
 

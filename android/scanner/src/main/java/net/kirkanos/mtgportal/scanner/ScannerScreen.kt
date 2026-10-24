@@ -37,6 +37,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -161,6 +163,7 @@ private fun ScannerContent(
             StatusChip(state, Modifier.align(Alignment.BottomCenter).padding(12.dp), onRetry = vm::loadCatalog)
         }
 
+        DefaultsRow(state, vm)
         if (state.items.isEmpty()) {
             Text(
                 stringResource(R.string.scanner_empty),
@@ -214,6 +217,33 @@ private fun SearchSheet(vm: ScannerViewModel, onDismiss: () -> Unit) {
                             Text(pluralStringResource(R.plurals.scanner_search_printings, printings.size, p.setCode.uppercase(), printings.size))
                         },
                     )
+                }
+            }
+        }
+    }
+}
+
+/** What new cards get when the camera cannot tell: finish, and language. */
+@Composable
+private fun DefaultsRow(state: ScannerUiState, vm: ScannerViewModel) {
+    var languages by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.scanner_defaults), style = MaterialTheme.typography.labelMedium)
+        FilterChip(
+            selected = state.defaultFoil == "foil",
+            onClick = { vm.setDefaultFoil(if (state.defaultFoil == "foil") "normal" else "foil") },
+            label = { Text(stringResource(R.string.scanner_foil)) },
+        )
+        Box {
+            FilterChip(
+                selected = state.defaultLanguage != null,
+                onClick = { languages = true },
+                label = { Text(state.defaultLanguage?.uppercase() ?: stringResource(R.string.scanner_language_auto)) },
+            )
+            DropdownMenu(expanded = languages, onDismissRequest = { languages = false }) {
+                DropdownMenuItem(text = { Text(stringResource(R.string.scanner_language_auto)) }, onClick = { vm.setDefaultLanguage(null); languages = false })
+                LANGUAGES.forEach { l ->
+                    DropdownMenuItem(text = { Text(l.uppercase()) }, onClick = { vm.setDefaultLanguage(l); languages = false })
                 }
             }
         }

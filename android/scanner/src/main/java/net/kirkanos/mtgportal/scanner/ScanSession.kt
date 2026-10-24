@@ -60,7 +60,7 @@ class ScanSession(private val window: Int = 3, private val votes: Int = 2) {
      * One analysed frame; [match] is null when nothing was recognised.
      * Returns the item that was added or counted up, if any.
      */
-    fun offer(match: Match?, language: String?): SessionItem? {
+    fun offer(match: Match?, language: String?, foil: String = "normal"): SessionItem? {
         val key = match?.printing?.name
         recent.addLast(key)
         while (recent.size > window) recent.removeFirst()
@@ -75,13 +75,13 @@ class ScanSession(private val window: Int = 3, private val votes: Int = 2) {
         }
         if (recent.count { it == key } < votes) return null
         lastAccepted = key
-        return add(match, language ?: "en")
+        return add(match, language ?: "en", foil)
     }
 
-    private fun add(match: Match, language: String): SessionItem {
-        val same = items.firstOrNull { it.printing.i == match.printing.i && it.language == language && it.foil == "normal" }
+    private fun add(match: Match, language: String, foil: String = "normal"): SessionItem {
+        val same = items.firstOrNull { it.printing.i == match.printing.i && it.language == language && it.foil == foil }
         val item = same?.copy(quantity = same.quantity + 1)
-            ?: SessionItem(nextId++, match.printing, match.alternatives, match.source, match.confidence, language)
+            ?: SessionItem(nextId++, match.printing, match.alternatives, match.source, match.confidence, language, foil)
         // Only a line of its own can be corrected; a count added to an
         // existing line stays where it is.
         correctable = if (same == null) item.id else null
@@ -112,8 +112,8 @@ class ScanSession(private val window: Int = 3, private val votes: Int = 2) {
     }
 
     /** A card the user picked by hand: no voting, counted like a scan. */
-    fun addManual(printing: Printing, alternatives: List<Printing>, language: String = "en"): SessionItem =
-        add(Match(printing, 1f, MatchSource.MANUAL, alternatives), language)
+    fun addManual(printing: Printing, alternatives: List<Printing>, language: String = "en", foil: String = "normal"): SessionItem =
+        add(Match(printing, 1f, MatchSource.MANUAL, alternatives), language, foil)
 
     fun update(id: Long, change: (SessionItem) -> SessionItem) {
         items = items.map { if (it.id == id) change(it) else it }

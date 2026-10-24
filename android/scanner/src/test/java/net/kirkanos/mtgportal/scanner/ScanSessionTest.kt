@@ -139,4 +139,14 @@ class ScanSessionTest {
         assertEquals(2, item.quantity)
         assertEquals(MatchSource.MANUAL, item.source)
     }
+
+    @Test
+    fun foilAndNonFoilAreSeparateLines() {
+        val s = ScanSession()
+        repeat(2) { s.offer(m(1), "en", "foil") }
+        repeat(3) { s.offer(null, null) }
+        repeat(2) { s.offer(m(1), "en") }
+        assertEquals(listOf("normal", "foil"), s.items.map { it.foil })
+        assertEquals("foil", s.result().items.last().foil)
+    }
 }
