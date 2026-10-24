@@ -151,6 +151,7 @@ type cardOut struct {
 	Added           string       `json:"added"`
 	BinderName      string       `json:"binderName"`
 	BinderType      string       `json:"binderType"`
+	Origin          string       `json:"origin"`
 	Scryfall        *scryfallOut `json:"scryfall"`
 }
 
@@ -161,7 +162,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := db.Query(`
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
-		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type,
+		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type, c.origin,
 		       s.name, s.type_line, s.colors, s.mana_cost, s.scryfall_id,
 		       COALESCE(s.image_normal, '') <> '',
 		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil
@@ -186,7 +187,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 		)
 		if err := rows.Scan(&c.Key, &c.ScryfallID, &setCode, &c.SetName, &c.CollectorNumber, &c.Name,
 			&c.Foil, &c.Rarity, &c.Language, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Condition, &c.Added,
-			&c.BinderName, &c.BinderType,
+			&c.BinderName, &c.BinderType, &c.Origin,
 			&sName, &sType, &sColors, &sMana, &sID, &sHasImage, &sHasBack, &sPrice, &sPriceFoil); err != nil {
 			http.Error(w, err.Error(), 500)
 			return

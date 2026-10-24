@@ -158,6 +158,9 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 		return res, fmt.Errorf("CSV contains no cards - collection unchanged (header: %s)", snippet(firstLine))
 	}
 
+	if err := bumpCollectionRev(tx); err != nil {
+		return res, err
+	}
 	if err := tx.Commit(); err != nil {
 		return res, err
 	}
@@ -202,5 +205,6 @@ func clearCollection(db *sql.DB, origin string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	_ = bumpCollectionRev(db)
 	return res.RowsAffected()
 }

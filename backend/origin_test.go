@@ -161,3 +161,46 @@ func TestClearCollectionByOrigin(t *testing.T) {
 		t.Errorf("clearing all removed %d", n)
 	}
 }
+
+// Two writes within one second used to leave the ETag unchanged (count and
+// updated_at have second resolution): a client got a stale 304.
+func TestCollectionETagSeesWritesWithinASecond(t *testing.T) {
+	newTestDB(t)
+	if _, err := importCSV(db, strings.NewReader(testCSV)); err != nil {
+		t.Fatal(err)
+	}
+	before := collectionETag(db)
+	if _, err := db.Exec(`UPDATE collection SET quantity = 5 WHERE set_code = 'snc'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := bumpCollectionRev(db); err != nil {
+		t.Fatal(err)
+	}
+	if collectionETag(db) == before {
+		t.Error("ETag unchanged after a write in the same second")
+	}
+	// Importing again also counts as a change.
+	mid := collectionETag(db)
+	if _, err := importCSV(db, strings.NewReader(testCSV)); err != nil {
+		t.Fatal(err)
+	}
+	if collectionETag(db) == mid {
+		t.Error("ETag unchanged after an import")
+	}
+}
+
+func TestCardsCarryRowIDAndOrigin(t *testing.T) {
+	newTestDB(t)
+	if _, err := importCSV(db, strings.NewReader(testCSV)); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err := cardRows()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range rows {
+		if r.ID == 0 || r.Origin != "csv" {
+			t.Errorf("%s: id %d origin %q", r.Name, r.ID, r.Origin)
+		}
+	}
+}

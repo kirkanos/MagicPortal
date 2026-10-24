@@ -233,6 +233,10 @@ func restoreFromGz(gzData []byte) error {
 			return fmt.Errorf("table %s: %w", tbl, err)
 		}
 	}
+	// After meta came back from the backup, so its old stamp is replaced.
+	if err := bumpCollectionRev(tx); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
