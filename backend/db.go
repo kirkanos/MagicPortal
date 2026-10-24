@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -95,6 +96,14 @@ CREATE TABLE IF NOT EXISTS card_hashes (
   PRIMARY KEY (set_code, collector_number)
 );
 
+-- Answers to writes sent with an Idempotency-Key (collection_write.go): a
+-- retried request gets the first answer instead of adding the cards twice.
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+  key        TEXT PRIMARY KEY,
+  response   TEXT,
+  created_at TEXT
+);
+
 -- Wishlist: cards you are missing, keyed by name (all printings of a name are
 -- the same want). set_code/collector_number pin a specific printing when it
 -- actually matters; min_condition is what you would accept when buying.
@@ -120,9 +129,13 @@ CREATE TABLE IF NOT EXISTS activity_log (
 `
 
 // collectionSchema is kept separate (not part of `schema`) so it is only ever
-// run against a fresh collection table – its binder index references a column
-// that an old (pre-binder) table doesn't have. Creation/migration happens in
+// run against a fresh collection table. Creation/migration happens in
 // migrate() after tableExists/columnExists checks.
+//
+// origin says where a row comes from: "csv" for the ManaBox import, "app" for
+// cards the Android app added. It is part of the key, so the same card can
+// exist once from each source; the import replaces only its own rows and app
+// rows survive it. Aggregates sum quantities anyway, so two rows count right.
 const collectionSchema = `
 CREATE TABLE IF NOT EXISTS collection (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,8 +155,17 @@ CREATE TABLE IF NOT EXISTS collection (
   condition        TEXT,
   added            TEXT,
   updated_at       TEXT,
-  UNIQUE (binder_name, set_code, collector_number, foil, language, condition)
+  origin           TEXT NOT NULL DEFAULT 'csv',
+  UNIQUE (binder_name, set_code, collector_number, foil, language, condition, origin)
 );
+`
+
+// collectionIndexes run after every creation or rebuild of the collection
+// table. Separate from the table on purpose: renaming a table takes its
+// indexes along, so "CREATE INDEX IF NOT EXISTS" right after a rebuild finds
+// the old table's index, skips, and dropping the old table then leaves the
+// new one without any.
+const collectionIndexes = `
 CREATE INDEX IF NOT EXISTS idx_collection_set ON collection(set_code);
 CREATE INDEX IF NOT EXISTS idx_collection_binder ON collection(binder_name);
 `
@@ -181,8 +203,8 @@ func migrate(db *sql.DB) {
 	}
 
 	// Collection table: create fresh, or migrate an old one. The UNIQUE key
-	// gained binder_name; SQLite can't ALTER a constraint, so we recreate the
-	// table (preserving existing rows) when the column is missing.
+	// gained binder_name and later origin; SQLite can't ALTER a constraint, so
+	// the table is recreated (preserving existing rows) when a column is missing.
 	if !tableExists(db, "collection") {
 		_, _ = db.Exec(collectionSchema)
 	} else if !columnExists(db, "collection", "binder_name") {
@@ -196,7 +218,36 @@ func migrate(db *sql.DB) {
 				FROM collection_old`)
 		}
 		_, _ = db.Exec(`DROP TABLE IF EXISTS collection_old`)
+	} else if !columnExists(db, "collection", "origin") {
+		if err := addCollectionOrigin(db); err != nil {
+			log.Printf("[db] adding the origin column failed, collection unchanged: %v", err)
+		}
 	}
+	_, _ = db.Exec(collectionIndexes)
+}
+
+// addCollectionOrigin rebuilds the collection with the origin column, in one
+// transaction: either every row arrives with origin 'csv' and its id, or
+// nothing changed.
+func addCollectionOrigin(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	cols := `id, binder_name, binder_type, scryfall_id, set_code, set_name, collector_number, name,
+		foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at`
+	for _, stmt := range []string{
+		`ALTER TABLE collection RENAME TO collection_old`,
+		collectionSchema,
+		`INSERT INTO collection (` + cols + `, origin) SELECT ` + cols + `, 'csv' FROM collection_old`,
+		`DROP TABLE collection_old`,
+	} {
+		if _, err := tx.Exec(stmt); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func tableExists(db *sql.DB, name string) bool {

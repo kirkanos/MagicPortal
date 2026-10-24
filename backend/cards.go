@@ -44,6 +44,7 @@ type cardRow struct {
 	Added           string
 	BinderName      string
 	BinderType      string
+	Origin          string
 
 	HasCatalog   bool
 	TypeLine     string
@@ -96,7 +97,7 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 
 	rows, err := db.Query(`
 		SELECT c.id, c.name, c.set_code, c.set_name, c.collector_number, c.rarity, c.foil, c.language,
-		       c.condition, c.quantity, c.purchase_price, c.currency, c.added, c.binder_name, c.binder_type,
+		       c.condition, c.quantity, c.purchase_price, c.currency, c.added, c.binder_name, c.binder_type, c.origin,
 		       s.scryfall_id, COALESCE(s.type_line, ''), COALESCE(s.mana_cost, ''), COALESCE(s.oracle_text, ''),
 		       COALESCE(s.colors, ''), COALESCE(s.image_normal, '') <> '',
 		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil
@@ -117,7 +118,7 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 		var priceEur, priceFoil *float64
 		if err := rows.Scan(&c.ID, &c.Name, &c.SetCode, &c.SetName, &c.CollectorNumber, &c.Rarity, &c.Foil,
 			&c.Language, &c.Condition, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Added,
-			&c.BinderName, &c.BinderType,
+			&c.BinderName, &c.BinderType, &c.Origin,
 			&sID, &c.TypeLine, &c.ManaCost, &c.OracleText, &colorsJSON, &hasImage, &c.HasBack,
 			&priceEur, &priceFoil); err != nil {
 			return nil, nil, err
@@ -335,6 +336,10 @@ func contains(list []string, want string) bool {
 // ---- grouping ----
 
 type variantOut struct {
+	// The collection row: the Android app edits single rows by id. origin
+	// is "csv" (ManaBox import) or "app".
+	ID            int      `json:"id"`
+	Origin        string   `json:"origin"`
 	Language      string   `json:"language"`
 	Foil          string   `json:"foil"`
 	Condition     string   `json:"condition"`
@@ -439,6 +444,7 @@ func buildGroups(rows []*cardRow, sets map[string]string) []*groupOut {
 				mpp = &mp
 			}
 			g.Variants = append(g.Variants, variantOut{
+				ID: v.ID, Origin: v.Origin,
 				Language: v.Language, Foil: v.Foil, Condition: v.Condition, Quantity: v.Quantity,
 				PurchasePrice: v.PurchasePrice, Currency: v.Currency, Added: v.Added,
 				BinderName: v.BinderName, BinderType: v.BinderType, MarketPrice: mpp,

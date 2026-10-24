@@ -1,3 +1,5 @@
 .env
 .env.dec
 .env.local
+# go build in backend/ drops the binary next to the sources
+backend/backend

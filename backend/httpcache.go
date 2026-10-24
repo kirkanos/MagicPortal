@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Conditional GETs for the two large read-only endpoints.
@@ -33,14 +35,32 @@ import (
 // answering 304 to clients whose cached copy still has the old shape, because
 // the underlying rows did not change - they would render stale data until the
 // next import. Bump this whenever a cacheable response's JSON changes.
-const payloadVersion = "4"
+const payloadVersion = "5"
 
 // collectionETag builds the validator for /api/collection.
+//
+// Count and newest updated_at alone miss a change within the same second -
+// two quick edits from the app would leave a stale 304 behind. Every write to
+// the collection therefore also stamps collection_rev (bumpCollectionRev).
 func collectionETag(db *sql.DB) string {
 	var count int
 	var maxUpdated sql.NullString
 	_ = db.QueryRow(`SELECT COUNT(*), MAX(updated_at) FROM collection`).Scan(&count, &maxUpdated)
-	return weakETag("c", fmt.Sprintf("%d|%s|%s", count, maxUpdated.String, metaGet(db, "bulk_synced_at")))
+	return weakETag("c", fmt.Sprintf("%d|%s|%s|%s", count, maxUpdated.String, metaGet(db, "bulk_synced_at"), metaGet(db, "collection_rev")))
+}
+
+type execer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+// bumpCollectionRev marks the collection as changed. Call it inside the
+// writing transaction, so the mark and the change commit together. A
+// timestamp rather than a counter: a restore brings back the meta table of
+// the backup, and a counter could then repeat an old value - and an old ETag.
+func bumpCollectionRev(x execer) error {
+	_, err := x.Exec(`INSERT INTO meta(key, value) VALUES('collection_rev', ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, strconv.FormatInt(time.Now().UnixNano(), 10))
+	return err
 }
 
 // setsETag builds the validator for /api/sets.

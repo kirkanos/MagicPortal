@@ -47,7 +47,7 @@ Inspired by [mtg-collection-viewer](https://github.com/pnz1990/mtg-collection-vi
 - **📈 Value over time** – the backend writes a daily (foil-aware) value snapshot of the collection. From that, the dashboard draws the **market vs. purchase value curve** over time (range 30 d / 90 d / 1 y / all) and the **biggest movers** (gainers/losers per range, weighted by the quantity you hold). History starts at deployment and grows forward (no retroactive price data).
 - **✅ Deck checker** – paste a decklist and see which cards you already own.
 - **🌐 Bilingual** – interface in German and English, switchable in the menu; the choice is remembered (default: German).
-- **⬆️ CSV upload** – upload new ManaBox exports straight from the menu (password protected); the import **replaces** the collection entirely, so it matches the CSV exactly (cards no longer in it disappear).
+- **⬆️ CSV upload** – upload new ManaBox exports straight from the menu (password protected); the import **replaces** the collection's CSV rows entirely, so they match the CSV exactly (cards no longer in it disappear). Cards added by the Android app are kept.
 - **🔄 Auto sync** – card data & prices are refreshed every 5 minutes in the background (downloading only when Scryfall has actually published a new dataset).
 - **🧾 Activity log** – an "Activity" menu entry, visible **only while logged in**, shows the tool's recent actions (imports, syncs, backups, restores) including error messages. The log is **persistent** (survives restarts) and can be cleared at any time.
 - **⚙️ Admin interface** – a gear icon in the top right, visible **only to logged-in users**, opens a settings overlay: the **random card strip** on the cards page (on/off + count), **hiding or showing individual menu entries** and the maintenance actions **clear collection / backup / restore** (stored server-side, applies to all visitors).
@@ -114,6 +114,10 @@ Top right in the menu: **"🔑 Login"** → password → then **"⬆ Upload CSV"
 The import **replaces** the collection entirely: afterwards the data matches the uploaded CSV
 exactly – cards no longer in it are removed (atomically; on error the previous collection
 stays intact). **"Clear"** removes the whole collection.
+
+Every row knows where it came from (`origin`): `csv` for the ManaBox import, `app` for cards
+the Android app added. The import replaces only the `csv` rows; app rows survive it, and the
+same card may exist once from each source (all counts add them up).
 
 Expected columns (standard ManaBox export):
 `Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, Scryfall ID, Purchase price, Purchase price currency, Condition, Language, Added`.
@@ -315,8 +319,12 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `DELETE` | `/api/wishlist/{name}` | Remove one entry (password protected) |
 | `GET` | `/api/wishlist/export` | The list in Cardmarket's decklist format (`text/plain`) |
 | `GET` | `/api/auth-check` | Password check (204/403) |
-| `POST` | `/api/upload` | Upload CSV (upsert) |
-| `POST` | `/api/reset` | Clear the collection |
+| `POST` | `/api/collection/cards` | Add cards (Android app): `{"items":[{setCode, collectorNumber, quantity, foil, language, condition, binderName, binderType}]}`, one transaction, merges equal rows, name and IDs from the catalog; `Idempotency-Key` makes retries safe (password protected) |
+| `GET` | `/api/collection/cards/{id}` | One collection row |
+| `PATCH` | `/api/collection/cards/{id}` | Change `quantity` or `quantityDelta` (0 deletes), move with `binderName`/`foil`/`language`/`condition` – merges into an existing row; edits of CSV rows answer `volatile: true`, the next import resets them (password protected) |
+| `DELETE` | `/api/collection/cards/{id}` | Remove one row (password protected) |
+| `POST` | `/api/upload` | Upload CSV (replaces the CSV rows; app rows stay) |
+| `POST` | `/api/reset` | Clear the collection; `?origin=csv` or `?origin=app` only that source's rows |
 | `POST` | `/api/sync` | Trigger a Scryfall sync now |
 | `POST` | `/api/images/sync` | Sync the image mirror now (only with `IMAGE_MIRROR`) |
 | `POST` | `/api/hashes/sync` | Build the image hash index now (only with `HASH_INDEX`) |

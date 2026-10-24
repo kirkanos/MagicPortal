@@ -120,6 +120,7 @@ var (
 	// Images downloaded by the local mirror, by result.
 	metricImageDownloads = newCounterVec()
 	metricHashScans      = newCounterVec()
+	metricAppWrites      = newCounterVec()
 
 	metricHTTPRequests = newCounterVec()
 	metricHTTPDuration = newHistogram([]float64{0.005, 0.025, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30})
@@ -161,8 +162,11 @@ func routeLabel(path string) string {
 			return "/api/catalog/" + tail
 		}
 	case "collection":
-		if tail == "owned" {
-			return "/api/collection/owned"
+		switch {
+		case tail == "owned" || tail == "cards":
+			return "/api/collection/" + tail
+		case strings.HasPrefix(tail, "cards/"):
+			return "/api/collection/cards/{id}"
 		}
 	case "sets":
 		if tail != "" {
@@ -467,6 +471,7 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	vec(n("syncs_total"), "Scryfall syncs by result", "counter", metricSyncs)
 	vec(n("image_downloads_total"), "Images downloaded by the local mirror", "counter", metricImageDownloads)
 	vec(n("hash_scans_total"), "Scans hashed for the scanner index, by source (mirror, download) or error", "counter", metricHashScans)
+	vec(n("app_writes_total"), "Collection writes from the Android app by operation", "counter", metricAppWrites)
 
 	// --- HTTP ---
 	vec(n("http_requests_total"), "API requests by route, method and status", "counter", metricHTTPRequests)

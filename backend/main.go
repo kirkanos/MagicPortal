@@ -39,6 +39,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/collection", handleCollection)
 	mux.HandleFunc("POST /api/collection/owned", handleOwnedByName)
+	mux.HandleFunc("POST /api/collection/cards", handleCollectionAdd)
+	mux.HandleFunc("GET /api/collection/cards/{id}", handleCollectionRow)
+	mux.HandleFunc("PATCH /api/collection/cards/{id}", handleCollectionPatch)
+	mux.HandleFunc("DELETE /api/collection/cards/{id}", handleCollectionDelete)
 	mux.HandleFunc("GET /api/editions", handleEditions)
 	mux.HandleFunc("GET /api/catalog/index", handleCatalogIndex)
 	mux.HandleFunc("GET /api/catalog/card", handleCatalogCard)
@@ -151,6 +155,7 @@ type cardOut struct {
 	Added           string       `json:"added"`
 	BinderName      string       `json:"binderName"`
 	BinderType      string       `json:"binderType"`
+	Origin          string       `json:"origin"`
 	Scryfall        *scryfallOut `json:"scryfall"`
 }
 
@@ -161,7 +166,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := db.Query(`
 		SELECT c.id, c.scryfall_id, c.set_code, c.set_name, c.collector_number, c.name, c.foil, c.rarity,
-		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type,
+		       c.language, c.quantity, c.purchase_price, c.currency, c.condition, c.added, c.binder_name, c.binder_type, c.origin,
 		       s.name, s.type_line, s.colors, s.mana_cost, s.scryfall_id,
 		       COALESCE(s.image_normal, '') <> '',
 		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil
@@ -186,7 +191,7 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 		)
 		if err := rows.Scan(&c.Key, &c.ScryfallID, &setCode, &c.SetName, &c.CollectorNumber, &c.Name,
 			&c.Foil, &c.Rarity, &c.Language, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Condition, &c.Added,
-			&c.BinderName, &c.BinderType,
+			&c.BinderName, &c.BinderType, &c.Origin,
 			&sName, &sType, &sColors, &sMana, &sID, &sHasImage, &sHasBack, &sPrice, &sPriceFoil); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -462,13 +467,25 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
-	if err := clearCollection(db); err != nil {
+	// ?origin=csv or ?origin=app clears only that source's rows; without it
+	// everything goes, as before.
+	origin := r.URL.Query().Get("origin")
+	if origin != "" && origin != "csv" && origin != "app" {
+		http.Error(w, "origin must be csv or app", 400)
+		return
+	}
+	n, err := clearCollection(db, origin)
+	if err != nil {
 		logActivity("error", "Reset", "Clearing failed: "+err.Error())
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	logActivity("info", "Reset", "Collection cleared")
-	writeJSON(w, map[string]string{"status": "reset"})
+	what := "Collection cleared"
+	if origin != "" {
+		what = fmt.Sprintf("Collection rows from %s cleared", origin)
+	}
+	logActivity("info", "Reset", fmt.Sprintf("%s (%d rows)", what, n))
+	writeJSON(w, map[string]interface{}{"status": "reset", "removed": n})
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {

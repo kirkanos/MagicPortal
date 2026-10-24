@@ -18,8 +18,9 @@ type importResult struct {
 	Total   int `json:"total"`
 }
 
-// importCSV parses a ManaBox-style CSV and upserts rows into the collection.
-// Matching key: (set_code, collector_number, foil, language, condition).
+// importCSV parses a ManaBox-style CSV and replaces the collection's CSV rows
+// with it. Rows the Android app added (origin 'app') are left alone.
+// Matching key: (binder_name, set_code, collector_number, foil, language, condition).
 func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 	var res importResult
 
@@ -67,10 +68,10 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 	}
 	defer tx.Rollback()
 
-	// Full replace: an import mirrors the CSV exactly, so cards no longer in the
-	// file are removed. Done inside the transaction → on any error the previous
-	// collection stays intact (rollback).
-	if _, err := tx.Exec(`DELETE FROM collection`); err != nil {
+	// Full replace of the CSV rows: an import mirrors the CSV exactly, so cards
+	// no longer in the file are removed. Done inside the transaction → on any
+	// error the previous collection stays intact (rollback).
+	if _, err := tx.Exec(`DELETE FROM collection WHERE origin = 'csv'`); err != nil {
 		return res, err
 	}
 
@@ -78,7 +79,8 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 		UPDATE collection SET
 			binder_type = ?, scryfall_id = ?, set_name = ?, name = ?, rarity = ?,
 			quantity = ?, purchase_price = ?, currency = ?, added = ?, updated_at = ?
-		WHERE binder_name = ? AND set_code = ? AND collector_number = ? AND foil = ? AND language = ? AND condition = ?`)
+		WHERE binder_name = ? AND set_code = ? AND collector_number = ? AND foil = ? AND language = ? AND condition = ?
+		  AND origin = 'csv'`)
 	if err != nil {
 		return res, err
 	}
@@ -87,8 +89,8 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 	insertStmt, err := tx.Prepare(`
 		INSERT INTO collection
 			(binder_name, binder_type, scryfall_id, set_code, set_name, collector_number, name, foil, rarity,
-			 language, quantity, purchase_price, currency, condition, added, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+			 language, quantity, purchase_price, currency, condition, added, updated_at, origin)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'csv')`)
 	if err != nil {
 		return res, err
 	}
@@ -156,6 +158,9 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 		return res, fmt.Errorf("CSV contains no cards - collection unchanged (header: %s)", snippet(firstLine))
 	}
 
+	if err := bumpCollectionRev(tx); err != nil {
+		return res, err
+	}
 	if err := tx.Commit(); err != nil {
 		return res, err
 	}
@@ -187,7 +192,19 @@ func snippet(b []byte) string {
 	return s
 }
 
-func clearCollection(db *sql.DB) error {
-	_, err := db.Exec(`DELETE FROM collection`)
-	return err
+// clearCollection empties the collection, or only the rows of one origin
+// ("csv", "app"); "" means all.
+func clearCollection(db *sql.DB, origin string) (int64, error) {
+	var res sql.Result
+	var err error
+	if origin == "" {
+		res, err = db.Exec(`DELETE FROM collection`)
+	} else {
+		res, err = db.Exec(`DELETE FROM collection WHERE origin = ?`, origin)
+	}
+	if err != nil {
+		return 0, err
+	}
+	_ = bumpCollectionRev(db)
+	return res.RowsAffected()
 }
