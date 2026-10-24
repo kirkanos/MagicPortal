@@ -462,13 +462,25 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
-	if err := clearCollection(db); err != nil {
+	// ?origin=csv or ?origin=app clears only that source's rows; without it
+	// everything goes, as before.
+	origin := r.URL.Query().Get("origin")
+	if origin != "" && origin != "csv" && origin != "app" {
+		http.Error(w, "origin must be csv or app", 400)
+		return
+	}
+	n, err := clearCollection(db, origin)
+	if err != nil {
 		logActivity("error", "Reset", "Clearing failed: "+err.Error())
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	logActivity("info", "Reset", "Collection cleared")
-	writeJSON(w, map[string]string{"status": "reset"})
+	what := "Collection cleared"
+	if origin != "" {
+		what = fmt.Sprintf("Collection rows from %s cleared", origin)
+	}
+	logActivity("info", "Reset", fmt.Sprintf("%s (%d rows)", what, n))
+	writeJSON(w, map[string]interface{}{"status": "reset", "removed": n})
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
