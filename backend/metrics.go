@@ -161,6 +161,10 @@ func routeLabel(path string) string {
 		case "index", "card", "search", "hashes":
 			return "/api/catalog/" + tail
 		}
+	case "binders":
+		if tail != "" {
+			return "/api/binders/{name}" // collapse the binder name
+		}
 	case "collection":
 		switch {
 		case tail == "owned" || tail == "cards" || tail == "export":

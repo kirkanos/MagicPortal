@@ -328,6 +328,7 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `GET` | `/api/collection/cards/{id}` | One collection row |
 | `PATCH` | `/api/collection/cards/{id}` | Change `quantity` or `quantityDelta` (0 deletes), move with `binderName`/`foil`/`language`/`condition` – merges into an existing row; edits of CSV rows answer `volatile: true`, the next import resets them (password protected) |
 | `DELETE` | `/api/collection/cards/{id}` | Remove one row (password protected) |
+| `PATCH` | `/api/binders/{name}` | Rename a binder (`name`, into an existing one merges equal cards) or change its `type`; `volatile: true` when CSV rows were touched (password protected) |
 | `POST` | `/api/collection/export` | The app's cards as a CSV in exactly ManaBox's export format, for importing them into ManaBox; remembers what went out (`X-Export-Id`) (password protected) |
 | `POST` | `/api/collection/export/{id}/confirm` | "ManaBox has imported it": moves exactly the exported quantities from app rows into csv rows, so the next ManaBox export counts them once (password protected) |
 | `POST` | `/api/upload` | Upload CSV (replaces the CSV rows; app rows stay) |

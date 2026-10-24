@@ -24,6 +24,7 @@ import (
 //   - GET    /api/collection/cards/{id}  one row
 //   - PATCH  /api/collection/cards/{id}  quantity, delta, or a new key (moves)
 //   - DELETE /api/collection/cards/{id}
+//   - PATCH  /api/binders/{name}         rename a binder, change its type
 //
 // Name, set name, rarity and Scryfall ID always come from the catalog, never
 // from the client: a card the catalog does not know is refused.
@@ -599,4 +600,137 @@ func writeWriteError(w http.ResponseWriter, err error) {
 		return
 	}
 	http.Error(w, err.Error(), 500)
+}
+
+// ---- PATCH /api/binders/{name} ----
+
+// binderPatch renames a binder and/or changes its type. Renaming into an
+// existing binder merges: equal cards (same key and origin) add up.
+type binderPatch struct {
+	Name *string `json:"name"`
+	Type *string `json:"type"`
+}
+
+type binderPatchResult struct {
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Rows   int    `json:"rows"`
+	Merged int    `json:"merged"`
+	// Some rows come from the CSV import: ManaBox does not know about the
+	// change, its next export restores the old binder for them.
+	Volatile bool `json:"volatile,omitempty"`
+}
+
+func handleBinderPatch(w http.ResponseWriter, r *http.Request) {
+	if !authorized(r) {
+		http.Error(w, "Wrong or missing password", 403)
+		return
+	}
+	from := r.PathValue("name")
+	var p binderPatch
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&p); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), 400)
+		return
+	}
+	res, err := patchBinder(from, p, time.Now())
+	if err != nil {
+		writeWriteError(w, err)
+		return
+	}
+	metricAppWrites.inc(labels("op", "binder"))
+	logActivity("info", "App", fmt.Sprintf("Binder %q → %q (%s): %d rows, %d merged", from, res.Name, res.Type, res.Rows, res.Merged))
+	writeJSON(w, res)
+}
+
+func patchBinder(from string, p binderPatch, now time.Time) (binderPatchResult, error) {
+	var res binderPatchResult
+	to := from
+	if p.Name != nil {
+		to = strings.TrimSpace(*p.Name)
+		if len(to) > 100 {
+			return res, badItem(-1, "name too long")
+		}
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return res, err
+	}
+	defer tx.Rollback()
+
+	type row struct {
+		id                                    int64
+		set, number, foil, lang, cond, origin string
+		qty                                   int
+		btype                                 string
+	}
+	q, err := tx.Query(`SELECT id, set_code, collector_number, foil, language, condition, origin, quantity, COALESCE(binder_type, '')
+		FROM collection WHERE binder_name = ?`, from)
+	if err != nil {
+		return res, err
+	}
+	var rows []row
+	for q.Next() {
+		var x row
+		if err := q.Scan(&x.id, &x.set, &x.number, &x.foil, &x.lang, &x.cond, &x.origin, &x.qty, &x.btype); err != nil {
+			q.Close()
+			return res, err
+		}
+		rows = append(rows, x)
+	}
+	q.Close()
+	if len(rows) == 0 {
+		return res, &writeError{http.StatusNotFound, -1, "no such binder"}
+	}
+
+	// The type: as asked, else the target binder's if it exists, else the old one.
+	btype := rows[0].btype
+	if to != from {
+		if err := tx.QueryRow(`SELECT binder_type FROM collection WHERE binder_name = ? LIMIT 1`, to).Scan(&btype); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return res, err
+		}
+	}
+	if p.Type != nil {
+		if btype, err = normBinderType(*p.Type); err != nil {
+			return res, badItem(-1, "%v", err)
+		}
+	}
+	ts := now.UTC().Format(time.RFC3339)
+	for _, x := range rows {
+		if x.origin == "csv" && (to != from || btype != x.btype) {
+			res.Volatile = true
+		}
+		var target int64
+		err := sql.ErrNoRows
+		if to != from {
+			err = tx.QueryRow(`SELECT id FROM collection WHERE binder_name = ? AND set_code = ? AND collector_number = ?
+				AND foil = ? AND language = ? AND condition = ? AND origin = ?`,
+				to, x.set, x.number, x.foil, x.lang, x.cond, x.origin).Scan(&target)
+		}
+		switch {
+		case err == nil:
+			if _, err := tx.Exec(`UPDATE collection SET quantity = quantity + ?, updated_at = ? WHERE id = ?`, x.qty, ts, target); err != nil {
+				return res, err
+			}
+			if _, err := tx.Exec(`DELETE FROM collection WHERE id = ?`, x.id); err != nil {
+				return res, err
+			}
+			res.Merged++
+		case errors.Is(err, sql.ErrNoRows):
+			if _, err := tx.Exec(`UPDATE collection SET binder_name = ?, binder_type = ?, updated_at = ? WHERE id = ?`, to, btype, ts, x.id); err != nil {
+				return res, err
+			}
+		default:
+			return res, err
+		}
+		res.Rows++
+	}
+	// Rows already in the target binder take the new type as well.
+	if _, err := tx.Exec(`UPDATE collection SET binder_type = ? WHERE binder_name = ?`, btype, to); err != nil {
+		return res, err
+	}
+	if err := bumpCollectionRev(tx); err != nil {
+		return res, err
+	}
+	res.Name, res.Type = to, btype
+	return res, tx.Commit()
 }
