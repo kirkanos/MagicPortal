@@ -355,4 +355,28 @@
     <string name="scan_result_copy">Als Liste kopieren</string>
     <string name="scan_result_copied">Kopiert ✓</string>
     <string name="scan_result_again">Weiter scannen</string>
+    <string name="nav_handover">An ManaBox übergeben</string>
+    <string name="handover_title">An ManaBox übergeben</string>
+    <string name="handover_intro">ManaBox bleibt führend. Karten, die du mit der App hinzugefügt hast, gibt es erst hier. Exportiere sie als ManaBox-CSV, importiere die Datei in ManaBox und bestätige dann hier – danach zählen sie als ManaBox-Karten und werden beim nächsten Import nicht doppelt gezählt.</string>
+    <string name="handover_export">Export erstellen</string>
+    <string name="handover_none">Keine App-Karten offen – nichts zu übergeben.</string>
+    <plurals name="handover_pending">
+        <item quantity="one">%d Karte exportiert</item>
+        <item quantity="other">%d Karten exportiert</item>
+    </plurals>
+    <string name="handover_step_import">1. Die Datei an ManaBox teilen oder speichern und in ManaBox importieren.</string>
+    <string name="handover_share">Teilen</string>
+    <string name="handover_save">Speichern …</string>
+    <string name="handover_step_confirm">2. Erst wenn ManaBox sie importiert hat:</string>
+    <string name="handover_confirm">In ManaBox importiert – bestätigen</string>
+    <string name="handover_discard">Export verwerfen</string>
+    <string name="handover_done">Übergeben: %1$d Karten zählen jetzt als ManaBox-Karten (%2$d inzwischen entfernt).</string>
+    <string name="detail_move">Verschieben</string>
+    <string name="detail_origin_app">aus der App</string>
+    <string name="detail_edit_volatile">Geändert – aber das ist eine ManaBox-Zeile: der nächste ManaBox-Import setzt sie zurück.</string>
+    <string name="binders_rename">Umbenennen</string>
+    <string name="binders_rename_title">Ordner umbenennen</string>
+    <string name="binders_rename_hint">Gibt es den Namen schon, werden die Ordner zusammengeführt.</string>
+    <string name="binders_rename_ok">Übernehmen</string>
+    <string name="binders_rename_volatile">Umbenannt – Karten aus ManaBox kommen beim nächsten Import aber wieder unter dem alten Namen.</string>
 </resources>

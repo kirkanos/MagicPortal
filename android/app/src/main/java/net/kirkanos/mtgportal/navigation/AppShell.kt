@@ -50,6 +50,7 @@ import net.kirkanos.mtgportal.feature.wishlist.WishlistScreen
 import net.kirkanos.mtgportal.feature.activity.ActivityScreen
 import net.kirkanos.mtgportal.feature.settings.AdminScreen
 import net.kirkanos.mtgportal.feature.settings.SettingsScreen
+import net.kirkanos.mtgportal.feature.collection.HandoverScreen
 import net.kirkanos.mtgportal.feature.collection.ScanResultScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,6 +124,7 @@ fun AppShell() {
                     onClose = { nav.popBackStack() },
                 )
             }
+            composable<HandoverRoute> { HandoverScreen() }
             composable<ScanResultRoute> {
                 ScanResultScreen(
                     container.lastScan,
@@ -142,6 +144,7 @@ fun AppShell() {
                     MoreEntry(item.icon, stringResource(item.label)) { go(item.route) }
                 }
                 // Like #nav-activity: only shown when write access is there.
+                if (unlocked) MoreEntry("📤", stringResource(R.string.nav_handover)) { go(HandoverRoute) }
                 if (unlocked) MoreEntry("📜", stringResource(R.string.nav_activity)) { go(ActivityRoute) }
                 HorizontalDivider()
                 MoreEntry("⚙", stringResource(R.string.nav_settings)) { go(SettingsRoute) }

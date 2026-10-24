@@ -6,6 +6,9 @@ import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
+import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
+import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
+import net.kirkanos.mtgportal.core.network.dto.ConfirmExportDto
 import net.kirkanos.mtgportal.core.network.dto.ImportResultDto
 import net.kirkanos.mtgportal.core.network.dto.UiConfigInputDto
 import net.kirkanos.mtgportal.core.network.dto.CardGroupDto
@@ -25,6 +28,7 @@ import net.kirkanos.mtgportal.core.network.dto.UiConfigDto
 import net.kirkanos.mtgportal.core.network.dto.WishlistDto
 import net.kirkanos.mtgportal.core.network.dto.WishlistInputDto
 import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -121,6 +125,17 @@ interface PortalApi {
 
     @DELETE("collection/cards/{id}")
     suspend fun deleteRow(@Path("id") id: Long): Response<Unit>
+
+    /** The app's cards as a ManaBox CSV; the export ID comes in X-Export-Id. */
+    @POST("collection/export")
+    suspend fun exportCollection(): Response<ResponseBody>
+
+    @POST("collection/export/{id}/confirm")
+    suspend fun confirmExport(@Path("id") id: Long): ConfirmExportDto
+
+    /** The name is one path segment; Retrofit encodes "/" in it. */
+    @PATCH("binders/{name}")
+    suspend fun patchBinder(@Path("name") name: String, @Body body: BinderPatchDto): BinderPatchResultDto
 
     @GET("wishlist")
     suspend fun wishlist(): WishlistDto

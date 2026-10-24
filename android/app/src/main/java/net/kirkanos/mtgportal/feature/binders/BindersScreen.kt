@@ -38,6 +38,17 @@ import net.kirkanos.mtgportal.core.ui.components.ErrorRetry
 import net.kirkanos.mtgportal.core.ui.containerViewModel
 import net.kirkanos.mtgportal.core.ui.theme.PortalColors
 import net.kirkanos.mtgportal.di.AppContainer
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import net.kirkanos.mtgportal.core.data.AuthState
+import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
+import net.kirkanos.mtgportal.core.ui.appContainer
 
 class BindersViewModel(private val c: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow<ApiResult<List<BinderDto>>?>(null)
@@ -49,6 +60,22 @@ class BindersViewModel(private val c: AppContainer) : ViewModel() {
         _state.value = null
         _state.value = safeCall { c.api.binders() }
     }
+
+    /** Message for the screen: what happened, or why not. */
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    /** Rename (into an existing binder merges) and/or change the type. */
+    fun rename(from: String, to: String, type: String, volatileText: String) = viewModelScope.launch {
+        when (val r = c.collectionWrite.renameBinder(from, BinderPatchDto(name = to.trim(), type = type))) {
+            is ApiResult.Success -> {
+                _message.value = if (r.data.volatile) volatileText else null
+                load()
+            }
+            is ApiResult.HttpError -> _message.value = r.message
+            is ApiResult.NetworkError -> _message.value = r.cause.message
+        }
+    }
 }
 
 /**
@@ -59,6 +86,11 @@ class BindersViewModel(private val c: AppContainer) : ViewModel() {
 fun BindersScreen(type: String, onOpen: (String) -> Unit) {
     val vm = containerViewModel { BindersViewModel(it) }
     val st by vm.state.collectAsStateWithLifecycle()
+    val message by vm.message.collectAsStateWithLifecycle()
+    val auth by appContainer().auth.state.collectAsStateWithLifecycle()
+    val unlocked = auth == AuthState.Open || auth == AuthState.Unlocked
+    var renaming by remember { mutableStateOf<BinderDto?>(null) }
+    val volatileText = stringResource(R.string.binders_rename_volatile)
 
     when (val r = st) {
         null -> Column(Modifier.fillMaxSize().padding(24.dp)) { CircularProgressIndicator() }
@@ -80,6 +112,7 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
                         color = PortalColors.TextDim,
                     )
                 }
+                message?.let { m -> item { Text(m, color = PortalColors.Accent, fontSize = 13.sp) } }
                 if (list.isEmpty()) item { Text(stringResource(R.string.binders_empty), color = PortalColors.TextDim) }
                 items(list, key = { it.name }) { b ->
                     Column(
@@ -87,7 +120,10 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
                             .clickable { onOpen(b.name) }.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text(b.name, style = MaterialTheme.typography.titleMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(b.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            if (unlocked) TextButton(onClick = { renaming = b }) { Text(stringResource(R.string.binders_rename)) }
+                        }
                         Row {
                             Text(
                                 stringResource(R.string.binders_cards, Format.count(b.total)),
@@ -100,4 +136,39 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
             }
         }
     }
+
+    renaming?.let { b ->
+        RenameDialog(b, onDismiss = { renaming = null }, onRename = { to, type ->
+            renaming = null
+            vm.rename(b.name, to, type, volatileText)
+        })
+    }
+}
+
+/** New name (an existing one merges the binders) and type. */
+@Composable
+private fun RenameDialog(b: BinderDto, onDismiss: () -> Unit, onRename: (String, String) -> Unit) {
+    var name by remember { mutableStateOf(b.name) }
+    var type by remember { mutableStateOf(b.type.ifEmpty { "binder" }) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.binders_rename_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for ((t, label) in listOf("binder" to R.string.nav_binders, "list" to R.string.nav_lists, "deck" to R.string.nav_decks)) {
+                        FilterChip(selected = type == t, onClick = { type = t }, label = { Text(stringResource(label)) })
+                    }
+                }
+                Text(stringResource(R.string.binders_rename_hint), fontSize = 12.sp, color = PortalColors.TextDim)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onRename(name, type) }, enabled = name.isNotBlank() && (name.trim() != b.name || type != b.type)) {
+                Text(stringResource(R.string.binders_rename_ok))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) } },
+    )
 }

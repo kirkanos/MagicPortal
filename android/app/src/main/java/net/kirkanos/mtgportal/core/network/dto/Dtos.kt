@@ -44,6 +44,10 @@ data class CardGroupDto(
 
 @Serializable
 data class VariantDto(
+    /** The collection row, for editing it (0 from an older backend). */
+    val id: Long = 0,
+    /** "csv" (ManaBox import) or "app"; csv rows are reset by the next import. */
+    val origin: String = "",
     val language: String = "",
     val foil: String = "normal",
     val condition: String = "",
@@ -455,4 +459,25 @@ data class RowPatchResultDto(
     val row: CollectionRowDto? = null,
     val deleted: Boolean = false,
     val mergedInto: Long = 0,
+)
+
+/** POST /api/collection/export/{id}/confirm */
+@Serializable
+data class ConfirmExportDto(
+    /** Cards that moved from app rows into csv rows. */
+    val moved: Int = 0,
+    /** Exported cards removed in the meantime. */
+    val missing: Int = 0,
+)
+
+@Serializable
+data class BinderPatchDto(val name: String? = null, val type: String? = null)
+
+@Serializable
+data class BinderPatchResultDto(
+    val name: String = "",
+    val type: String = "",
+    val rows: Int = 0,
+    val merged: Int = 0,
+    val volatile: Boolean = false,
 )

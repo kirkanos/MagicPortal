@@ -9,11 +9,18 @@ import net.kirkanos.mtgportal.core.network.PortalApi
 import net.kirkanos.mtgportal.core.network.dto.AddCardItemDto
 import net.kirkanos.mtgportal.core.network.dto.AddCardsRequest
 import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
+import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
+import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
+import net.kirkanos.mtgportal.core.network.dto.CollectionRowDto
+import net.kirkanos.mtgportal.core.network.dto.ConfirmExportDto
+import net.kirkanos.mtgportal.core.network.dto.VariantDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchResultDto
 import net.kirkanos.mtgportal.core.network.safeCall
 import net.kirkanos.mtgportal.core.network.safeStatus
 import net.kirkanos.mtgportal.scanner.ScanSessionResult
+import retrofit2.HttpException
+import java.util.UUID
 
 /** Where scanned cards go. An empty name is the collection without a binder. */
 data class BinderTarget(val name: String, val type: String = "binder")
@@ -38,7 +45,27 @@ class CollectionWriteRepository(private val api: PortalApi) {
         }
     }
 
+    /** One more copy of an owned variant, as an app row: unlike +1 on a csv row it survives the next import. */
+    suspend fun addOne(setCode: String, collectorNumber: String, v: VariantDto): ApiResult<CollectionRowDto> = safeCall {
+        val item = AddCardItemDto(setCode.lowercase(), collectorNumber, 1, v.foil.ifEmpty { "normal" }, v.language.ifEmpty { "en" }, v.condition.ifEmpty { "near_mint" }, v.binderName, v.binderType)
+        api.addCards(AddCardsRequest(listOf(item)), UUID.randomUUID().toString()).items.first()
+    }.withReadableError()
+
     suspend fun patch(id: Long, patch: RowPatchDto): ApiResult<RowPatchResultDto> = safeCall { api.patchRow(id, patch) }.withReadableError()
+
+    /** A ManaBox export of the app's cards, to hand them over. */
+    data class Export(val id: Long, val cards: Int, val csv: ByteArray)
+
+    suspend fun exportForManabox(): ApiResult<Export> = safeCall {
+        val r = api.exportCollection()
+        if (!r.isSuccessful) throw HttpException(r)
+        val id = r.headers()["X-Export-Id"]?.toLongOrNull() ?: error("no export id")
+        Export(id, r.headers()["X-Export-Cards"]?.toIntOrNull() ?: 0, r.body()?.bytes() ?: ByteArray(0))
+    }.withReadableError()
+
+    suspend fun confirmExport(id: Long): ApiResult<ConfirmExportDto> = safeCall { api.confirmExport(id) }.withReadableError()
+
+    suspend fun renameBinder(name: String, patch: BinderPatchDto): ApiResult<BinderPatchResultDto> = safeCall { api.patchBinder(name, patch) }.withReadableError()
 
     suspend fun delete(id: Long): ApiResult<Unit> = safeStatus { api.deleteRow(id) }.withReadableError()
 

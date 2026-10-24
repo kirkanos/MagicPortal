@@ -334,4 +334,28 @@
     <string name="scan_result_copy">Copy as list</string>
     <string name="scan_result_copied">Copied ✓</string>
     <string name="scan_result_again">Scan more</string>
+    <string name="nav_handover">Hand over to ManaBox</string>
+    <string name="handover_title">Hand over to ManaBox</string>
+    <string name="handover_intro">ManaBox stays the master. Cards you added with the app exist only here so far. Export them as a ManaBox CSV, import the file into ManaBox, then confirm here – from then on they count as ManaBox cards and the next import does not count them twice.</string>
+    <string name="handover_export">Create export</string>
+    <string name="handover_none">No app cards waiting – nothing to hand over.</string>
+    <plurals name="handover_pending">
+        <item quantity="one">%d card exported</item>
+        <item quantity="other">%d cards exported</item>
+    </plurals>
+    <string name="handover_step_import">1. Share the file with ManaBox or save it, and import it in ManaBox.</string>
+    <string name="handover_share">Share</string>
+    <string name="handover_save">Save …</string>
+    <string name="handover_step_confirm">2. Only once ManaBox has imported it:</string>
+    <string name="handover_confirm">Imported in ManaBox – confirm</string>
+    <string name="handover_discard">Discard export</string>
+    <string name="handover_done">Handed over: %1$d cards count as ManaBox cards now (%2$d removed in the meantime).</string>
+    <string name="detail_move">Move</string>
+    <string name="detail_origin_app">from the app</string>
+    <string name="detail_edit_volatile">Changed – but this is a ManaBox row: the next ManaBox import resets it.</string>
+    <string name="binders_rename">Rename</string>
+    <string name="binders_rename_title">Rename binder</string>
+    <string name="binders_rename_hint">If the name exists, the binders are merged.</string>
+    <string name="binders_rename_ok">Apply</string>
+    <string name="binders_rename_volatile">Renamed – but cards from ManaBox come back under the old name with the next import.</string>
 </resources>

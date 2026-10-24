@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,13 +35,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.model.Condition
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.model.Language
 import net.kirkanos.mtgportal.core.model.SetCode
 import net.kirkanos.mtgportal.core.network.ApiResult
+import net.kirkanos.mtgportal.core.data.AuthState
+import net.kirkanos.mtgportal.core.data.BinderTarget
+import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.dto.CardGroupDto
+import net.kirkanos.mtgportal.core.network.dto.RowPatchDto
+import net.kirkanos.mtgportal.core.network.dto.VariantDto
+import net.kirkanos.mtgportal.feature.collection.BinderPickerDialog
 import net.kirkanos.mtgportal.core.network.dto.PrintDto
 import net.kirkanos.mtgportal.core.network.safeCall
 import net.kirkanos.mtgportal.core.ui.Format
@@ -63,9 +71,36 @@ import net.kirkanos.mtgportal.core.ui.theme.PortalColors
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
+fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit, onChanged: () -> Unit = {}) {
     val c = appContainer()
     val images by c.config.imageUrls.collectAsStateWithLifecycle()
+    val auth by c.auth.state.collectAsStateWithLifecycle()
+    val unlocked = auth == AuthState.Open || auth == AuthState.Unlocked
+    val scope = rememberCoroutineScope()
+
+    // Edited in place: +1, -1 and moves update this list from the server's answer.
+    var rows by remember(g.key) { mutableStateOf(g.variants) }
+    var changed by remember(g.key) { mutableStateOf(false) }
+    var busy by remember(g.key) { mutableStateOf(false) }
+    var notice by remember(g.key) { mutableStateOf<String?>(null) }
+    var moving by remember(g.key) { mutableStateOf<VariantDto?>(null) }
+    var binders by remember { mutableStateOf<List<BinderDto>>(emptyList()) }
+    val volatileText = stringResource(R.string.detail_edit_volatile)
+
+    fun write(block: suspend () -> String?) {
+        if (busy) return
+        busy = true
+        scope.launch {
+            notice = block()
+            changed = true
+            busy = false
+        }
+    }
+    fun failure(r: ApiResult<*>) = when (r) {
+        is ApiResult.HttpError -> r.message
+        is ApiResult.NetworkError -> r.cause.message ?: r.cause.javaClass.simpleName
+        is ApiResult.Success -> null
+    }
 
     var prints by remember(g.key) { mutableStateOf<List<PrintDto>?>(null) }
     LaunchedEffect(g.key) {
@@ -76,10 +111,11 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
         }
     }
 
-    val variants = g.variants.sortedWith(compareBy({ it.language }, { it.foil }))
+    val variants = rows.sortedWith(compareBy({ it.language }, { it.foil }))
     val totalMarket = variants.sumOf { (it.marketPrice ?: 0.0) * it.quantity }
+    val dismiss = { if (changed) onChanged(); onDismiss() }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = dismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -96,7 +132,7 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
             HorizontalDivider()
             Fact("Set", "${g.setName} (${g.setCode} #${g.collectorNumber})")
             Fact(stringResource(R.string.detail_rarity), rarityLabel(g.rarity))
-            Fact(stringResource(R.string.detail_copies), g.totalQty.toString())
+            Fact(stringResource(R.string.detail_copies), variants.sumOf { it.quantity }.toString())
             Fact(stringResource(R.string.detail_market_total), Format.eur(totalMarket))
             Text(stringResource(R.string.detail_price_hint), fontSize = 11.sp, color = PortalColors.TextDim)
 
@@ -115,10 +151,39 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
                     val meta = listOfNotNull(
                         v.binderName.ifEmpty { null },
                         v.added.take(10).ifEmpty { null }?.let { stringResource(R.string.detail_added, it) },
+                        if (v.origin == "app") stringResource(R.string.detail_origin_app) else null,
                     ).joinToString(" · ")
                     if (meta.isNotEmpty()) Text(meta, fontSize = 12.sp, color = PortalColors.TextDim)
+                    if (unlocked && v.id != 0L) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(enabled = !busy, onClick = {
+                                write {
+                                    when (val r = c.collectionWrite.patch(v.id, RowPatchDto(quantityDelta = -1))) {
+                                        is ApiResult.Success -> {
+                                            rows = applyWrite(rows, r.data.row, if (r.data.deleted) setOf(v.id) else emptySet())
+                                            if (v.origin == "csv") volatileText else null
+                                        }
+                                        else -> failure(r)
+                                    }
+                                }
+                            }) { Text("−1") }
+                            TextButton(enabled = !busy, onClick = {
+                                write {
+                                    when (val r = c.collectionWrite.addOne(g.setCode, g.collectorNumber, v)) {
+                                        is ApiResult.Success -> { rows = applyWrite(rows, r.data); null }
+                                        else -> failure(r)
+                                    }
+                                }
+                            }) { Text("+1") }
+                            TextButton(enabled = !busy, onClick = {
+                                moving = v
+                                scope.launch { (safeCall { c.api.binders() } as? ApiResult.Success)?.let { binders = it.data } }
+                            }) { Text(stringResource(R.string.detail_move)) }
+                        }
+                    }
                 }
             }
+            notice?.let { Text(it, fontSize = 12.sp, color = PortalColors.Accent) }
 
             Text(stringResource(R.string.detail_other_printings), style = MaterialTheme.typography.titleSmall)
             when (val p = prints) {
@@ -130,6 +195,27 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
             }
         }
     }
+
+    moving?.let { v ->
+        MoveDialog(v, binders, onDismiss = { moving = null }, onPick = { target ->
+            moving = null
+            if (target.name == v.binderName) return@MoveDialog
+            write {
+                when (val r = c.collectionWrite.patch(v.id, RowPatchDto(binderName = target.name, binderType = target.type))) {
+                    is ApiResult.Success -> {
+                        rows = applyWrite(rows, r.data.row, setOf(v.id))
+                        if (v.origin == "csv") volatileText else null
+                    }
+                    else -> failure(r)
+                }
+            }
+        })
+    }
+}
+
+@Composable
+private fun MoveDialog(v: VariantDto, binders: List<BinderDto>, onPick: (BinderTarget) -> Unit, onDismiss: () -> Unit) {
+    BinderPickerDialog(binders, BinderTarget(v.binderName, v.binderType), onPick, onDismiss)
 }
 
 @Composable

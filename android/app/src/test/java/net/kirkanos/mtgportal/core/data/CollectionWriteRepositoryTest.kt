@@ -82,3 +82,44 @@ class CollectionWriteRepositoryTest {
         assertEquals(ApiResult.HttpError(404, "STH #131 is not in the catalog (#2)"), r)
     }
 }
+
+class HandoverRepositoryTest {
+    @get:Rule val tmp = TemporaryFolder()
+    private lateinit var server: MockWebServer
+    private lateinit var repo: CollectionWriteRepository
+
+    @Before
+    fun setUp() {
+        server = MockWebServer().apply { start() }
+        val base = server.url("/").toString()
+        repo = CollectionWriteRepository(HttpClients(tmp.newFolder(), { base }, { "pw" }, debug = false).portalApi)
+    }
+
+    @After
+    fun tearDown() = server.close()
+
+    @Test
+    fun exportCarriesIdCountAndFile() = runTest {
+        val csv = "Binder Name,Binder Type,Name\nScans,binder,Victual Sliver\n"
+        server.enqueue(MockResponse.Builder().code(200).addHeader("Content-Type", "text/csv").addHeader("X-Export-Id", "7").addHeader("X-Export-Cards", "3").body(csv).build())
+        val r = repo.exportForManabox() as ApiResult.Success
+        assertEquals(7L, r.data.id)
+        assertEquals(3, r.data.cards)
+        assertEquals(csv, String(r.data.csv))
+        assertEquals("POST", server.takeRequest().method)
+    }
+
+    @Test
+    fun confirmTwiceIsReadable() = runTest {
+        server.enqueue(MockResponse.Builder().code(409).addHeader("Content-Type", "application/json").body("""{"error":"export already confirmed at 2026-10-24T15:00:00Z"}""").build())
+        assertEquals(ApiResult.HttpError(409, "export already confirmed at 2026-10-24T15:00:00Z"), repo.confirmExport(7))
+        assertEquals("/api/collection/export/7/confirm", server.takeRequest().url.encodedPath)
+    }
+
+    @Test
+    fun binderNamesAreOnePathSegment() = runTest {
+        server.enqueue(MockResponse.Builder().code(200).addHeader("Content-Type", "application/json").body("""{"name":"Box","type":"list","rows":2,"merged":1}""").build())
+        repo.renameBinder("Scans 1/2", net.kirkanos.mtgportal.core.network.dto.BinderPatchDto(name = "Box"))
+        assertEquals("/api/binders/Scans%201%2F2", server.takeRequest().url.encodedPath)
+    }
+}

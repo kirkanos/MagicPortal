@@ -28,11 +28,13 @@ class SettingsRepository(
     private val secretKey = stringPreferencesKey("upload_password")
     private val editionTypesKey = stringPreferencesKey("editions_type_filter")
     private val lastBinderKey = stringPreferencesKey("last_scan_binder")
+    private val pendingExportKey = stringPreferencesKey("pending_export")
 
     private val _baseUrl: MutableStateFlow<String>
     private val _secret: MutableStateFlow<String?>
     private val _editionTypes: MutableStateFlow<String?>
     private val _lastBinder: MutableStateFlow<String?>
+    private val _pendingExport: MutableStateFlow<String?>
 
     init {
         val prefs = runBlocking { context.settingsStore.data.first() }
@@ -40,6 +42,7 @@ class SettingsRepository(
         _secret = MutableStateFlow(prefs[secretKey]?.let(secrets::decrypt))
         _editionTypes = MutableStateFlow(prefs[editionTypesKey])
         _lastBinder = MutableStateFlow(prefs[lastBinderKey])
+        _pendingExport = MutableStateFlow(prefs[pendingExportKey])
     }
 
     val baseUrl: StateFlow<String> = _baseUrl.asStateFlow()
@@ -74,5 +77,13 @@ class SettingsRepository(
     suspend fun setLastBinder(encoded: String) {
         context.settingsStore.edit { it[lastBinderKey] = encoded }
         _lastBinder.value = encoded
+    }
+
+    /** An export for ManaBox that is not confirmed yet; "" when none. */
+    val pendingExport: StateFlow<String?> = _pendingExport.asStateFlow()
+
+    suspend fun setPendingExport(encoded: String) {
+        context.settingsStore.edit { it[pendingExportKey] = encoded }
+        _pendingExport.value = encoded
     }
 }
