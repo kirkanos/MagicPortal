@@ -69,3 +69,19 @@ The release build talks HTTPS to `https://mtg.kirkanos.net` only.
 
 The debug app is installed as "Magic Portal" with the id
 `net.kirkanos.mtgportal.debug`, so it can coexist with a release build.
+
+## Release-Signierung
+
+Der Release-Schlüssel liegt mit sops verschlüsselt in `signing/` – für denselben
+age-Empfänger wie `.env.enc`, die CI entschlüsselt ihn mit `sops_age_key`:
+
+- `signing/release.jks.enc` – der Keystore (PKCS12, Alias `mtgportal`)
+- `signing/signing.env.enc` – `MTG_KEYSTORE_PASSWORD`, `MTG_KEY_ALIAS`, `MTG_KEY_PASSWORD`
+
+Gradle signiert Release-Builds nur, wenn `MTG_KEYSTORE` auf den entschlüsselten
+Keystore zeigt; lokal bleiben sie unsigniert. `versionCode` ist in der CI die
+Pipeline-Nummer, damit jede neue APK sich über die alte installieren lässt.
+
+Den Schlüssel nicht verlieren: Android installiert ein Update nur mit derselben
+Signatur. Eine Kopie gehört in den Passwortmanager (lokal entschlüsseln mit
+`sops --decrypt --input-type binary --output-type binary signing/release.jks.enc`).

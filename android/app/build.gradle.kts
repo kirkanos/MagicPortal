@@ -12,10 +12,28 @@ android {
         applicationId = "net.kirkanos.mtgportal"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        // CI builds count up with the pipeline, so every release installs over
+        // the one before; local builds stay at 1.
+        val build = System.getenv("CI_PIPELINE_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = build
+        versionName = "0.1.$build"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "DEFAULT_BASE_URL", "\"https://mtg.kirkanos.net\"")
+    }
+
+    // The release key lives sops-encrypted in signing/ (see README); CI
+    // decrypts it and passes it in here. Without it, release builds stay
+    // unsigned, which is all a local build needs.
+    val keystore = System.getenv("MTG_KEYSTORE")?.let(::file)?.takeIf { it.exists() }
+    signingConfigs {
+        if (keystore != null) {
+            create("release") {
+                storeFile = keystore
+                storePassword = System.getenv("MTG_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("MTG_KEY_ALIAS")
+                keyPassword = System.getenv("MTG_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -27,6 +45,7 @@ android {
             buildConfigField("String", "DEFAULT_BASE_URL", "\"http://127.0.0.1:8088\"")
         }
         release {
+            if (keystore != null) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

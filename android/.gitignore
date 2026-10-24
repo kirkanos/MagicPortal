@@ -8,3 +8,7 @@ local.properties
 captures/
 *.keystore
 *.jks
+
+# Decrypted release key (CI only); the encrypted copies are *.enc
+signing/release.jks
+signing/signing.env
