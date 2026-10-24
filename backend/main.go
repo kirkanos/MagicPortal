@@ -54,6 +54,7 @@ func main() {
 	mux.HandleFunc("GET /api/sets/{code}/cards", handleSetCards)
 	mux.HandleFunc("GET /api/prints", handlePrints)
 	mux.HandleFunc("GET /api/binders", handleBinders)
+	mux.HandleFunc("PATCH /api/binders/{name}", handleBinderPatch)
 	mux.HandleFunc("GET /api/subtypes", handleSubtypes)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/summary", handleSummary)

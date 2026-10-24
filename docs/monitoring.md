@@ -116,7 +116,7 @@ going up, another instance has consumed it.
 | `mtg_hash_sync_in_progress` | gauge | 1 while the hash index is being built |
 | `mtg_last_hash_sync_timestamp_seconds` | gauge | Last hash index run |
 | `mtg_hash_scans_total{result}` | counter | Hashed scans: `mirror`, `download` or `error` |
-| `mtg_app_writes_total{op}` | counter | Collection writes from the Android app: `add`, `update`, `move`, `merge`, `delete`, `export`, `confirm` |
+| `mtg_app_writes_total{op}` | counter | Collection writes from the Android app: `add`, `update`, `move`, `merge`, `delete`, `export`, `confirm`, `binder` |
 | `mtg_backup_last_size_bytes` | gauge | Size of the last backup |
 
 ### HTTP and runtime
