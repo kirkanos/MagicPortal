@@ -292,6 +292,9 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `POST` | `/api/collection/owned` | Owned copies per card name, body `{"names": [...]}` (max. 500) – the deck checker without downloading the collection |
 | `GET` | `/api/editions` | Completion per set: owned, missing, duplicates, value (ETag, conditional requests) |
 | `GET` | `/api/sets` | Set index |
+| `GET` | `/api/catalog/index` | The whole Scryfall catalog in compact form for the Android scanner's offline index (ETag over the content) |
+| `GET` | `/api/catalog/card?set=…&number=…` | One printing of the catalog, with prices |
+| `GET` | `/api/catalog/search?name=…` | Name search that forgives typos and OCR errors, every printing newest first |
 | `GET` | `/api/sets/{code}/cards` | All cards of a set, with the owned copies per language and binder |
 | `GET` | `/api/prints?name=…` | All printings of a card (editions) |
 | `GET` | `/api/binders` | Binders/lists with card count & value |

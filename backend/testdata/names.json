@@ -1,0 +1,18 @@
+[
+  {"in": "Lightning Bolt", "out": "lightning bolt"},
+  {"in": "  LIGHTNING   BOLT  ", "out": "lightning bolt"},
+  {"in": "Æther Vial", "out": "aether vial"},
+  {"in": "Lim-Dûl's Vault", "out": "lim duls vault"},
+  {"in": "Jötun Grunt", "out": "jotun grunt"},
+  {"in": "Fire // Ice", "out": "fire ice"},
+  {"in": "Fable of the Mirror-Breaker // Reflection of Kiki-Jiki", "out": "fable of the mirror breaker reflection of kiki jiki"},
+  {"in": "Séance", "out": "seance"},
+  {"in": "Dandân", "out": "dandan"},
+  {"in": "Ifh-Bíff Efreet", "out": "ifh biff efreet"},
+  {"in": "Urza's Saga", "out": "urzas saga"},
+  {"in": "Who/What/When/Where/Why", "out": "who what when where why"},
+  {"in": "+2 Mace", "out": "2 mace"},
+  {"in": "\"Ach! Hans, Run!\"", "out": "ach hans run"},
+  {"in": "Sol Ring®", "out": "sol ring"},
+  {"in": "", "out": ""}
+]

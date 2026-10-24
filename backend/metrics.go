@@ -142,6 +142,7 @@ var apiRoutes = map[string]string{
 	"cards":         "/api/cards",
 	"images":        "/api/images/sync",
 	"value-history": "/api/value-history", "value-movers": "/api/value-movers",
+	"wishlist": "/api/wishlist",
 	"activity": "/api/activity", "backup": "/api/backup", "auth-check": "/api/auth-check",
 	"upload": "/api/upload", "reset": "/api/reset", "sync": "/api/sync", "health": "/api/health",
 }
@@ -154,6 +155,11 @@ func routeLabel(path string) string {
 	}
 	head, tail, _ := strings.Cut(rest, "/")
 	switch head {
+	case "catalog":
+		switch tail {
+		case "index", "card", "search":
+			return "/api/catalog/" + tail
+		}
 	case "collection":
 		if tail == "owned" {
 			return "/api/collection/owned"
@@ -166,6 +172,13 @@ func routeLabel(path string) string {
 		switch tail {
 		case "facets", "random":
 			return "/api/cards/" + tail
+		}
+	case "wishlist":
+		switch {
+		case tail == "export":
+			return "/api/wishlist/export"
+		case tail != "":
+			return "/api/wishlist/{name}" // collapse the card name
 		}
 	case "activity":
 		if tail == "clear" {
