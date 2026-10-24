@@ -128,6 +128,9 @@ fun ScanResultScreen(result: ScanSessionResult?, onScanAgain: () -> Unit, onOpen
     var picking by remember { mutableStateOf(false) }
     val items = result?.items.orEmpty()
     val total = items.sumOf { it.quantity }
+    val container = appContainer()
+    val wanted = { name: String -> container.wishlist.contains(name) }
+    val wantedCount = items.count { wanted(it.name) }
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         item {
@@ -136,6 +139,9 @@ fun ScanResultScreen(result: ScanSessionResult?, onScanAgain: () -> Unit, onOpen
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
             )
+            if (wantedCount > 0) {
+                Text(pluralStringResource(R.plurals.scan_wanted, wantedCount, wantedCount), color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 8.dp))
+            }
             when (val save = state.save) {
                 is SaveState.Done -> DoneCard(save, onOpenBinder, onScanAgain)
                 else -> if (unlocked && items.isNotEmpty()) {
@@ -168,7 +174,7 @@ fun ScanResultScreen(result: ScanSessionResult?, onScanAgain: () -> Unit, onOpen
         items(items) { c ->
             ListItem(
                 leadingContent = { Text("${c.quantity}×") },
-                headlineContent = { Text(c.name) },
+                headlineContent = { Text((if (wanted(c.name)) "★ " else "") + c.name) },
                 supportingContent = {
                     Text("${c.setCode.uppercase()} #${c.collectorNumber} · ${c.language.uppercase()}" + if (c.foil != "normal") " · ${c.foil}" else "")
                 },

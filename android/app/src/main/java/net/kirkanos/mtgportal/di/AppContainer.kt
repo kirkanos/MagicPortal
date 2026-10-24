@@ -56,6 +56,7 @@ class AppContainer(context: Context) {
             PLACEHOLDER_BASE + "catalog/hashes",
         ),
         dumpDir = if (BuildConfig.DEBUG) context.getExternalFilesDir("scans") else null,
+        isWanted = { wishlist.contains(it) },
     )
 
     /** The last finished scan session, until it is taken into the collection. */

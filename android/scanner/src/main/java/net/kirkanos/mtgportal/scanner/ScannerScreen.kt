@@ -90,7 +90,12 @@ import java.util.concurrent.Executors
  * The camera scanner behind [ScannerEntry]; the app hands in where the
  * catalog comes from and, in debug builds, where to dump frames.
  */
-class CameraScanner(private val store: CatalogStore, private val dumpDir: File? = null) : ScannerEntry {
+class CameraScanner(
+    private val store: CatalogStore,
+    private val dumpDir: File? = null,
+    /** Is a card (catalog name) on the wishlist? Marked in the session list. */
+    private val isWanted: (String) -> Boolean = { false },
+) : ScannerEntry {
     // The orientation lock is deliberate, see below.
     @SuppressLint("SourceLockedOrientationActivity")
     @Composable
@@ -111,7 +116,7 @@ class CameraScanner(private val store: CatalogStore, private val dumpDir: File? 
             onDispose { if (before != null) activity.requestedOrientation = before }
         }
         LaunchedEffect(Unit) { if (!granted) ask.launch(Manifest.permission.CAMERA) }
-        ScannerContent(vm, granted, onAskPermission = { ask.launch(Manifest.permission.CAMERA) }, onDone = { onResult(vm.result()) }, onClose = onClose)
+        ScannerContent(vm, granted, isWanted, onAskPermission = { ask.launch(Manifest.permission.CAMERA) }, onDone = { onResult(vm.result()) }, onClose = onClose)
     }
 }
 
@@ -128,6 +133,7 @@ private val FINISHES = listOf("normal", "foil", "etched")
 private fun ScannerContent(
     vm: ScannerViewModel,
     granted: Boolean,
+    isWanted: (String) -> Boolean,
     onAskPermission: () -> Unit,
     onDone: () -> Unit,
     onClose: () -> Unit,
@@ -173,7 +179,7 @@ private fun ScannerContent(
         }
         LazyColumn(Modifier.weight(1f)) {
             items(state.items, key = { it.id }) { item ->
-                SessionRow(item) { editing = item.id }
+                SessionRow(item, isWanted(item.printing.name)) { editing = item.id }
                 HorizontalDivider()
             }
         }
@@ -351,12 +357,12 @@ private fun PermissionHint(onAsk: () -> Unit) {
 }
 
 @Composable
-private fun SessionRow(item: SessionItem, onClick: () -> Unit) {
+private fun SessionRow(item: SessionItem, wanted: Boolean, onClick: () -> Unit) {
     val p = item.printing
     ListItem(
         modifier = Modifier.clickable(onClick = onClick),
         leadingContent = { Text("${item.quantity}×", style = MaterialTheme.typography.titleMedium) },
-        headlineContent = { Text(p.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        headlineContent = { Text((if (wanted) "★ " else "") + p.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             val extra = buildList {
                 if (item.foil != "normal") add(item.foil)
@@ -365,7 +371,10 @@ private fun SessionRow(item: SessionItem, onClick: () -> Unit) {
             Text("${p.setCode.uppercase()} #${p.collectorNumber}" + if (extra.isNotEmpty()) " · $extra" else "")
         },
         trailingContent = {
-            if (item.uncertain) Text("?", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleLarge)
+            Column(horizontalAlignment = Alignment.End) {
+                if (item.uncertain) Text("?", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleLarge)
+                if (wanted) Text(stringResource(R.string.scanner_wanted), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
         },
     )
 }

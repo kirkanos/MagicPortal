@@ -386,6 +386,10 @@
         <item quantity="one">%d Karte gescannt</item>
         <item quantity="other">%d Karten gescannt</item>
     </plurals>
+    <plurals name="scan_wanted">
+        <item quantity="one">★ %d Karte steht auf deiner Wunschliste.</item>
+        <item quantity="other">★ %d Karten stehen auf deiner Wunschliste.</item>
+    </plurals>
     <string name="scan_add_target">In welchen Ordner?</string>
     <string name="scan_add_no_binder">Ohne Ordner</string>
     <string name="scan_add_new_binder">Neuer Ordner</string>

@@ -365,6 +365,10 @@
         <item quantity="one">%d card scanned</item>
         <item quantity="other">%d cards scanned</item>
     </plurals>
+    <plurals name="scan_wanted">
+        <item quantity="one">★ %d card is on your wishlist.</item>
+        <item quantity="other">★ %d cards are on your wishlist.</item>
+    </plurals>
     <string name="scan_add_target">Into which binder?</string>
     <string name="scan_add_no_binder">No binder</string>
     <string name="scan_add_new_binder">New binder</string>
