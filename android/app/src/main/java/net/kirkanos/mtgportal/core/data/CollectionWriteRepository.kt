@@ -1,6 +1,10 @@
 package net.kirkanos.mtgportal.core.data
 
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -35,12 +39,23 @@ data class BinderTarget(val name: String, val type: String = "binder")
  */
 class CollectionWriteRepository(private val api: PortalApi) {
 
+    /**
+     * Counts successful writes. Screens that show collection data stay in
+     * memory while the user is elsewhere; they reload when this changes, so
+     * a change made on another screen (a handover, a scan) is never shown
+     * stale - and never edited through a row id that no longer exists.
+     */
+    private val _changes = MutableStateFlow(0L)
+    val changes: StateFlow<Long> = _changes.asStateFlow()
+
+    private fun <T> ApiResult<T>.noted(): ApiResult<T> = also { if (it is ApiResult.Success) _changes.update { n -> n + 1 } }
+
     suspend fun addScan(result: ScanSessionResult, target: BinderTarget, condition: String, sessionKey: String): ApiResult<AddCardsResultDto> {
         val body = toRequest(result, target, condition)
         var attempt = 0
         while (true) {
             val r = safeCall { api.addCards(body, sessionKey) }
-            if (r !is ApiResult.NetworkError || ++attempt >= 3) return r.withReadableError()
+            if (r !is ApiResult.NetworkError || ++attempt >= 3) return r.withReadableError().noted()
             delay(1000L * attempt)
         }
     }
@@ -49,9 +64,9 @@ class CollectionWriteRepository(private val api: PortalApi) {
     suspend fun addOne(setCode: String, collectorNumber: String, v: VariantDto): ApiResult<CollectionRowDto> = safeCall {
         val item = AddCardItemDto(setCode.lowercase(), collectorNumber, 1, v.foil.ifEmpty { "normal" }, v.language.ifEmpty { "en" }, v.condition.ifEmpty { "near_mint" }, v.binderName, v.binderType)
         api.addCards(AddCardsRequest(listOf(item)), UUID.randomUUID().toString()).items.first()
-    }.withReadableError()
+    }.withReadableError().noted()
 
-    suspend fun patch(id: Long, patch: RowPatchDto): ApiResult<RowPatchResultDto> = safeCall { api.patchRow(id, patch) }.withReadableError()
+    suspend fun patch(id: Long, patch: RowPatchDto): ApiResult<RowPatchResultDto> = safeCall { api.patchRow(id, patch) }.withReadableError().noted()
 
     /** A ManaBox export of the app's cards, to hand them over. */
     data class Export(val id: Long, val cards: Int, val csv: ByteArray)
@@ -63,11 +78,11 @@ class CollectionWriteRepository(private val api: PortalApi) {
         Export(id, r.headers()["X-Export-Cards"]?.toIntOrNull() ?: 0, r.body()?.bytes() ?: ByteArray(0))
     }.withReadableError()
 
-    suspend fun confirmExport(id: Long): ApiResult<ConfirmExportDto> = safeCall { api.confirmExport(id) }.withReadableError()
+    suspend fun confirmExport(id: Long): ApiResult<ConfirmExportDto> = safeCall { api.confirmExport(id) }.withReadableError().noted()
 
-    suspend fun renameBinder(name: String, patch: BinderPatchDto): ApiResult<BinderPatchResultDto> = safeCall { api.patchBinder(name, patch) }.withReadableError()
+    suspend fun renameBinder(name: String, patch: BinderPatchDto): ApiResult<BinderPatchResultDto> = safeCall { api.patchBinder(name, patch) }.withReadableError().noted()
 
-    suspend fun delete(id: Long): ApiResult<Unit> = safeStatus { api.deleteRow(id) }.withReadableError()
+    suspend fun delete(id: Long): ApiResult<Unit> = safeStatus { api.deleteRow(id) }.withReadableError().noted()
 
     companion object {
         fun toRequest(result: ScanSessionResult, target: BinderTarget, condition: String) = AddCardsRequest(

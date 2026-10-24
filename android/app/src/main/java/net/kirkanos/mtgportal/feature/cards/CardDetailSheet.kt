@@ -71,16 +71,16 @@ import net.kirkanos.mtgportal.core.ui.theme.PortalColors
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit, onChanged: () -> Unit = {}) {
+fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
     val c = appContainer()
     val images by c.config.imageUrls.collectAsStateWithLifecycle()
     val auth by c.auth.state.collectAsStateWithLifecycle()
     val unlocked = auth == AuthState.Open || auth == AuthState.Unlocked
     val scope = rememberCoroutineScope()
 
-    // Edited in place: +1, -1 and moves update this list from the server's answer.
+    // Edited in place: +1, -1 and moves update this list from the server's
+    // answer; the grid behind reloads on its own (CollectionWriteRepository.changes).
     var rows by remember(g.key) { mutableStateOf(g.variants) }
-    var changed by remember(g.key) { mutableStateOf(false) }
     var busy by remember(g.key) { mutableStateOf(false) }
     var notice by remember(g.key) { mutableStateOf<String?>(null) }
     var moving by remember(g.key) { mutableStateOf<VariantDto?>(null) }
@@ -92,7 +92,6 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit, onChanged: () -> Uni
         busy = true
         scope.launch {
             notice = block()
-            changed = true
             busy = false
         }
     }
@@ -113,9 +112,8 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit, onChanged: () -> Uni
 
     val variants = rows.sortedWith(compareBy({ it.language }, { it.foil }))
     val totalMarket = variants.sumOf { (it.marketPrice ?: 0.0) * it.quantity }
-    val dismiss = { if (changed) onChanged(); onDismiss() }
 
-    ModalBottomSheet(onDismissRequest = dismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),

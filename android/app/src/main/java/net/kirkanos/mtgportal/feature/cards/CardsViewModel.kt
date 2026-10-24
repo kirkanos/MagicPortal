@@ -78,6 +78,8 @@ class CardsViewModel(
 
     init {
         loadAll()
+        // Reload after writes made elsewhere (see CollectionWriteRepository.changes).
+        viewModelScope.launch { c.collectionWrite.changes.drop(1).collect { loadAll() } }
         // Typing is debounced like the web's 250 ms; everything else applies at once.
         viewModelScope.launch {
             _state.map { it.filters.query }.distinctUntilChanged().drop(1).debounce(250).collect { runQuery() }

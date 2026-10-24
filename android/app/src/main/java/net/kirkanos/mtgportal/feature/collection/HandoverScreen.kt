@@ -158,7 +158,7 @@ fun HandoverScreen() {
                     }
                     Text(stringResource(R.string.handover_step_confirm), style = MaterialTheme.typography.bodyMedium)
                     Button(
-                        onClick = { vm.confirm { moved, missing -> res.getString(R.string.handover_done, moved, missing) } },
+                        onClick = { vm.confirm { moved, missing -> res.getQuantityString(R.plurals.handover_done, moved, moved, missing) } },
                         enabled = !st.busy,
                     ) { Text(stringResource(R.string.handover_confirm)) }
                     TextButton(onClick = vm::discard) { Text(stringResource(R.string.handover_discard)) }

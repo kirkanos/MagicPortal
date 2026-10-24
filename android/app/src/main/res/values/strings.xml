@@ -370,7 +370,10 @@
     <string name="handover_step_confirm">2. Erst wenn ManaBox sie importiert hat:</string>
     <string name="handover_confirm">In ManaBox importiert – bestätigen</string>
     <string name="handover_discard">Export verwerfen</string>
-    <string name="handover_done">Übergeben: %1$d Karten zählen jetzt als ManaBox-Karten (%2$d inzwischen entfernt).</string>
+    <plurals name="handover_done">
+        <item quantity="one">Übergeben: %1$d Karte zählt jetzt als ManaBox-Karte (%2$d inzwischen entfernt).</item>
+        <item quantity="other">Übergeben: %1$d Karten zählen jetzt als ManaBox-Karten (%2$d inzwischen entfernt).</item>
+    </plurals>
     <string name="detail_move">Verschieben</string>
     <string name="detail_origin_app">aus der App</string>
     <string name="detail_edit_volatile">Geändert – aber das ist eine ManaBox-Zeile: der nächste ManaBox-Import setzt sie zurück.</string>

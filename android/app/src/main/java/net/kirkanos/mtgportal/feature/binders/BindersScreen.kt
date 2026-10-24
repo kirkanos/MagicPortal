@@ -28,6 +28,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.network.ApiResult
@@ -54,7 +55,11 @@ class BindersViewModel(private val c: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow<ApiResult<List<BinderDto>>?>(null)
     val state: StateFlow<ApiResult<List<BinderDto>>?> = _state.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+        // Reload after writes made elsewhere (see CollectionWriteRepository.changes).
+        viewModelScope.launch { c.collectionWrite.changes.drop(1).collect { load() } }
+    }
 
     fun load() = viewModelScope.launch {
         _state.value = null

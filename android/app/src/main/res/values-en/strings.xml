@@ -349,7 +349,10 @@
     <string name="handover_step_confirm">2. Only once ManaBox has imported it:</string>
     <string name="handover_confirm">Imported in ManaBox – confirm</string>
     <string name="handover_discard">Discard export</string>
-    <string name="handover_done">Handed over: %1$d cards count as ManaBox cards now (%2$d removed in the meantime).</string>
+    <plurals name="handover_done">
+        <item quantity="one">Handed over: %1$d card counts as a ManaBox card now (%2$d removed in the meantime).</item>
+        <item quantity="other">Handed over: %1$d cards count as ManaBox cards now (%2$d removed in the meantime).</item>
+    </plurals>
     <string name="detail_move">Move</string>
     <string name="detail_origin_app">from the app</string>
     <string name="detail_edit_volatile">Changed – but this is a ManaBox row: the next ManaBox import resets it.</string>

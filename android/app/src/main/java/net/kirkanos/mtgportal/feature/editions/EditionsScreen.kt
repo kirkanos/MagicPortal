@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.network.ApiResult
@@ -84,7 +85,11 @@ class EditionsViewModel(private val c: AppContainer) : ViewModel() {
     val types: StateFlow<TypeFilter> = c.settings.editionTypes.map { TypeFilter.decode(it) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, TypeFilter.decode(c.settings.editionTypes.value))
 
-    init { load() }
+    init {
+        load()
+        // Reload after writes made elsewhere (see CollectionWriteRepository.changes).
+        viewModelScope.launch { c.collectionWrite.changes.drop(1).collect { load() } }
+    }
 
     fun load() = viewModelScope.launch {
         _data.value = null

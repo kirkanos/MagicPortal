@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.model.Language
@@ -89,7 +90,11 @@ class DashboardViewModel(private val c: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+        // Reload after writes made elsewhere (see CollectionWriteRepository.changes).
+        viewModelScope.launch { c.collectionWrite.changes.drop(1).collect { load() } }
+    }
 
     fun load() = viewModelScope.launch {
         _state.update { it.copy(dashboard = null) }

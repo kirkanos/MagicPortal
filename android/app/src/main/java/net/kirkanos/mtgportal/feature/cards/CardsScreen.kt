@@ -167,7 +167,7 @@ fun CardsScreen(binder: String?, set: String?) {
         if (st.loadingMore) item(span = full) { Loading() }
     }
 
-    openCard?.let { CardDetailSheet(it, onDismiss = { openCard = null }, onChanged = { vm.loadAll() }) }
+    openCard?.let { CardDetailSheet(it, onDismiss = { openCard = null }) }
 
     if (filtersOpen) {
         FilterSheet(st, onChange = vm::setFilters, onReset = vm::resetFilters, onDismiss = { filtersOpen = false })
