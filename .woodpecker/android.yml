@@ -17,11 +17,12 @@ when:
     path:
       include: ["android/**", ".woodpecker/android.yml"]
 
-steps:
-  - name: test, lint, build
+# Pushes and pull requests use separate Gradle homes: Gradle locks its cache
+# and cannot reach a lock holder in another container, so two pipelines on
+# one cache (a push and its PR, run side by side) failed after a timeout.
+variables:
+  - &check
     image: ghcr.io/cirruslabs/android-sdk:36
-    volumes:
-      - /services/common/gradle-android:/root/.gradle
     environment:
       GRADLE_OPTS: -Dorg.gradle.daemon=false
     commands:
@@ -29,6 +30,21 @@ steps:
       - sdkmanager --install "platforms;android-37.0" > /dev/null
       - cd android
       - ./gradlew --console=plain testDebugUnitTest lintDebug :app:assembleDebug
+
+steps:
+  - name: test, lint, build
+    <<: *check
+    volumes:
+      - /services/common/gradle-android:/root/.gradle
+    when:
+      - event: push
+
+  - name: test, lint, build (PR)
+    <<: *check
+    volumes:
+      - /services/common/gradle-android-pr:/root/.gradle
+    when:
+      - event: pull_request
 
   - name: decrypt release key
     image: registry.kirkanos.net/images/ci-build:alpine
