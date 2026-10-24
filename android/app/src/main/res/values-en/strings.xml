@@ -320,7 +320,17 @@
         <item quantity="one">%d card scanned</item>
         <item quantity="other">%d cards scanned</item>
     </plurals>
-    <string name="scan_result_note">Adding cards to the collection directly comes next. Until then, copy the list and import it into ManaBox or Moxfield, for example.</string>
+    <string name="scan_add_target">Into which binder?</string>
+    <string name="scan_add_no_binder">No binder</string>
+    <string name="scan_add_new_binder">New binder</string>
+    <string name="scan_add_new_binder_ok">Use</string>
+    <string name="scan_add_exists">That one exists – the cards are added to it.</string>
+    <string name="scan_add_condition">Condition</string>
+    <string name="scan_add_button">Add to collection</string>
+    <string name="scan_add_failed">Not added: %s</string>
+    <string name="scan_add_locked">Unlock in the settings first to add cards to the collection.</string>
+    <string name="scan_add_done">Added: %1$d new, %2$d counted onto existing rows</string>
+    <string name="scan_add_open_binder">Show binder</string>
     <string name="scan_result_copy">Copy as list</string>
     <string name="scan_result_copied">Copied ✓</string>
     <string name="scan_result_again">Scan more</string>

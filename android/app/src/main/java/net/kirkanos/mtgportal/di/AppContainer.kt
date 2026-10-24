@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.BuildConfig
 import net.kirkanos.mtgportal.core.data.AuthRepository
+import net.kirkanos.mtgportal.core.data.CollectionWriteRepository
 import net.kirkanos.mtgportal.core.data.ConfigRepository
 import net.kirkanos.mtgportal.core.data.SecretStore
 import net.kirkanos.mtgportal.core.data.SettingsRepository
@@ -44,6 +45,7 @@ class AppContainer(context: Context) {
     val auth = AuthRepository(api, settings)
     val config = ConfigRepository(api, settings, appScope)
     val wishlist = WishlistRepository(api, auth)
+    val collectionWrite = CollectionWriteRepository(api)
 
     /** The camera scanner; its catalog comes through the API client like everything else. */
     val scanner: ScannerEntry = CameraScanner(

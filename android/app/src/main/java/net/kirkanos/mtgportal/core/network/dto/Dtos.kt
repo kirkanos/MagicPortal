@@ -392,3 +392,67 @@ data class UiConfigInputDto(
 /** Answer of POST /api/upload: the import is a full replace of the collection. */
 @Serializable
 data class ImportResultDto(val added: Int = 0, val updated: Int = 0, val total: Int = 0)
+
+// ---- writing the collection (POST/PATCH/DELETE /api/collection/cards) ----
+
+@Serializable
+data class AddCardItemDto(
+    val setCode: String,
+    val collectorNumber: String,
+    val quantity: Int = 1,
+    val foil: String = "normal",
+    val language: String = "en",
+    val condition: String = "near_mint",
+    val binderName: String = "",
+    val binderType: String = "",
+)
+
+@Serializable
+data class AddCardsRequest(val items: List<AddCardItemDto>)
+
+/** One collection row as the write API returns it. */
+@Serializable
+data class CollectionRowDto(
+    val id: Long,
+    val name: String = "",
+    val setCode: String = "",
+    val collectorNumber: String = "",
+    val quantity: Int = 0,
+    val foil: String = "normal",
+    val language: String = "en",
+    val condition: String = "",
+    val binderName: String = "",
+    val binderType: String = "",
+    /** "csv" (ManaBox import) or "app". */
+    val origin: String = "",
+    /** The next CSV import resets this row. */
+    val volatile: Boolean = false,
+    /** Only in add results: joined an existing row, quantity is the new total. */
+    val merged: Boolean = false,
+)
+
+@Serializable
+data class AddCardsResultDto(
+    val items: List<CollectionRowDto> = emptyList(),
+    val added: Int = 0,
+    val merged: Int = 0,
+)
+
+/** All optional; quantity and quantityDelta exclude each other. */
+@Serializable
+data class RowPatchDto(
+    val quantity: Int? = null,
+    val quantityDelta: Int? = null,
+    val binderName: String? = null,
+    val binderType: String? = null,
+    val foil: String? = null,
+    val language: String? = null,
+    val condition: String? = null,
+)
+
+@Serializable
+data class RowPatchResultDto(
+    val row: CollectionRowDto? = null,
+    val deleted: Boolean = false,
+    val mergedInto: Long = 0,
+)

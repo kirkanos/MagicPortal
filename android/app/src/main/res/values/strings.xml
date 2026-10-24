@@ -341,7 +341,17 @@
         <item quantity="one">%d Karte gescannt</item>
         <item quantity="other">%d Karten gescannt</item>
     </plurals>
-    <string name="scan_result_note">Direkt in die Sammlung übernehmen kommt als Nächstes. Bis dahin lässt sich die Liste kopieren und z. B. in ManaBox oder Moxfield importieren.</string>
+    <string name="scan_add_target">In welchen Ordner?</string>
+    <string name="scan_add_no_binder">Ohne Ordner</string>
+    <string name="scan_add_new_binder">Neuer Ordner</string>
+    <string name="scan_add_new_binder_ok">Übernehmen</string>
+    <string name="scan_add_exists">Den gibt es schon – die Karten kommen dazu.</string>
+    <string name="scan_add_condition">Zustand</string>
+    <string name="scan_add_button">In die Sammlung übernehmen</string>
+    <string name="scan_add_failed">Nicht übernommen: %s</string>
+    <string name="scan_add_locked">Zum Übernehmen in die Sammlung erst in den Einstellungen entsperren.</string>
+    <string name="scan_add_done">Übernommen: %1$d neu, %2$d zu vorhandenen dazugezählt</string>
+    <string name="scan_add_open_binder">Ordner ansehen</string>
     <string name="scan_result_copy">Als Liste kopieren</string>
     <string name="scan_result_copied">Kopiert ✓</string>
     <string name="scan_result_again">Weiter scannen</string>

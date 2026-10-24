@@ -27,16 +27,19 @@ class SettingsRepository(
     private val baseUrlKey = stringPreferencesKey("base_url")
     private val secretKey = stringPreferencesKey("upload_password")
     private val editionTypesKey = stringPreferencesKey("editions_type_filter")
+    private val lastBinderKey = stringPreferencesKey("last_scan_binder")
 
     private val _baseUrl: MutableStateFlow<String>
     private val _secret: MutableStateFlow<String?>
     private val _editionTypes: MutableStateFlow<String?>
+    private val _lastBinder: MutableStateFlow<String?>
 
     init {
         val prefs = runBlocking { context.settingsStore.data.first() }
         _baseUrl = MutableStateFlow(prefs[baseUrlKey] ?: defaultBaseUrl)
         _secret = MutableStateFlow(prefs[secretKey]?.let(secrets::decrypt))
         _editionTypes = MutableStateFlow(prefs[editionTypesKey])
+        _lastBinder = MutableStateFlow(prefs[lastBinderKey])
     }
 
     val baseUrl: StateFlow<String> = _baseUrl.asStateFlow()
@@ -63,5 +66,13 @@ class SettingsRepository(
     suspend fun setEditionTypes(encoded: String) {
         context.settingsStore.edit { it[editionTypesKey] = encoded }
         _editionTypes.value = encoded
+    }
+
+    /** The binder the last scan went into ("type|name"), offered first next time. */
+    val lastBinder: StateFlow<String?> = _lastBinder.asStateFlow()
+
+    suspend fun setLastBinder(encoded: String) {
+        context.settingsStore.edit { it[lastBinderKey] = encoded }
+        _lastBinder.value = encoded
     }
 }

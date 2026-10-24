@@ -124,7 +124,11 @@ fun AppShell() {
                 )
             }
             composable<ScanResultRoute> {
-                ScanResultScreen(container.lastScan, onScanAgain = { nav.navigate(ScannerRoute) { popUpTo<ScanResultRoute> { inclusive = true } } })
+                ScanResultScreen(
+                    container.lastScan,
+                    onScanAgain = { nav.navigate(ScannerRoute) { popUpTo<ScanResultRoute> { inclusive = true } } },
+                    onOpenBinder = { nav.navigate(CardsRoute(binder = it)) { popUpTo<ScanResultRoute> { inclusive = true } } },
+                )
             }
         }
     }

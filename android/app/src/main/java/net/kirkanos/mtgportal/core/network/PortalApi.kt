@@ -1,6 +1,10 @@
 package net.kirkanos.mtgportal.core.network
 
 import net.kirkanos.mtgportal.core.network.dto.ActivityDto
+import net.kirkanos.mtgportal.core.network.dto.AddCardsRequest
+import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
+import net.kirkanos.mtgportal.core.network.dto.RowPatchDto
+import net.kirkanos.mtgportal.core.network.dto.RowPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.dto.ImportResultDto
 import net.kirkanos.mtgportal.core.network.dto.UiConfigInputDto
@@ -26,6 +30,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -102,6 +107,20 @@ interface PortalApi {
     /** Owned copies per lowercase name; every asked name is in the answer. */
     @POST("collection/owned")
     suspend fun ownedByName(@Body body: OwnedByNameRequest): Map<String, Int>
+
+    /**
+     * Adds a batch in one transaction. The same [idempotencyKey] (one per
+     * scan session) makes a retry after a lost answer return the first
+     * result instead of adding the cards twice.
+     */
+    @POST("collection/cards")
+    suspend fun addCards(@Body body: AddCardsRequest, @Header("Idempotency-Key") idempotencyKey: String): AddCardsResultDto
+
+    @PATCH("collection/cards/{id}")
+    suspend fun patchRow(@Path("id") id: Long, @Body body: RowPatchDto): RowPatchResultDto
+
+    @DELETE("collection/cards/{id}")
+    suspend fun deleteRow(@Path("id") id: Long): Response<Unit>
 
     @GET("wishlist")
     suspend fun wishlist(): WishlistDto
