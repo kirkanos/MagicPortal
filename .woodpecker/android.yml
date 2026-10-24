@@ -2,7 +2,8 @@
 # android/ changes - on a push to any branch and on pull requests. Nothing is
 # published: release signing is not set up, the debug APK is sideloaded.
 #
-# The SDK image ships platform 36; the app compiles against 37, which is
+# The SDK image ships platform 36; the app compiles against 37 (package
+# "platforms;android-37.0" - from 37 on the name carries a minor version), which is
 # installed per run (a few MB). Gradle's caches live on the agent's host, so
 # dependencies and the wrapper distribution are fetched once, not per run.
 # The agent is x86_64: AAPT2 from Google's Maven exists for Linux only there.
@@ -23,6 +24,6 @@ steps:
       GRADLE_OPTS: -Dorg.gradle.daemon=false
     commands:
       - yes | sdkmanager --licenses > /dev/null
-      - sdkmanager --install "platforms;android-37" > /dev/null
+      - sdkmanager --install "platforms;android-37.0" > /dev/null
       - cd android
       - ./gradlew --console=plain testDebugUnitTest lintDebug :app:assembleDebug
