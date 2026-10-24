@@ -72,7 +72,7 @@ object CardCropper {
                 val height = (right.at(cy) - left.at(cy)) / GuideFrame.CARD_RATIO
                 if (top == null) top = bottom!!.shift(-height) else bottom = top.shift(height)
             }
-            val q = Quad(cross(left, top!!), cross(right!!, top), cross(right, bottom!!), cross(left, bottom))
+            val q = Quad(cross(left, top), cross(right, top), cross(right, bottom), cross(left, bottom))
             val shape = shape(q, guide) ?: continue
             // Of the card-shaped outlines with real edges, the largest: the
             // inner frame of an old card is as card-shaped as the card and

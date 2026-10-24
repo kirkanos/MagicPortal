@@ -43,9 +43,9 @@ class HashEvalTest {
 
     @Test
     fun evaluate() {
-        val frames = System.getenv("SCANNER_FRAMES")
-        val refsDir = System.getenv("SCANNER_REFS")
-        assumeTrue(frames != null && refsDir != null)
+        val frames = System.getenv("SCANNER_FRAMES").orEmpty()
+        val refsDir = System.getenv("SCANNER_REFS").orEmpty()
+        assumeTrue(frames.isNotEmpty() && refsDir.isNotEmpty())
         val refs = File(refsDir).listFiles { f -> f.name.endsWith(".jpg") }!!.sorted().associate { f ->
             val g = gray(ImageIO.read(f))
             f.nameWithoutExtension to DHash.of(g.px, g.w, g.h)
