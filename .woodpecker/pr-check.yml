@@ -6,6 +6,8 @@
 #   3. every image tag from the compose file and the Dockerfile must exist in
 #      its registry - a Renovate PR with a wrong tag fails here, not at deploy
 #      time
+#   4. the backend's tests (go vet, go test), with the Go image the backend
+#      Dockerfile builds with
 labels:
   backend: docker
 
@@ -48,3 +50,10 @@ steps:
     commands:
       - for img in $(cat .images.txt); do case "$img" in registry.kirkanos.net/*) echo "skip (private) $img";; *) echo "check $img"; skopeo inspect --raw "docker://$img" > /dev/null || exit 1;; esac; done
       - echo "all image tags exist"
+
+  - name: go test
+    image: golang:1.27-alpine
+    commands:
+      - cd backend
+      - go vet ./...
+      - go test ./...
