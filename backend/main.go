@@ -43,6 +43,8 @@ func main() {
 	mux.HandleFunc("GET /api/collection/cards/{id}", handleCollectionRow)
 	mux.HandleFunc("PATCH /api/collection/cards/{id}", handleCollectionPatch)
 	mux.HandleFunc("DELETE /api/collection/cards/{id}", handleCollectionDelete)
+	mux.HandleFunc("POST /api/collection/export", handleCollectionExport)
+	mux.HandleFunc("POST /api/collection/export/{id}/confirm", handleCollectionExportConfirm)
 	mux.HandleFunc("GET /api/editions", handleEditions)
 	mux.HandleFunc("GET /api/catalog/index", handleCatalogIndex)
 	mux.HandleFunc("GET /api/catalog/card", handleCatalogCard)

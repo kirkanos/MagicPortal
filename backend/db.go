@@ -104,6 +104,15 @@ CREATE TABLE IF NOT EXISTS idempotency_keys (
   created_at TEXT
 );
 
+-- What an export for ManaBox contained (collection_export.go): the app rows
+-- and their quantities, so the confirmation moves exactly those into csv rows.
+CREATE TABLE IF NOT EXISTS collection_exports (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at   TEXT,
+  rows         TEXT,
+  confirmed_at TEXT
+);
+
 -- Wishlist: cards you are missing, keyed by name (all printings of a name are
 -- the same want). set_code/collector_number pin a specific printing when it
 -- actually matters; min_condition is what you would accept when buying.
