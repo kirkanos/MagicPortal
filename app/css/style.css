@@ -84,6 +84,18 @@ nav.topnav a.active { background: var(--accent); color: #1b1400; font-weight: 60
 }
 .nav-toggle:hover { border-color: var(--accent); }
 
+/* The Android app download: in the sticky header so it is always one tap
+   away. One link, placed by order: right before the actions on wide
+   screens, between logo and menu button on phones (see the media query). */
+nav.topnav a.app-download {
+  order: 1; margin-left: auto;
+  border: 1px solid var(--accent); color: var(--accent); border-radius: 6px;
+  padding: 6px 12px; font-size: 0.85rem; white-space: nowrap;
+}
+nav.topnav a.app-download:hover { background: var(--accent); color: #1b1400; }
+nav.topnav .nav-actions { order: 2; }
+nav.topnav a.app-download ~ .nav-actions { margin-left: 8px; }
+
 main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
 .site-footer {
@@ -100,7 +112,6 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 }
 .site-footer a { color: var(--text-dim); }
 .site-footer a:hover { color: var(--text); }
-.site-footer .footer-links { display: inline-flex; align-items: center; gap: 16px; }
 .site-footer .footer-gh { display: inline-flex; align-items: center; }
 .site-footer .footer-gh:hover { color: var(--accent); }
 
@@ -870,10 +881,12 @@ body.is-unlocked .wish-bulk { display: inline-block; }
   .admin-navlist { grid-template-columns: 1fr; }
 
   /* Hamburger menu: collapse links + actions behind the toggle */
-  .nav-toggle { display: inline-flex; }
-  nav.topnav a:not(.brand),
+  .nav-toggle { display: inline-flex; margin-left: 8px; }
+  nav.topnav a:not(.brand):not(.app-download),
   nav.topnav .nav-actions { display: none; }
-  nav.topnav.open a:not(.brand) { display: block; width: 100%; margin: 0; }
+  nav.topnav a.app-download { order: 0; padding: 5px 10px; }
+  nav.topnav.open a:not(.brand):not(.app-download) { display: block; width: 100%; margin: 0; order: 3; }
+  nav.topnav.open .nav-actions { order: 4; }
   nav.topnav.open .nav-actions {
     display: flex; width: 100%; margin: 6px 0 0; padding-top: 8px;
     flex-wrap: wrap; align-items: center; gap: 8px; border-top: 1px solid var(--border);
