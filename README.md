@@ -119,6 +119,11 @@ Every row knows where it came from (`origin`): `csv` for the ManaBox import, `ap
 the Android app added. The import replaces only the `csv` rows; app rows survive it, and the
 same card may exist once from each source (all counts add them up).
 
+ManaBox stays the master. To hand the app's cards over: export them (`POST
+/api/collection/export`, a ManaBox CSV), import the file into ManaBox, then confirm the export.
+The confirmation turns exactly the exported cards into `csv` rows – cards scanned or changed
+in between stay app rows until the next handover.
+
 Expected columns (standard ManaBox export):
 `Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, Scryfall ID, Purchase price, Purchase price currency, Condition, Language, Added`.
 
@@ -323,6 +328,8 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `GET` | `/api/collection/cards/{id}` | One collection row |
 | `PATCH` | `/api/collection/cards/{id}` | Change `quantity` or `quantityDelta` (0 deletes), move with `binderName`/`foil`/`language`/`condition` – merges into an existing row; edits of CSV rows answer `volatile: true`, the next import resets them (password protected) |
 | `DELETE` | `/api/collection/cards/{id}` | Remove one row (password protected) |
+| `POST` | `/api/collection/export` | The app's cards as a CSV in exactly ManaBox's export format, for importing them into ManaBox; remembers what went out (`X-Export-Id`) (password protected) |
+| `POST` | `/api/collection/export/{id}/confirm` | "ManaBox has imported it": moves exactly the exported quantities from app rows into csv rows, so the next ManaBox export counts them once (password protected) |
 | `POST` | `/api/upload` | Upload CSV (replaces the CSV rows; app rows stay) |
 | `POST` | `/api/reset` | Clear the collection; `?origin=csv` or `?origin=app` only that source's rows |
 | `POST` | `/api/sync` | Trigger a Scryfall sync now |
