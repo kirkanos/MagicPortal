@@ -106,6 +106,8 @@ services:
     volumes:
       # Read-only: nginx serves mirrored images directly.
       - mtg-images:/usr/share/nginx/html/img:ro
+      # The Android APK, uploaded by .woodpecker/android.yml (read-only here).
+      - ./download:/usr/share/nginx/html/download:ro
     security_opt:
       - no-new-privileges:true
     cap_drop:

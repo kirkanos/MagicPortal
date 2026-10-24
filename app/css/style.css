@@ -100,6 +100,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 }
 .site-footer a { color: var(--text-dim); }
 .site-footer a:hover { color: var(--text); }
+.site-footer .footer-links { display: inline-flex; align-items: center; gap: 16px; }
 .site-footer .footer-gh { display: inline-flex; align-items: center; }
 .site-footer .footer-gh:hover { color: var(--accent); }
 

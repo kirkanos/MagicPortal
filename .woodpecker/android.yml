@@ -1,7 +1,8 @@
 # Android app: unit tests, lint and a debug build, whenever something under
 # android/ changes - on a push to any branch and on pull requests. Pushes
 # also build a signed release APK: the key is sops-encrypted in
-# android/signing/ and decrypted with the same age key as .env.enc.
+# android/signing/ and decrypted with the same age key as .env.enc. On main
+# the APK goes to the web server: /download/magic-portal.apk on the portal.
 #
 # The SDK image ships platform 36; the app compiles against 37 (package
 # "platforms;android-37.0" - from 37 on the name carries a minor version), which is
@@ -16,11 +17,12 @@ when:
     path:
       include: ["android/**", ".woodpecker/android.yml"]
 
-steps:
-  - name: test, lint, build
+# Pushes and pull requests use separate Gradle homes: Gradle locks its cache
+# and cannot reach a lock holder in another container, so two pipelines on
+# one cache (a push and its PR, run side by side) failed after a timeout.
+variables:
+  - &check
     image: ghcr.io/cirruslabs/android-sdk:36
-    volumes:
-      - /services/common/gradle-android:/root/.gradle
     environment:
       GRADLE_OPTS: -Dorg.gradle.daemon=false
     commands:
@@ -28,6 +30,21 @@ steps:
       - sdkmanager --install "platforms;android-37.0" > /dev/null
       - cd android
       - ./gradlew --console=plain testDebugUnitTest lintDebug :app:assembleDebug
+
+steps:
+  - name: test, lint, build
+    <<: *check
+    volumes:
+      - /services/common/gradle-android:/root/.gradle
+    when:
+      - event: push
+
+  - name: test, lint, build (PR)
+    <<: *check
+    volumes:
+      - /services/common/gradle-android-pr:/root/.gradle
+    when:
+      - event: pull_request
 
   - name: decrypt release key
     image: registry.kirkanos.net/images/ci-build:alpine
@@ -38,6 +55,8 @@ steps:
     commands:
       - sops --decrypt --input-type binary --output-type binary --output android/signing/release.jks android/signing/release.jks.enc
       - sops --decrypt --input-type dotenv --output-type dotenv --output android/signing/signing.env android/signing/signing.env.enc
+      # SERVICE (the deploy directory on the server), for publishing below.
+      - sops --decrypt --input-type dotenv --output-type dotenv --output .env .env.enc
     when:
       - event: push
 
@@ -54,5 +73,30 @@ steps:
       - ./gradlew --console=plain :app:assembleRelease
       - $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk | head -1
       - rm -f signing/release.jks signing/signing.env
+      # What the download page and a future in-app update check can read.
+      - printf '{"versionCode":%s,"versionName":"0.1.%s","sha256":"%s"}\n' "$CI_PIPELINE_NUMBER" "$CI_PIPELINE_NUMBER" "$(sha256sum app/build/outputs/apk/release/app-release.apk | cut -d' ' -f1)" > app/build/outputs/apk/release/magic-portal.json
     when:
       - event: push
+
+  # Same SSH key and host as the deploy in pipeline.yaml. Upload under a
+  # temporary name and rename, so a download never gets half a file.
+  - name: publish apk
+    image: registry.kirkanos.net/images/ci-build:alpine
+    volumes: [ "/services/common/.ssh:/root/.ssh" ]
+    environment:
+      SSH_HOST_LOCAL:
+        from_secret: ssh_host_local
+    commands:
+      - set -a && . ./.env && set +a
+      - test -n "$SERVICE" || (echo "SERVICE is empty" && exit 1)
+      - export SSH_OPTS='-o BatchMode=yes -o RequestTTY=no -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -p822'
+      - export SCP_OPTS='-o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -P822'
+      - export OUT=android/app/build/outputs/apk/release
+      - timeout 60 sh -c "ssh -n -T $SSH_OPTS \"$SSH_HOST_LOCAL\" \"mkdir -p /services/$SERVICE/download\""
+      - timeout 120 sh -c "scp $SCP_OPTS $OUT/app-release.apk \"$SSH_HOST_LOCAL\":/services/$SERVICE/download/magic-portal.apk.part"
+      - timeout 60 sh -c "scp $SCP_OPTS $OUT/magic-portal.json \"$SSH_HOST_LOCAL\":/services/$SERVICE/download/magic-portal.json.part"
+      - timeout 60 sh -c "ssh -n -T $SSH_OPTS \"$SSH_HOST_LOCAL\" \"cd /services/$SERVICE/download && mv magic-portal.apk.part magic-portal.apk && mv magic-portal.json.part magic-portal.json\""
+      - echo "published $(cat $OUT/magic-portal.json)"
+    when:
+      - event: push
+        branch: main

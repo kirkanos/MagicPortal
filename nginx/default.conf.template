@@ -78,6 +78,20 @@ server {
     include /etc/nginx/conf.d/analytics/locations.conf;
 
     # API requests are proxied to the Go backend container.
+    # The Android app (download/magic-portal.apk), put there by the Android
+    # pipeline on every push to main - a bind mount, not part of the image.
+    # Revalidated every time, so a new build is picked up at once.
+    location /download/ {
+        # nginx's mime.types does not know .apk; Android installs it more
+        # readily with the proper type. (types{} here replaces the global map.)
+        types {
+            application/vnd.android.package-archive apk;
+            application/json json;
+        }
+        add_header Cache-Control "no-cache";
+        try_files $uri =404;
+    }
+
     location /api/ {
         proxy_pass http://mtg-portal-backend:8080;
         proxy_set_header Host $host;
