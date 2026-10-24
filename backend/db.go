@@ -205,6 +205,7 @@ func migrate(db *sql.DB) {
 		`ALTER TABLE scryfall_cards ADD COLUMN image_back_small TEXT`,
 		`ALTER TABLE scryfall_cards ADD COLUMN cardmarket_uri TEXT`,
 		`ALTER TABLE scryfall_cards ADD COLUMN reserved INTEGER`,
+		`ALTER TABLE scryfall_cards ADD COLUMN finishes TEXT`,
 	} {
 		if _, err := db.Exec(stmt); err == nil {
 			_, _ = db.Exec(`DELETE FROM meta WHERE key = 'bulk_remote_updated_at'`)

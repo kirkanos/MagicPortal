@@ -184,6 +184,8 @@ type bulkCard struct {
 		EurFoil string `json:"eur_foil"`
 	} `json:"prices"`
 	PurchaseUris map[string]string `json:"purchase_uris"`
+	// nonfoil, foil, etched: the finishes this printing exists in.
+	Finishes []string `json:"finishes"`
 }
 
 func parsePrice(s string) interface{} {
@@ -268,8 +270,8 @@ func syncBulk(db *sql.DB, force bool) error {
 		INSERT INTO scryfall_cards
 			(set_code, collector_number, scryfall_id, name, rarity, type_line, colors,
 			 mana_cost, oracle_text, image_normal, image_small, image_back_normal, image_back_small,
-			 cardmarket_uri, reserved, price_eur, price_eur_foil, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 cardmarket_uri, reserved, price_eur, price_eur_foil, finishes, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(set_code, collector_number) DO UPDATE SET
 			scryfall_id=excluded.scryfall_id, name=excluded.name, rarity=excluded.rarity,
 			type_line=excluded.type_line, colors=excluded.colors,
@@ -278,7 +280,7 @@ func syncBulk(db *sql.DB, force bool) error {
 			image_back_normal=excluded.image_back_normal, image_back_small=excluded.image_back_small,
 			cardmarket_uri=excluded.cardmarket_uri, reserved=excluded.reserved,
 			price_eur=excluded.price_eur, price_eur_foil=excluded.price_eur_foil,
-			updated_at=excluded.updated_at`
+			finishes=excluded.finishes, updated_at=excluded.updated_at`
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	count := 0
@@ -361,7 +363,8 @@ func syncBulk(db *sql.DB, force bool) error {
 
 		if _, err := stmt.Exec(c.Set, c.CollectorNumber, c.ID, c.Name, c.Rarity, typeLine,
 			colorsToJSON(colors), manaCost, oracleText, imgN, imgS, imgBackN, imgBackS,
-			cardmarketURI, reserved, parsePrice(c.Prices.Eur), parsePrice(c.Prices.EurFoil), now); err != nil {
+			cardmarketURI, reserved, parsePrice(c.Prices.Eur), parsePrice(c.Prices.EurFoil),
+			strings.Join(c.Finishes, ","), now); err != nil {
 			stmt.Close()
 			tx.Rollback()
 			return err
