@@ -111,6 +111,11 @@ going up, another instance has consumed it.
 | `mtg_images_bytes` | gauge | Disk space the mirror occupies |
 | `mtg_last_image_sync_timestamp_seconds` | gauge | Last mirror run |
 | `mtg_image_downloads_total{result}` | counter | Downloaded images by result |
+| `mtg_hash_index_enabled` | gauge | 1 when the scanner's image hash index is active |
+| `mtg_card_hashes` | gauge | Printings in the hash index |
+| `mtg_hash_sync_in_progress` | gauge | 1 while the hash index is being built |
+| `mtg_last_hash_sync_timestamp_seconds` | gauge | Last hash index run |
+| `mtg_hash_scans_total{result}` | counter | Hashed scans: `mirror`, `download` or `error` |
 | `mtg_backup_last_size_bytes` | gauge | Size of the last backup |
 
 ### HTTP and runtime

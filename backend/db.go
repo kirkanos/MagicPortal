@@ -82,6 +82,19 @@ CREATE TABLE IF NOT EXISTS image_files (
   fetched_at TEXT
 );
 
+-- Image hashes of card scans for the Android scanner (hashes.go). ts is the
+-- cache buster of the scan a hash came from: a new picture, a new hash.
+CREATE TABLE IF NOT EXISTS card_hashes (
+  set_code         TEXT,
+  collector_number TEXT,
+  scryfall_id      TEXT,
+  ts               TEXT,
+  hash_h           INTEGER,
+  hash_v           INTEGER,
+  computed_at      TEXT,
+  PRIMARY KEY (set_code, collector_number)
+);
+
 -- Wishlist: cards you are missing, keyed by name (all printings of a name are
 -- the same want). set_code/collector_number pin a specific printing when it
 -- actually matters; min_condition is what you would accept when buying.
