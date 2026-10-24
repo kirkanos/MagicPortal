@@ -149,4 +149,22 @@ class ScanSessionTest {
         assertEquals(listOf("normal", "foil"), s.items.map { it.foil })
         assertEquals("foil", s.result().items.last().foil)
     }
+
+    @Test
+    fun theDefaultFinishOnlyWhereThePrintingHasIt() {
+        val s = ScanSession()
+        val ice = Printing(1, "ice", "61", "Brainstorm", "id1", true, setOf("normal"))
+        val promo = Printing(2, "pdom", "1", "Promo", "id2", true, setOf("foil"))
+        val unknown = Printing(3, "snc", "3", "Card", "id3", true)
+        assertEquals("normal", s.addManual(ice, emptyList(), foil = "foil").foil)
+        assertEquals("foil", s.addManual(promo, emptyList()).foil)
+        assertEquals("etched", s.addManual(unknown, emptyList(), foil = "etched").foil)
+    }
+
+    @Test
+    fun finishBitsOfTheIndex() {
+        assertEquals(emptySet<String>(), Printing.finishes(1))
+        assertEquals(setOf("normal", "foil"), Printing.finishes(12 or 1))
+        assertEquals(setOf("foil", "etched"), Printing.finishes(24))
+    }
 }

@@ -33,8 +33,34 @@ data class Match(
  *
  * Old printings of one card often share their art (Alpha, Beta, Revised);
  * the hash then finds the card, not the printing, and the user picks.
+ *
+ * [restrictTo] limits all tiers to some sets, like ManaBox's set filter:
+ * sorting a booster or a precon, a name alone then pins the printing.
  */
 class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex? = null) {
+
+    /** The sets cards may come from and the names printed in them. */
+    private class Scope(val sets: Set<String>, val byName: Map<String, IntArray>)
+
+    @Volatile private var scope: Scope? = null
+
+    /** Only printings of these sets (codes, any case) count from now on; empty = all. */
+    fun restrictTo(sets: Set<String>) {
+        val codes = sets.map { it.lowercase() }.filter(index::hasSet).toSet()
+        scope = if (codes.isEmpty()) null else Scope(
+            codes,
+            index.byName.mapNotNull { (name, ps) ->
+                ps.filter { index.setOf(it) in codes }.takeIf { it.isNotEmpty() }?.let { name to it.toIntArray() }
+            }.toMap(),
+        )
+    }
+
+    private fun names() = scope?.byName ?: index.byName
+
+    private fun inScope(set: String) = scope?.sets?.contains(set) ?: true
+
+    /** Side sets count as regular when chosen on purpose. */
+    private fun isSide(set: String) = scope == null && index.sets[set]?.setType in SIDE_SET_TYPES
 
     /** [hash] is the camera image's artwork hash, null without a hash index. */
     fun match(r: CardReading, hash: CardHash? = null): Match? =
@@ -44,7 +70,7 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
 
     private fun bySetAndNumber(r: CardReading): Match? {
         val set = r.setCode ?: return null
-        for (code in setVariants(set)) for (n in r.numbers) {
+        for (code in setVariants(set).filter(::inScope)) for (n in r.numbers) {
             val p = index.find(code, n.number) ?: continue
             val sim = r.name?.let { nameSimilarity(it, p.name) }
             // A clearly different name means set or number were misread.
@@ -104,7 +130,7 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
         val (cards, sim) = bestNames(r.name ?: return null) ?: return null
         if (hash != null && hashes != null) byNameAndArtwork(cards.map(index::printing), sim, hash)?.let { return it }
         val printings = cards.map(index::printing).sortedWith(
-            compareBy<Printing> { if (index.sets[it.setCode]?.setType in SIDE_SET_TYPES) 1 else 0 }
+            compareBy<Printing> { if (isSide(it.setCode)) 1 else 0 }
                 .thenByDescending { index.sets[it.setCode]?.year ?: 0 }
                 // Within a year the original comes first, reprints and
                 // variant sets follow it ...
@@ -121,7 +147,7 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
         // Regular printings the evidence allows: all of them without a year,
         // those of that year with one. A single one is as good as a number
         // (Quicksand in 2010 is Worldwake, Maze of Shadows only Tempest).
-        val regular = printings.filter { index.sets[it.setCode]?.setType !in SIDE_SET_TYPES }
+        val regular = printings.filter { !isSide(it.setCode) }
         val candidates = if (year == null) regular else regular.filter { index.sets[it.setCode]?.year == year }
         val conf = when {
             candidates.size == 1 && candidates[0] == pick -> 0.75f
@@ -175,7 +201,7 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
         val h = hashes ?: return null
         // Side sets (gold-bordered copies, blank cards, tokens) are never
         // guessed from the picture alone.
-        val hits = h.nearest(hash ?: return null, 60).filter { index.sets[index.printing(it.printing).setCode]?.setType !in SIDE_SET_TYPES }
+        val hits = h.nearest(hash ?: return null, 60) { p -> index.setOf(p).let { inScope(it) && !isSide(it) } }
         val best = hits.firstOrNull() ?: return null
         val name = index.printing(best.printing).name
         // The nearest scan of a different card: without a clear gap the
@@ -192,12 +218,15 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
     /**
      * Names for a typed query, best first, each with its printings (regular
      * sets first, newest first). A prefix beats a substring beats a typo;
-     * the query is typed by a person, so it is short and partial.
+     * the query is typed by a person, so it is short and partial. With a
+     * set filter, names and printings of those sets come first; the others
+     * stay findable for the odd card from another box.
      */
     fun search(query: String, limit: Int = 10): List<List<Printing>> {
         val q = NameNormalizer.normalize(query)
         if (q.length < 2) return emptyList()
         val scored = ArrayList<Pair<String, Float>>()
+        val scoped = scope?.byName
         for (name in index.byName.keys) {
             val s = when {
                 name.startsWith(q) -> 3f - name.length / 1000f
@@ -208,11 +237,12 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
                 }
                 else -> continue
             }
-            scored += name to s
+            scored += name to s + if (scoped?.containsKey(name) == true) 10f else 0f
         }
         return scored.sortedByDescending { it.second }.take(limit).map { (name, _) ->
             index.byName.getValue(name).map(index::printing).sortedWith(
-                compareBy<Printing> { if (index.sets[it.setCode]?.setType in SIDE_SET_TYPES) 1 else 0 }
+                compareBy<Printing> { if (inScope(it.setCode)) 0 else 1 }
+                    .thenBy { if (isSide(it.setCode)) 1 else 0 }
                     .thenByDescending { index.sets[it.setCode]?.releasedAt.orEmpty() },
             ).distinctBy { it.i }
         }
@@ -233,7 +263,8 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
             Regex("""^\S\s+(.+)$""").matchEntire(title.trim())?.let { add(NameNormalizer.normalize(it.groupValues[1])) }
         }.filter { it.length >= 3 }.distinct()
         var best: Pair<String, Float>? = null
-        for (q in readings) for (name in index.byName.keys) {
+        val names = names()
+        for (q in readings) for (name in names.keys) {
             if (kotlin.math.abs(name.length - q.length) > 3) continue
             val d = NameNormalizer.levenshtein(q, name)
             // Short words are close to many names: "Decode" is two edits
@@ -244,7 +275,7 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
         }
         val (name, score) = best ?: return null
         if (score < 0.6f) return null
-        return index.byName.getValue(name) to score
+        return names.getValue(name) to score
     }
 
     /**

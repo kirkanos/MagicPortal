@@ -165,4 +165,34 @@ class CardMatcherTest {
         assertEquals("Bruce Banner // The Incredible Hulk", matcher.search("incredible hulk").first().first().name)
         assertTrue(matcher.search("x").isEmpty())
     }
+
+    // ---- set filter ----
+
+    @Test
+    fun aSetFilterPinsThePrintingByNameAlone() {
+        val m = CardMatcher(index).apply { restrictTo(setOf("WWK")) }
+        val r = m.match(reading("Quicksand"))!!
+        assertEquals("wwk/140", "${r.printing.setCode}/${r.printing.collectorNumber}")
+        assertTrue("no longer a guess", r.confidence >= 0.6f)
+    }
+
+    @Test
+    fun cardsOutsideTheFilterAreNotTaken() {
+        val m = CardMatcher(index).apply { restrictTo(setOf("wwk")) }
+        assertNull(m.match(reading("Counterspell")))
+        // A set code printed on the card does not get past the filter either.
+        assertNull(m.match(CardReadingParser.parse(ocr.getValue("snc_047.jpg"))))
+        // Lifted again, everything counts.
+        m.restrictTo(emptySet())
+        assertNotNull(m.match(reading("Counterspell")))
+    }
+
+    @Test
+    fun manualSearchPutsTheFilteredSetsFirst() {
+        val m = CardMatcher(index).apply { restrictTo(setOf("wwk")) }
+        val quicksand = m.search("quicksand").first()
+        assertEquals("wwk", quicksand.first().setCode)
+        // Other cards stay findable.
+        assertEquals("Counterspell", m.search("counterspell").first().first().name)
+    }
 }

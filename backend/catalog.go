@@ -39,6 +39,7 @@ type catalogEntry struct {
 	HasBack         bool
 	Rarity          string
 	ReleasedAt      string
+	Finishes        string // "nonfoil,foil", empty until the bulk sync filled it
 }
 
 type catalogData struct {
@@ -116,7 +117,8 @@ func catalog() (*catalogData, error) {
 	setRows.Close()
 
 	rows, err := db.Query(`SELECT set_code, collector_number, name, COALESCE(scryfall_id, ''),
-		COALESCE(image_normal, '') <> '', COALESCE(image_back_normal, '') <> '', COALESCE(rarity, '')
+		COALESCE(image_normal, '') <> '', COALESCE(image_back_normal, '') <> '', COALESCE(rarity, ''),
+		COALESCE(finishes, '')
 		FROM scryfall_cards`)
 	if err != nil {
 		return nil, err
@@ -124,7 +126,7 @@ func catalog() (*catalogData, error) {
 	var printings []catalogEntry
 	for rows.Next() {
 		var p catalogEntry
-		if err := rows.Scan(&p.SetCode, &p.CollectorNumber, &p.Name, &p.ScryfallID, &p.HasImage, &p.HasBack, &p.Rarity); err != nil {
+		if err := rows.Scan(&p.SetCode, &p.CollectorNumber, &p.Name, &p.ScryfallID, &p.HasImage, &p.HasBack, &p.Rarity, &p.Finishes); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -189,6 +191,7 @@ func catalog() (*catalogData, error) {
 		if p.HasBack {
 			flags |= 2
 		}
+		flags |= finishFlags(p.Finishes)
 		out.Cards = append(out.Cards, []interface{}{p.SetCode, p.CollectorNumber, p.Name, p.ScryfallID, flags})
 	}
 	var buf bytes.Buffer
@@ -379,4 +382,22 @@ func handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, searchNames(c, name, limit))
+}
+
+// finishFlags encodes a printing's finishes for the phone's index: 4 nonfoil,
+// 8 foil, 16 etched. No bit at all means unknown (a catalog from before the
+// column), and the app then offers every finish.
+func finishFlags(finishes string) int {
+	flags := 0
+	for _, f := range strings.Split(finishes, ",") {
+		switch strings.TrimSpace(f) {
+		case "nonfoil":
+			flags |= 4
+		case "foil":
+			flags |= 8
+		case "etched":
+			flags |= 16
+		}
+	}
+	return flags
 }

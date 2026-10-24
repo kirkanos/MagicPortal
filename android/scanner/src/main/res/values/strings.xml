@@ -30,4 +30,12 @@
     <string name="scanner_nonfoil">Normal</string>
     <string name="scanner_foil" translatable="false">Foil</string>
     <string name="scanner_etched" translatable="false">Etched</string>
+    <string name="scanner_sets_all">Alle Editionen</string>
+    <string name="scanner_sets_title">Editionen</string>
+    <string name="scanner_sets_hint">Nur Karten aus den gewählten Editionen werden erkannt – dann reicht der Name für den richtigen Druck.</string>
+    <string name="scanner_sets_search">Edition oder Kürzel</string>
+    <string name="scanner_sets_clear">Alle zulassen</string>
+    <string name="scanner_sets_done">Fertig</string>
+    <string name="scanner_camera_auto">Auto</string>
+    <string name="scanner_camera_focus">%1$s · ab %2$d cm</string>
 </resources>

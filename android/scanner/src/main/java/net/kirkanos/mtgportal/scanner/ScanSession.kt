@@ -78,7 +78,9 @@ class ScanSession(private val window: Int = 3, private val votes: Int = 2) {
         return add(match, language ?: "en", foil)
     }
 
-    private fun add(match: Match, language: String, foil: String = "normal"): SessionItem {
+    private fun add(match: Match, language: String, wantedFoil: String = "normal"): SessionItem {
+        // The default finish only where the printing has it.
+        val foil = match.printing.finishFor(wantedFoil)
         val same = items.firstOrNull { it.printing.i == match.printing.i && it.language == language && it.foil == foil }
         val item = same?.copy(quantity = same.quantity + 1)
             ?: SessionItem(nextId++, match.printing, match.alternatives, match.source, match.confidence, language, foil)
@@ -104,6 +106,7 @@ class ScanSession(private val window: Int = 3, private val votes: Int = 2) {
         update(id) {
             it.copy(
                 printing = match.printing,
+                foil = match.printing.finishFor(it.foil),
                 alternatives = (listOf(it.printing) + match.alternatives).filter { p -> p.i != match.printing.i }.distinctBy { p -> p.i },
                 source = match.source,
                 confidence = match.confidence,

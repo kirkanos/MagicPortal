@@ -1,12 +1,17 @@
 package net.kirkanos.mtgportal.di
 
 import android.content.Context
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.svg.SvgDecoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.BuildConfig
@@ -17,7 +22,13 @@ import net.kirkanos.mtgportal.core.data.SecretStore
 import net.kirkanos.mtgportal.core.data.SettingsRepository
 import net.kirkanos.mtgportal.core.data.WishlistRepository
 import net.kirkanos.mtgportal.core.network.HttpClients
+import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.PLACEHOLDER_BASE
+import net.kirkanos.mtgportal.core.network.dto.SetDto
+import net.kirkanos.mtgportal.core.network.safeCall
+import net.kirkanos.mtgportal.core.model.ImageUrls
+import net.kirkanos.mtgportal.core.ui.components.CardImage
+import net.kirkanos.mtgportal.core.ui.components.SetSymbol
 import net.kirkanos.mtgportal.scanner.CameraScanner
 import net.kirkanos.mtgportal.scanner.ScanSessionResult
 import net.kirkanos.mtgportal.scanner.ScannerEntry
@@ -57,7 +68,27 @@ class AppContainer(context: Context) {
         ),
         dumpDir = if (BuildConfig.DEBUG) context.getExternalFilesDir("scans") else null,
         isWanted = { wishlist.contains(it) },
+        setSymbol = { code ->
+            LaunchedEffect(Unit) { loadScannerSets() }
+            val sets by scannerSets.collectAsState()
+            val images by config.imageUrls.collectAsState()
+            val url = images.setIcon(sets[code]?.iconSvgUri)
+            SetSymbol(url, null, 22.dp)
+            url != null
+        },
+        cardImage = { id, large, modifier ->
+            val images by config.imageUrls.collectAsState()
+            CardImage(images.card(id, if (large) ImageUrls.Size.NORMAL else ImageUrls.Size.SMALL), "", modifier)
+        },
     )
+
+    /** /api/sets for the symbols in the scanner's set picker, loaded on first use. */
+    private val scannerSets = MutableStateFlow<Map<String, SetDto>>(emptyMap())
+
+    private fun loadScannerSets() {
+        if (scannerSets.value.isNotEmpty()) return
+        appScope.launch { (safeCall { api.sets() } as? ApiResult.Success)?.let { scannerSets.value = it.data } }
+    }
 
     /** The last finished scan session, until it is taken into the collection. */
     var lastScan: ScanSessionResult? = null

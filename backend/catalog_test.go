@@ -79,3 +79,11 @@ func TestSearchNames(t *testing.T) {
 		t.Errorf("unrelated name matched: %+v", hits)
 	}
 }
+
+func TestFinishFlags(t *testing.T) {
+	for in, want := range map[string]int{"": 0, "nonfoil": 4, "foil": 8, "nonfoil,foil": 12, "foil,etched": 24, "glossy": 0} {
+		if got := finishFlags(in); got != want {
+			t.Errorf("finishFlags(%q) = %d, want %d", in, got, want)
+		}
+	}
+}

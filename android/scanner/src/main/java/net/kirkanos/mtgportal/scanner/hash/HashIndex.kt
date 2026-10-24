@@ -23,10 +23,10 @@ class HashIndex private constructor(
     /** Distance of [hash] to one printing's scan, null when it has no hash. */
     fun distance(hash: CardHash, printing: Int): Int? = byPrinting[printing]?.let { hash.distance(h[it], v[it]) }
 
-    /** The [k] nearest printings, closest first. */
-    fun nearest(hash: CardHash, k: Int = 20): List<HashHit> {
+    /** The [k] nearest printings that pass [accept], closest first. */
+    fun nearest(hash: CardHash, k: Int = 20, accept: (Int) -> Boolean = { true }): List<HashHit> {
         val d = IntArray(printings.size) { hash.distance(h[it], v[it]) }
-        return d.indices.sortedBy { d[it] }.take(k).map { HashHit(printings[it], d[it]) }
+        return d.indices.filter { accept(printings[it]) }.sortedBy { d[it] }.take(k).map { HashHit(printings[it], d[it]) }
     }
 
     companion object {
