@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -168,7 +169,7 @@ private fun WishlistContent(data: WishlistDto, exportText: String?, vm: Wishlist
                         Text(it, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(PortalColors.BgCard).padding(8.dp))
                     }
                 }
-                Text(stringResource(R.string.wl_result_count, shown.size, data.items.size), fontSize = 13.sp, color = PortalColors.TextDim)
+                Text(pluralStringResource(R.plurals.wl_result_count, data.items.size, shown.size, data.items.size), fontSize = 13.sp, color = PortalColors.TextDim)
             }
         }
         if (shown.isEmpty()) {
@@ -268,7 +269,7 @@ private fun PriceLine(item: WishlistItemDto, days: Int) {
             Text((if (pct > 0) "+" else "") + String.format(Locale.GERMANY, "%.1f %%", pct), color = color, fontSize = 12.sp)
         }
     }
-    item.priceThen?.let { Text(stringResource(R.string.wl_days_ago, days, Format.eur(it)), fontSize = 11.sp, color = PortalColors.TextDim) }
+    item.priceThen?.let { Text(pluralStringResource(R.plurals.wl_days_ago, days, days, Format.eur(it)), fontSize = 11.sp, color = PortalColors.TextDim) }
 }
 
 @Composable

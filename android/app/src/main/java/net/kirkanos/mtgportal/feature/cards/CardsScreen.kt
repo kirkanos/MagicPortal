@@ -222,7 +222,7 @@ fun CardTile(g: CardGroupDto, set: SetDto?, images: ImageUrls, onClick: () -> Un
     Column(Modifier.clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Box {
             CardImage(images.card(g.imageId, ImageUrls.Size.SMALL), g.name, Modifier.fillMaxWidth())
-            if (g.anyFoil) Badge("Foil", PortalColors.Accent2, PortalColors.Text, Modifier.align(Alignment.TopStart).padding(4.dp))
+            if (g.anyFoil) Badge("Foil", PortalColors.Accent2, foreground = PortalColors.Text, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
             if (g.totalQty > 1) Badge("×${g.totalQty}", PortalColors.Accent, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
             val flags = g.langs.joinToString(" ") { Language.flag(it).ifEmpty { it.uppercase() } }
             if (flags.isNotEmpty()) {

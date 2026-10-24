@@ -33,7 +33,7 @@ fun isUnlocked(): Boolean {
  * @param label text after the star, e.g. "Wunschliste"; null for the bare star
  */
 @Composable
-fun WishStar(name: String, label: String? = null, modifier: Modifier = Modifier) {
+fun WishStar(name: String, modifier: Modifier = Modifier, label: String? = null) {
     if (!isUnlocked()) return
     val c = appContainer()
     val names by c.wishlist.names.collectAsStateWithLifecycle()

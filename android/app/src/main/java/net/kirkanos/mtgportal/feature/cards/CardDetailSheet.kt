@@ -134,14 +134,14 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
             Fact(stringResource(R.string.detail_market_total), Format.eur(totalMarket))
             Text(stringResource(R.string.detail_price_hint), fontSize = 11.sp, color = PortalColors.TextDim)
 
-            WishStar(g.name, stringResource(R.string.detail_wishlist))
+            WishStar(g.name, label = stringResource(R.string.detail_wishlist))
 
             Text(stringResource(R.string.detail_languages), style = MaterialTheme.typography.titleSmall)
             variants.forEach { v ->
                 Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("${Language.flag(v.language)} ${v.language.ifEmpty { "?" }.uppercase()}")
-                        if (v.foil.isNotEmpty() && v.foil != "normal") Badge(v.foil, PortalColors.Accent2, PortalColors.Text)
+                        if (v.foil.isNotEmpty() && v.foil != "normal") Badge(v.foil, PortalColors.Accent2, foreground = PortalColors.Text)
                         Text(Condition.label(v.condition), color = PortalColors.TextDim, modifier = Modifier.weight(1f))
                         Text("×${v.quantity}")
                         Text(Format.eur(v.marketPrice), modifier = Modifier.width(76.dp), maxLines = 1)

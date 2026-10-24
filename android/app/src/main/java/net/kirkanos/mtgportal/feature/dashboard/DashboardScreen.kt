@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -254,7 +255,7 @@ private fun MoversCard(movers: MoversDto?, days: Int, onDays: (Int) -> Unit) {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             items(listOf(7, 30, 90, 365)) { d ->
                 FilterChip(days == d, { onDays(d) }, label = {
-                    Text(if (d == 365) stringResource(R.string.db_year) else stringResource(R.string.db_days_n, d), fontSize = 12.sp)
+                    Text(if (d == 365) stringResource(R.string.db_year) else pluralStringResource(R.plurals.db_days_n, d, d), fontSize = 12.sp)
                 })
             }
         }

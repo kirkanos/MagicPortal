@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -142,7 +143,7 @@ fun ReservedScreen() {
                                 }
                         }
                         Text(stringResource(R.string.reserved_hint), fontSize = 12.sp, color = PortalColors.TextDim)
-                        Text(stringResource(R.string.reserved_result_count, shown.size, r.data.cards.size), fontSize = 13.sp, color = PortalColors.TextDim)
+                        Text(pluralStringResource(R.plurals.reserved_result_count, r.data.cards.size, shown.size, r.data.cards.size), fontSize = 13.sp, color = PortalColors.TextDim)
                     }
                 }
                 if (shown.isEmpty()) item(span = full) { Text(stringResource(R.string.reserved_empty_filter), color = PortalColors.TextDim) }
@@ -163,7 +164,7 @@ private fun ReservedTile(c: ReservedCardDto, images: ImageUrls) {
                 Badge("✓", PortalColors.Green, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
                 if (c.quantity > 1) Badge("×${c.quantity}", PortalColors.Accent, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
             } else {
-                Badge(stringResource(R.string.reserved_missing_tag), PortalColors.Red, PortalColors.Text, Modifier.align(Alignment.TopStart).padding(4.dp))
+                Badge(stringResource(R.string.reserved_missing_tag), PortalColors.Red, foreground = PortalColors.Text, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
             }
             WishStar(c.name, modifier = Modifier.align(Alignment.BottomEnd))
         }

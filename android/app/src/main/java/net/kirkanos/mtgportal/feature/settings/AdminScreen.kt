@@ -168,7 +168,7 @@ fun AdminScreen() {
         pendingUpload = null
         confirm = uploadConfirm to {
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            if (bytes != null) vm.upload(bytes) { t, a, u -> res.getString(R.string.admin_upload_done, t, a, u) }
+            if (bytes != null) vm.upload(bytes) { t, a, u -> res.getQuantityString(R.plurals.admin_upload_done, t, t, a, u) }
         }
     }
 

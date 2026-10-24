@@ -94,7 +94,7 @@ fun SetSymbol(url: String?, rarity: String?, size: Dp = 14.dp) {
 }
 
 @Composable
-fun Badge(text: String, background: Color, foreground: Color = PortalColors.Bg, modifier: Modifier = Modifier) {
+fun Badge(text: String, background: Color, modifier: Modifier = Modifier, foreground: Color = PortalColors.Bg) {
     Text(
         text,
         color = foreground,

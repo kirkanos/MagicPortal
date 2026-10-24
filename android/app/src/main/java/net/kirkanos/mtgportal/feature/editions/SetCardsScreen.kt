@@ -165,7 +165,7 @@ private fun SetCardTile(c: SetCardDto, images: ImageUrls, onClick: () -> Unit) {
                 Badge("✓", PortalColors.Green, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
                 if (owned.copies > 1) Badge("×${owned.copies}", PortalColors.Accent, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
             } else {
-                Badge(stringResource(R.string.reserved_missing_tag), PortalColors.Red, PortalColors.Text, Modifier.align(Alignment.TopStart).padding(4.dp))
+                Badge(stringResource(R.string.reserved_missing_tag), PortalColors.Red, foreground = PortalColors.Text, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
             }
             WishStar(c.name, modifier = Modifier.align(Alignment.BottomEnd))
         }
@@ -199,7 +199,7 @@ private fun SetCardDetailSheet(c: SetCardDto, images: ImageUrls, onDismiss: () -
             if (c.cardmarketUri.isNotEmpty()) {
                 TextButton(onClick = { uri.openUri(c.cardmarketUri) }) { Text(stringResource(R.string.eo_view_cardmarket)) }
             }
-            WishStar(c.name, stringResource(R.string.detail_wishlist))
+            WishStar(c.name, label = stringResource(R.string.detail_wishlist))
             val owned = c.owned
             if (owned == null) {
                 Text(stringResource(R.string.eo_missing_card), color = PortalColors.TextDim)

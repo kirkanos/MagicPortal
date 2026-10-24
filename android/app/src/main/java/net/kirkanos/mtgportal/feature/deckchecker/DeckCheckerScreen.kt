@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -123,7 +124,7 @@ fun DeckCheckerScreen() {
 
     st.bulkResult?.let { (ok, failed) ->
         LaunchedEffect(ok, failed) {
-            val msg = if (failed > 0) res.getString(R.string.dc_bulk_failed, failed) else res.getString(R.string.dc_bulk_done, ok)
+            val msg = if (failed > 0) res.getQuantityString(R.plurals.dc_bulk_failed, failed, failed) else res.getQuantityString(R.plurals.dc_bulk_done, ok, ok)
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             vm.clearBulkResult()
         }
@@ -164,7 +165,7 @@ fun DeckCheckerScreen() {
                         OutlinedButton(enabled = !st.bulkRunning, onClick = {
                             val todo = missing.filter { it.lowercase() !in wished }
                             if (todo.isEmpty()) Toast.makeText(context, allThere, Toast.LENGTH_SHORT).show() else confirm = todo
-                        }) { Text(stringResource(R.string.dc_bulk, missing.size)) }
+                        }) { Text(pluralStringResource(R.plurals.dc_bulk, missing.size, missing.size)) }
                     }
                 }
                 items(lines) { line -> DeckRow(line) }
@@ -175,7 +176,7 @@ fun DeckCheckerScreen() {
     confirm?.let { todo ->
         AlertDialog(
             onDismissRequest = { confirm = null },
-            text = { Text(stringResource(R.string.dc_bulk_confirm, todo.size)) },
+            text = { Text(pluralStringResource(R.plurals.dc_bulk_confirm, todo.size, todo.size)) },
             confirmButton = { TextButton(onClick = { confirm = null; vm.addMissing(todo) }) { Text(stringResource(R.string.common_ok)) } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.common_cancel)) } },
         )

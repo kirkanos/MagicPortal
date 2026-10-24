@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -162,7 +163,7 @@ fun EditionsScreen(onOpenSet: (String) -> Unit) {
                             SortMenu(sort) { sort = it }
                         }
                         Text(stringResource(R.string.ed_hint), fontSize = 12.sp, color = PortalColors.TextDim)
-                        Text(stringResource(R.string.ed_result_count, shown.size, all.size), fontSize = 13.sp, color = PortalColors.TextDim)
+                        Text(pluralStringResource(R.plurals.ed_result_count, all.size, shown.size, all.size), fontSize = 13.sp, color = PortalColors.TextDim)
                     }
                 }
                 items(shown, key = { it.code }) { e ->
@@ -184,7 +185,7 @@ private fun typeButtonLabel(f: TypeFilter): String = when (f.mode) {
     else -> when (f.types.size) {
         0 -> stringResource(R.string.ed_types_none)
         1 -> setTypeLabel(f.types.first())
-        else -> stringResource(R.string.ed_types_n, f.types.size)
+        else -> pluralStringResource(R.plurals.ed_types_n, f.types.size, f.types.size)
     }
 }
 
@@ -220,7 +221,7 @@ private fun EditionRow(e: EditionDto, icon: String?, onClick: () -> Unit) {
             Text(e.code, fontSize = 12.sp, color = PortalColors.TextDim)
         }
         if (e.total == null) {
-            Text(stringResource(R.string.ed_cards_unknown_size, e.owned), fontSize = 12.sp, color = PortalColors.TextDim)
+            Text(pluralStringResource(R.plurals.ed_cards_unknown_size, e.owned, e.owned), fontSize = 12.sp, color = PortalColors.TextDim)
         } else {
             val pct = if (e.total > 0) minOf(100, Math.round(e.owned * 100f / e.total)) else 0
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -239,7 +240,7 @@ private fun EditionRow(e: EditionDto, icon: String?, onClick: () -> Unit) {
                 fontSize = 12.sp,
                 color = if (e.missing == 0) PortalColors.Green else PortalColors.TextDim,
             )
-            if (e.dupeCount > 0) Text(stringResource(R.string.ed_dupes_n, e.dupeCount, e.dupeExtra), fontSize = 12.sp, color = PortalColors.TextDim)
+            if (e.dupeCount > 0) Text(pluralStringResource(R.plurals.ed_dupes_n, e.dupeCount, e.dupeCount, e.dupeExtra), fontSize = 12.sp, color = PortalColors.TextDim)
             Box(Modifier.weight(1f))
             Text(Format.eur(e.marketValue), fontSize = 13.sp, color = PortalColors.Accent)
         }
