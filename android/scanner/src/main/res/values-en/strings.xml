@@ -27,4 +27,12 @@
     <string name="scanner_uncertain">Recognised by name only – please check the printing.</string>
     <string name="scanner_other_printings">Other printings</string>
     <string name="scanner_nonfoil">Non-foil</string>
+    <string name="scanner_sets_all">All sets</string>
+    <string name="scanner_sets_title">Sets</string>
+    <string name="scanner_sets_hint">Only cards from the chosen sets are recognised – the name alone then finds the right printing.</string>
+    <string name="scanner_sets_search">Set name or code</string>
+    <string name="scanner_sets_clear">Allow all</string>
+    <string name="scanner_sets_done">Done</string>
+    <string name="scanner_camera_auto">Auto</string>
+    <string name="scanner_camera_focus">%1$s · from %2$d cm</string>
 </resources>

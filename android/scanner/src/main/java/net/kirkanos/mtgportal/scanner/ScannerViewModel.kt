@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.kirkanos.mtgportal.scanner.catalog.CatalogSet
 import net.kirkanos.mtgportal.scanner.catalog.CatalogStore
 import net.kirkanos.mtgportal.scanner.catalog.Printing
 import net.kirkanos.mtgportal.scanner.match.CardMatcher
@@ -48,14 +49,22 @@ data class ScannerUiState(
      */
     val defaultFoil: String = "normal",
     val defaultLanguage: String? = null,
+    /** Lowercase set codes cards may come from; empty = all. */
+    val sets: Set<String> = emptySet(),
+    /** [CameraChoice.key] of the camera in use, null = the phone's default. */
+    val camera: String? = null,
 )
 
 /**
  * [dumpDir]: debug builds save camera frames there (at most one a second)
  * to tune the scanner offline.
  */
-class ScannerViewModel(private val store: CatalogStore, private val dumpDir: File? = null) : ViewModel() {
-    private val _state = MutableStateFlow(ScannerUiState())
+class ScannerViewModel(
+    private val store: CatalogStore,
+    private val dumpDir: File? = null,
+    private val prefs: ScannerPrefs? = null,
+) : ViewModel() {
+    private val _state = MutableStateFlow(ScannerUiState(sets = prefs?.sets.orEmpty(), camera = prefs?.camera))
     val state: StateFlow<ScannerUiState> = _state
 
     /** Fires once per card taken into the list: beep and vibrate. */
@@ -69,6 +78,8 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
     private val session = ScanSession()
     private val fusion = ReadingFusion()
     private var matcher: CardMatcher? = null
+    private var catalogSets: List<CatalogSet> = emptyList()
+    private var setsByCode: Map<String, CatalogSet> = emptyMap()
 
     init {
         loadCatalog()
@@ -79,7 +90,9 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
         viewModelScope.launch {
             when (val r = store.load()) {
                 is CatalogStore.Result.Ready -> {
-                    matcher = CardMatcher(r.index, r.hashes)
+                    matcher = CardMatcher(r.index, r.hashes).apply { restrictTo(_state.value.sets) }
+                    catalogSets = r.index.sets.values.sortedByDescending { it.releasedAt }
+                    setsByCode = r.index.sets
                     _state.update { it.copy(catalog = CatalogState.Ready(r.index.size, r.current)) }
                     busy.set(false)
                 }
@@ -159,6 +172,23 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
     /** Manual search in the on-device catalog; empty until it is loaded. */
     fun search(query: String): List<List<Printing>> = matcher?.search(query).orEmpty()
 
+    /** All sets of the catalog, newest first; empty until it is loaded. */
+    fun allSets(): List<CatalogSet> = catalogSets
+
+    fun set(code: String): CatalogSet? = setsByCode[code.lowercase()]
+
+    fun setSets(sets: Set<String>) {
+        val codes = sets.map { it.lowercase() }.toSet()
+        prefs?.sets = codes
+        _state.update { it.copy(sets = codes) }
+        viewModelScope.launch(Dispatchers.Default) { matcher?.restrictTo(codes) }
+    }
+
+    fun setCamera(key: String?) {
+        prefs?.camera = key
+        _state.update { it.copy(camera = key) }
+    }
+
     fun setDefaultFoil(foil: String) = _state.update { it.copy(defaultFoil = foil) }
     fun setDefaultLanguage(language: String?) = _state.update { it.copy(defaultLanguage = language) }
 
@@ -175,7 +205,7 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
 
     /** The user picked another printing of the same card; theirs is certain. */
     fun setPrinting(id: Long, p: Printing) = edit(id) { item ->
-        item.copy(printing = p, alternatives = (listOf(item.printing) + item.alternatives).filter { it != p }, source = MatchSource.MANUAL, confidence = 1f)
+        item.copy(printing = p, foil = p.finishFor(item.foil), alternatives = (listOf(item.printing) + item.alternatives).filter { it != p }, source = MatchSource.MANUAL, confidence = 1f)
     }
 
     fun remove(id: Long) {

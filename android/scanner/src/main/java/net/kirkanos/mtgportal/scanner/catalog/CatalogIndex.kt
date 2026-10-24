@@ -8,8 +8,36 @@ data class CatalogSet(val code: String, val name: String, val releasedAt: String
     val year: Int? get() = releasedAt.take(4).toIntOrNull()
 }
 
-/** One printing; [i] is its position in the index arrays. */
-data class Printing(val i: Int, val setCode: String, val collectorNumber: String, val name: String, val scryfallId: String, val hasImage: Boolean)
+/**
+ * One printing; [i] is its position in the index arrays. [finishes] in the
+ * collection's words (normal, foil, etched); empty when the server does not
+ * know them yet, which allows every finish.
+ */
+data class Printing(
+    val i: Int,
+    val setCode: String,
+    val collectorNumber: String,
+    val name: String,
+    val scryfallId: String,
+    val hasImage: Boolean,
+    val finishes: Set<String> = emptySet(),
+) {
+    fun hasFinish(f: String) = finishes.isEmpty() || f in finishes
+
+    /** [wanted] if this printing exists so, else its first finish: a foil-only promo is foil. */
+    fun finishFor(wanted: String) = if (hasFinish(wanted)) wanted else FINISH_ORDER.first { it in finishes }
+
+    companion object {
+        val FINISH_ORDER = listOf("normal", "foil", "etched")
+
+        /** Bits of /api/catalog/index: 4 nonfoil, 8 foil, 16 etched. */
+        fun finishes(flags: Int): Set<String> = buildSet {
+            if (flags and 4 != 0) add("normal")
+            if (flags and 8 != 0) add("foil")
+            if (flags and 16 != 0) add("etched")
+        }
+    }
+}
 
 /**
  * The Scryfall catalog on the phone, built from /api/catalog/index.
@@ -48,7 +76,10 @@ class CatalogIndex private constructor(
 
     val size get() = setCodes.size
 
-    fun printing(i: Int) = Printing(i, setCodes[i], numbers[i], names[i], ids[i], flags[i] and 1 != 0)
+    fun printing(i: Int) = Printing(i, setCodes[i], numbers[i], names[i], ids[i], flags[i] and 1 != 0, Printing.finishes(flags[i]))
+
+    /** Set code of a printing, without building the [Printing]. */
+    fun setOf(i: Int) = setCodes[i]
 
     fun find(setCode: String, number: String): Printing? = byKey[key(setCode, number)]?.let(::printing)
 
