@@ -96,6 +96,14 @@ CREATE TABLE IF NOT EXISTS card_hashes (
   PRIMARY KEY (set_code, collector_number)
 );
 
+-- Answers to writes sent with an Idempotency-Key (collection_write.go): a
+-- retried request gets the first answer instead of adding the cards twice.
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+  key        TEXT PRIMARY KEY,
+  response   TEXT,
+  created_at TEXT
+);
+
 -- Wishlist: cards you are missing, keyed by name (all printings of a name are
 -- the same want). set_code/collector_number pin a specific printing when it
 -- actually matters; min_condition is what you would accept when buying.

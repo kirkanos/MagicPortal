@@ -319,6 +319,10 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `DELETE` | `/api/wishlist/{name}` | Remove one entry (password protected) |
 | `GET` | `/api/wishlist/export` | The list in Cardmarket's decklist format (`text/plain`) |
 | `GET` | `/api/auth-check` | Password check (204/403) |
+| `POST` | `/api/collection/cards` | Add cards (Android app): `{"items":[{setCode, collectorNumber, quantity, foil, language, condition, binderName, binderType}]}`, one transaction, merges equal rows, name and IDs from the catalog; `Idempotency-Key` makes retries safe (password protected) |
+| `GET` | `/api/collection/cards/{id}` | One collection row |
+| `PATCH` | `/api/collection/cards/{id}` | Change `quantity` or `quantityDelta` (0 deletes), move with `binderName`/`foil`/`language`/`condition` – merges into an existing row; edits of CSV rows answer `volatile: true`, the next import resets them (password protected) |
+| `DELETE` | `/api/collection/cards/{id}` | Remove one row (password protected) |
 | `POST` | `/api/upload` | Upload CSV (replaces the CSV rows; app rows stay) |
 | `POST` | `/api/reset` | Clear the collection; `?origin=csv` or `?origin=app` only that source's rows |
 | `POST` | `/api/sync` | Trigger a Scryfall sync now |
