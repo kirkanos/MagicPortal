@@ -13,6 +13,7 @@
     <string name="scanner_permission">The scanner needs access to the camera.</string>
     <string name="scanner_permission_grant">Allow camera</string>
     <string name="scanner_remove">Remove</string>
+    <string name="scanner_torch">Light</string>
     <string name="scanner_search">Search</string>
     <string name="scanner_wanted">Wishlist</string>
     <string name="scanner_defaults">New cards:</string>

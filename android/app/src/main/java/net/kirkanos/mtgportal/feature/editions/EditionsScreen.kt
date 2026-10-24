@@ -66,6 +66,8 @@ import net.kirkanos.mtgportal.core.ui.components.StatGrid
 import net.kirkanos.mtgportal.core.ui.containerViewModel
 import net.kirkanos.mtgportal.core.ui.theme.PortalColors
 import net.kirkanos.mtgportal.di.AppContainer
+import net.kirkanos.mtgportal.core.ui.icons.AppIconView
+import net.kirkanos.mtgportal.core.ui.icons.Icons
 
 private val SORTS = listOf(
     "value-desc" to R.string.ed_sort_value_desc,
@@ -215,7 +217,7 @@ private fun EditionRow(e: EditionDto, icon: String?, onClick: () -> Unit) {
                 AsyncImage(model = icon, contentDescription = null, modifier = Modifier.size(22.dp),
                     colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(PortalColors.Text))
             } else {
-                Text(if (e.inCollection) "🗂️" else "⬚")
+                AppIconView(Icons.Collection, if (e.inCollection) PortalColors.Text else PortalColors.TextDim, size = 22.dp)
             }
             Text(e.name, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(e.code, fontSize = 12.sp, color = PortalColors.TextDim)

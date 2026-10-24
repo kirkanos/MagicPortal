@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.ui.theme.PortalColors
+import net.kirkanos.mtgportal.core.ui.icons.AppIconView
+import net.kirkanos.mtgportal.core.ui.icons.Icons
 
 /** decks.html: a placeholder there too, buttons included and disabled. */
 @Composable
@@ -26,7 +28,7 @@ fun DecksScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
     ) {
-        Text("🧩", fontSize = 48.sp)
+        AppIconView(Icons.Planeswalker, PortalColors.Accent, size = 56.dp)
         Text(stringResource(R.string.decks_title), style = MaterialTheme.typography.titleLarge)
         Text(stringResource(R.string.decks_text), color = PortalColors.TextDim, textAlign = TextAlign.Center)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

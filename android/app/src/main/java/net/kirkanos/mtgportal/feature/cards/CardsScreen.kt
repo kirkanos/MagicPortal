@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
@@ -36,12 +35,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -61,11 +60,22 @@ import net.kirkanos.mtgportal.core.ui.components.Badge
 import net.kirkanos.mtgportal.core.ui.components.CardImage
 import net.kirkanos.mtgportal.core.ui.components.ErrorRetry
 import net.kirkanos.mtgportal.core.ui.components.SetSymbol
-import net.kirkanos.mtgportal.core.ui.components.StatGrid
 import net.kirkanos.mtgportal.core.ui.components.rarityColor
 import net.kirkanos.mtgportal.core.ui.components.rarityLabel
 import net.kirkanos.mtgportal.core.ui.containerViewModel
 import net.kirkanos.mtgportal.core.ui.theme.PortalColors
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Badge as CountBadge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import net.kirkanos.mtgportal.core.ui.icons.AppIconView
+import net.kirkanos.mtgportal.core.ui.icons.Icons
 
 /** The sort orders of the web grid, in its order (sort-by in index.html). */
 private val SORTS = listOf(
@@ -108,29 +118,17 @@ fun CardsScreen(binder: String?, set: String?) {
 
     val full: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
 
+    // Laid out like ManaBox's collection: value up top, one search row, a
+    // dense three-column grid.
     LazyVerticalGrid(
         state = grid,
-        columns = GridCells.Adaptive(minSize = 110.dp),
-        contentPadding = PaddingValues(12.dp),
+        columns = GridCells.Fixed(3),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        st.facets?.stats?.let { s ->
-            item(span = full) {
-                StatGrid(
-                    listOf(
-                        Format.count(s.distinct) to stringResource(R.string.cards_stat_distinct),
-                        Format.count(s.totalQty) to stringResource(R.string.cards_stat_total),
-                        Format.eur(s.purchaseValue) to stringResource(R.string.cards_stat_purchase),
-                        Format.eur(s.marketValue) to stringResource(R.string.cards_stat_market),
-                    ),
-                )
-            }
-        }
-        if (st.random.isNotEmpty()) {
-            item(span = full) { RandomStrip(st.random, st.sets, images, onOpenCard) }
-        }
+        item(span = full) { Header(st, binder, set) }
         item(span = full) {
             Controls(
                 st = st,
@@ -179,47 +177,75 @@ private fun Loading() {
     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
 }
 
+/** Market value large, counts and purchase value small - the collection at a glance. */
+@Composable
+private fun Header(st: CardsUiState, binder: String?, set: String?) {
+    val s = st.facets?.stats
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            binder ?: set?.uppercase() ?: stringResource(R.string.nav_cards),
+            style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold,
+        )
+        if (s != null) {
+            Text(Format.eur(s.marketValue), style = MaterialTheme.typography.titleLarge, color = PortalColors.Accent, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.cards_header_counts, Format.count(s.totalQty), Format.count(s.distinct), Format.eur(s.purchaseValue)),
+                fontSize = 13.sp, color = PortalColors.TextDim,
+            )
+        }
+    }
+}
+
+/** One row: search, sort menu, filters with the number of active ones. */
 @Composable
 private fun Controls(st: CardsUiState, onQuery: (String) -> Unit, onSort: (String) -> Unit, onOpenFilters: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
+    var sortOpen by remember { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        TextField(
             value = st.filters.query,
             onValueChange = onQuery,
             placeholder = { Text(stringResource(R.string.cards_search)) },
+            leadingIcon = { AppIconView(Icons.Search, PortalColors.TextDim) },
+            trailingIcon = {
+                if (st.filters.query.isNotEmpty()) {
+                    IconButton(onClick = { onQuery("") }) { AppIconView(Icons.Close, PortalColors.TextDim, size = 20.dp) }
+                }
+            },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = PortalColors.BgCard,
+                unfocusedContainerColor = PortalColors.BgCard,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            ),
+            modifier = Modifier.weight(1f),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Dropdown(
-                selected = st.filters.sort,
-                options = SORTS.map { (k, label) -> k to stringResource(label) },
-                onSelect = onSort,
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedButton(onClick = onOpenFilters) {
-                val n = st.filters.activeCount
-                Text(if (n > 0) stringResource(R.string.cards_filter_active, n) else stringResource(R.string.cards_filter))
+        Box {
+            IconButton(onClick = { sortOpen = true }) { AppIconView(Icons.Sort, PortalColors.Text) }
+            DropdownMenu(expanded = sortOpen, onDismissRequest = { sortOpen = false }) {
+                SORTS.forEach { (k, label) ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(label), color = if (k == st.filters.sort) PortalColors.Accent else PortalColors.Text) },
+                        onClick = { sortOpen = false; onSort(k) },
+                    )
+                }
             }
+        }
+        IconButton(onClick = onOpenFilters) {
+            val n = st.filters.activeCount
+            BadgedBox(badge = { if (n > 0) CountBadge { Text("$n") } }) { AppIconView(Icons.Filter, PortalColors.Text) }
         }
     }
 }
 
-@Composable
-private fun RandomStrip(cards: List<CardGroupDto>, sets: Map<String, SetDto>, images: ImageUrls, onOpen: (CardGroupDto) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(stringResource(R.string.cards_random_title), color = PortalColors.TextDim, fontSize = 13.sp)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(cards, key = { "r" + it.key }) { g ->
-                Box(Modifier.width(110.dp)) { CardTile(g, sets[SetCode.key(g.setCode)], images, onClick = { onOpen(g) }) }
-            }
-        }
-    }
-}
-
-/** buildCardTile() in grid.js: image with foil/quantity badges and flags, name, set, rarity, price. */
+/**
+ * A grid tile, slim like ManaBox's: the image with quantity, foil and
+ * language marks, the name, and set symbol with price.
+ */
 @Composable
 fun CardTile(g: CardGroupDto, set: SetDto?, images: ImageUrls, onClick: () -> Unit) {
-    Column(Modifier.clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    Column(Modifier.clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Box {
             CardImage(images.card(g.imageId, ImageUrls.Size.SMALL), g.name, Modifier.fillMaxWidth())
             if (g.anyFoil) Badge("Foil", PortalColors.Accent2, foreground = PortalColors.Text, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
@@ -229,17 +255,11 @@ fun CardTile(g: CardGroupDto, set: SetDto?, images: ImageUrls, onClick: () -> Un
                 Text(flags, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomStart).padding(4.dp))
             }
         }
-        Text(g.name, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(g.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SetSymbol(images.setIcon(set?.iconSvgUri), g.rarity)
-            Text(
-                set?.name?.takeIf { it.isNotEmpty() } ?: g.setName.ifEmpty { g.setCode },
-                fontSize = 11.sp, color = PortalColors.TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Row {
-            Text(rarityLabel(g.rarity), fontSize = 11.sp, color = rarityColor(g.rarity), modifier = Modifier.weight(1f))
-            Text(if (g.marketPrice > 0) Format.eur(g.marketPrice) else "–", fontSize = 11.sp)
+            Text(g.setCode.uppercase(), fontSize = 11.sp, color = rarityColor(g.rarity), modifier = Modifier.weight(1f), maxLines = 1)
+            Text(if (g.marketPrice > 0) Format.eur(g.marketPrice) else "–", fontSize = 11.sp, color = PortalColors.Text)
         }
     }
 }

@@ -5,7 +5,7 @@
     <string name="app_name" translatable="false">Magic Portal</string>
 
     <!-- Navigation (NAV_ITEMS in shared.js) -->
-    <string name="nav_cards">Karten</string>
+    <string name="nav_cards">Sammlung</string>
     <string name="nav_editions">Editionen</string>
     <string name="nav_reserved">Reserved List</string>
     <string name="nav_wishlist">Wunschliste</string>
@@ -39,7 +39,7 @@
     <string name="settings_state_open">Der Server hat kein Passwort – alles ist änderbar.</string>
     <string name="settings_state_locked">Gesperrt – Anmelden, um Wunschliste, Upload und Einstellungen zu ändern.</string>
     <string name="settings_state_unlocked">Angemeldet</string>
-    <string name="settings_unlock">🔑 Login</string>
+    <string name="settings_unlock">Login</string>
     <string name="settings_lock">Abmelden</string>
     <string name="settings_version">Version %1$s</string>
 
@@ -53,7 +53,6 @@
     <!-- Cards grid (index.html / grid.js) -->
     <string name="cards_search">Name, Text, Mana suchen…</string>
     <string name="cards_filter">Filter</string>
-    <string name="cards_filter_active">Filter (%1$d)</string>
     <string name="cards_filter_reset">Zurücksetzen</string>
     <string name="cards_all_sets">Alle Sets</string>
     <string name="cards_search_set">Set suchen…</string>
@@ -73,12 +72,7 @@
     <string name="cards_sort_released_desc">Sortieren: Erscheinung (neueste zuerst)</string>
     <string name="cards_sort_released_asc">Sortieren: Erscheinung (älteste zuerst)</string>
     <string name="cards_sort_added_desc">Sortieren: zuletzt hinzugefügt</string>
-    <string name="cards_stat_distinct">Verschiedene Karten</string>
-    <string name="cards_stat_total">Karten gesamt</string>
-    <string name="cards_stat_purchase">Kaufwert</string>
-    <string name="cards_stat_market">Marktwert (Scryfall)</string>
     <string name="cards_result_count">%1$s von %2$s Karten</string>
-    <string name="cards_random_title">Zufällige Karten aus deiner Sammlung</string>
     <string name="cards_no_image">Kein Bild</string>
     <string name="cards_empty">Keine Karten gefunden.</string>
     <string name="cards_collection_empty">Die Sammlung ist noch leer. Melde dich an und lade im Web deinen ManaBox-Export hoch.</string>
@@ -166,7 +160,7 @@
     <string name="wl_sort_added">Sortieren: Zuletzt hinzugefügt</string>
     <string name="wl_add_name">Karte per Name hinzufügen (exakt wie bei Scryfall)</string>
     <string name="wl_add">Hinzufügen</string>
-    <string name="wl_export">📋 Für Cardmarket kopieren</string>
+    <string name="wl_export">Für Cardmarket kopieren</string>
     <string name="wl_export_copied">In die Zwischenablage kopiert – und hier zum Nachlesen:</string>
     <string name="wl_export_empty">Nichts zu exportieren.</string>
     <string name="wl_howto_title">Wie es zu Cardmarket kommt</string>
@@ -351,7 +345,7 @@
     <string name="act_src_log">Protokoll</string>
 
     <!-- Admin (buildAdminOverlay / initCollectionUpload in shared.js) -->
-    <string name="admin_open">⚙ Verwaltung</string>
+    <string name="admin_open">Verwaltung</string>
     <string name="admin_random">Zufallskarten</string>
     <string name="admin_random_enabled">Zufällige Karten auf der Karten-Seite anzeigen</string>
     <string name="admin_random_count">Anzahl</string>
@@ -360,7 +354,7 @@
     <string name="admin_save">Speichern</string>
     <string name="admin_saved">Gespeichert.</string>
     <string name="admin_data">Daten</string>
-    <string name="admin_sync">🔄 Kartendaten &amp; Preise aktualisieren</string>
+    <string name="admin_sync">Kartendaten &amp; Preise aktualisieren</string>
     <string name="admin_sync_hint">Kartendaten &amp; Preise von Scryfall aktualisieren – prüft zusätzlich auf einen neuen CSV-Import aus Nextcloud/Google Drive (falls konfiguriert).</string>
     <string name="admin_syncing">Aktualisiere Kartendaten…</string>
     <string name="admin_card_data">Kartendaten: %1$s</string>
@@ -404,8 +398,10 @@
     <string name="scan_result_copy">Als Liste kopieren</string>
     <string name="scan_result_copied">Kopiert ✓</string>
     <string name="scan_result_again">Weiter scannen</string>
-    <string name="nav_handover">An ManaBox übergeben</string>
-    <string name="handover_title">An ManaBox übergeben</string>
+    <string name="handover_title">Export für ManaBox</string>
+    <string name="settings_export">Export für ManaBox</string>
+    <string name="settings_export_hint">Karten, die du mit der App hinzugefügt hast, als ManaBox-CSV exportieren und nach dem Import in ManaBox bestätigen.</string>
+    <string name="settings_export_open">Exportieren …</string>
     <string name="handover_intro">ManaBox bleibt führend. Karten, die du mit der App hinzugefügt hast, gibt es erst hier. Exportiere sie als ManaBox-CSV, importiere die Datei in ManaBox und bestätige dann hier – danach zählen sie als ManaBox-Karten und werden beim nächsten Import nicht doppelt gezählt.</string>
     <string name="handover_export">Export erstellen</string>
     <string name="handover_none">Keine App-Karten offen – nichts zu übergeben.</string>
@@ -431,4 +427,5 @@
     <string name="binders_rename_hint">Gibt es den Namen schon, werden die Ordner zusammengeführt.</string>
     <string name="binders_rename_ok">Übernehmen</string>
     <string name="binders_rename_volatile">Umbenannt – Karten aus ManaBox kommen beim nächsten Import aber wieder unter dem alten Namen.</string>
+    <string name="cards_header_counts">%1$s Karten · %2$s verschieden · Kaufwert %3$s</string>
 </resources>

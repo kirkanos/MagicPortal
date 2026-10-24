@@ -85,6 +85,11 @@ import net.kirkanos.mtgportal.scanner.camera.Quad
 import net.kirkanos.mtgportal.scanner.catalog.CatalogStore
 import java.io.File
 import java.util.concurrent.Executors
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.addPathNodes
 
 /**
  * The camera scanner behind [ScannerEntry]; the app hands in where the
@@ -126,6 +131,16 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     else -> null
 }
 
+/** Material Symbols flash_on / flash_off (rounded, 400), drawn in a 960 box with y from -960. */
+private fun materialIcon(name: String, d: String) = ImageVector.Builder(name, 24.dp, 24.dp, 960f, 960f)
+    .addGroup(translationY = 960f)
+    .addPath(addPathNodes(d), fill = SolidColor(Color.Black))
+    .clearGroup()
+    .build()
+
+private val FlashOn = materialIcon("flash_on", "m460-272 186-268H520l81-280H340v360h120v188Zm251-257L441-139q-5 7-11.5 8.5t-13.4-.66q-6.9-2.15-11.5-7.54-4.6-5.39-4.6-13.3v-248h-60q-24.75 0-42.37-17.63Q280-435.25 280-460v-360q0-24.75 17.63-42.38Q315.25-880 340-880h278q23 0 38 18.5t8 41.5l-64 220h74q26.87 0 39.94 24Q727-552 711-529Zm-251 69H340h120Z")
+private val FlashOff = materialIcon("flash_off", "m664-820-64 220h74q26.87 0 39.94 24Q727-552 711-529l-59 85q-8.43 11.05-22.21 12.53Q616-430 606-440q-8-8-8.5-18t5.5-19l43-63h-86q-15.45 0-24.73-12-9.27-12-4.27-26l70-242H310q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h308q23 0 38 18.5t8 41.5ZM792-83 561-313 441-139q-5 7-11.5 8.5t-13.4-.66q-6.9-2.15-11.5-7.54-4.6-5.39-4.6-13.3v-248h-60q-24.75 0-42.37-17.63Q280-435.25 280-460v-134L82-792q-9-9.07-9-21.53Q73-826 82.05-835q9.06-9 21.5-9 12.45 0 21.45 9l710 710q9 9 9 21t-9.05 21q-9.06 9-21.5 9Q801-74 792-83ZM463-639Z")
+
 private val LANGUAGES = listOf("en", "de", "fr", "it", "es", "pt", "ja", "ko", "ru", "zhs", "zht")
 private val FINISHES = listOf("normal", "foil", "etched")
 
@@ -164,7 +179,11 @@ private fun ScannerContent(
             if (granted) CameraPreview(vm, state.torch) else PermissionHint(onAskPermission)
             GuideOverlay(Modifier.fillMaxSize(), state.outline)
             Row(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-                if (granted) OutlinedButton(onClick = vm::toggleTorch) { Text(if (state.torch) "🔦 ✓" else "🔦") }
+                if (granted) {
+                    FilledTonalIconButton(onClick = vm::toggleTorch) {
+                        Icon(if (state.torch) FlashOn else FlashOff, contentDescription = stringResource(R.string.scanner_torch))
+                    }
+                }
             }
             StatusChip(state, Modifier.align(Alignment.BottomCenter).padding(12.dp), onRetry = vm::loadCatalog)
         }

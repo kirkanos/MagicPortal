@@ -85,3 +85,11 @@ Pipeline-Nummer, damit jede neue APK sich über die alte installieren lässt.
 Den Schlüssel nicht verlieren: Android installiert ein Update nur mit derselben
 Signatur. Eine Kopie gehört in den Passwortmanager (lokal entschlüsseln mit
 `sops --decrypt --input-type binary --output-type binary signing/release.jks.enc`).
+
+## Schriften und Icons
+
+- Magic-Symbole: Schriften **Mana** 1.18.0 und **Keyrune** 3.19.0 von Andrew Gioia
+  (`app/src/main/res/font/`), SIL OFL 1.1. Die Symbole sind Marken von Wizards of the Coast.
+- Übrige Icons: Material Symbols (Rounded, 400), Apache 2.0; die Pfade stehen in
+  `core/ui/icons/Icons.kt`.
+- App-Symbol: das Magic-Portal-Logo (`app/images/magic-portal-icon.svg`) als adaptives Icon.

@@ -84,7 +84,7 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
 }
 
 @Composable
-fun SettingsScreen(onOpenAdmin: () -> Unit) {
+fun SettingsScreen(onOpenAdmin: () -> Unit, onOpenExport: () -> Unit = {}) {
     val vm = containerViewModel { SettingsViewModel(it) }
     val baseUrl by vm.baseUrl.collectAsStateWithLifecycle()
     val auth by vm.auth.collectAsStateWithLifecycle()
@@ -138,6 +138,13 @@ fun SettingsScreen(onOpenAdmin: () -> Unit) {
         // Like the gear in the web's nav bar: only with write access.
         if (auth == AuthState.Open || auth == AuthState.Unlocked) {
             Button(onClick = onOpenAdmin) { Text(stringResource(R.string.admin_open)) }
+        }
+
+        // Handing app cards over to ManaBox, which stays the master.
+        if (auth == AuthState.Open || auth == AuthState.Unlocked) {
+            Text(stringResource(R.string.settings_export), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_export_hint), color = PortalColors.TextDim)
+            OutlinedButton(onClick = onOpenExport) { Text(stringResource(R.string.settings_export_open)) }
         }
 
         Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleMedium)

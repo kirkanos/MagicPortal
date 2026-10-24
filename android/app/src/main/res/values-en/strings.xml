@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="nav_cards">Cards</string>
+    <string name="nav_cards">Collection</string>
     <string name="nav_editions">Editions</string>
     <string name="nav_reserved">Reserved List</string>
     <string name="nav_wishlist">Wishlist</string>
@@ -32,7 +32,7 @@
     <string name="settings_state_open">The server has no password – everything can be changed.</string>
     <string name="settings_state_locked">Locked – log in to change the wishlist, uploads and settings.</string>
     <string name="settings_state_unlocked">Logged in</string>
-    <string name="settings_unlock">🔑 Login</string>
+    <string name="settings_unlock">Login</string>
     <string name="settings_lock">Log out</string>
     <string name="settings_version">Version %1$s</string>
 
@@ -44,7 +44,6 @@
 
     <string name="cards_search">Search name, text, mana…</string>
     <string name="cards_filter">Filter</string>
-    <string name="cards_filter_active">Filter (%1$d)</string>
     <string name="cards_filter_reset">Reset</string>
     <string name="cards_all_sets">All sets</string>
     <string name="cards_search_set">Search set…</string>
@@ -64,12 +63,7 @@
     <string name="cards_sort_released_desc">Sort: Release (newest first)</string>
     <string name="cards_sort_released_asc">Sort: Release (oldest first)</string>
     <string name="cards_sort_added_desc">Sort: Recently added</string>
-    <string name="cards_stat_distinct">Distinct cards</string>
-    <string name="cards_stat_total">Cards total</string>
-    <string name="cards_stat_purchase">Purchase value</string>
-    <string name="cards_stat_market">Market value (Scryfall)</string>
     <string name="cards_result_count">%1$s of %2$s cards</string>
-    <string name="cards_random_title">Random cards from your collection</string>
     <string name="cards_no_image">No image</string>
     <string name="cards_empty">No cards found.</string>
     <string name="cards_collection_empty">The collection is still empty. Log in and upload your ManaBox export on the web.</string>
@@ -152,7 +146,7 @@
     <string name="wl_sort_added">Sort: Recently added</string>
     <string name="wl_add_name">Add a card by name (exactly as Scryfall spells it)</string>
     <string name="wl_add">Add</string>
-    <string name="wl_export">📋 Copy for Cardmarket</string>
+    <string name="wl_export">Copy for Cardmarket</string>
     <string name="wl_export_copied">Copied to the clipboard – and here to read back:</string>
     <string name="wl_export_empty">Nothing to export.</string>
     <string name="wl_howto_title">How it gets to Cardmarket</string>
@@ -331,7 +325,7 @@
     <string name="act_src_restore">Restore</string>
     <string name="act_src_reset">Reset</string>
     <string name="act_src_log">Log</string>
-    <string name="admin_open">⚙ Administration</string>
+    <string name="admin_open">Administration</string>
     <string name="admin_random">Random cards</string>
     <string name="admin_random_enabled">Show random cards on the Cards page</string>
     <string name="admin_random_count">Count</string>
@@ -340,7 +334,7 @@
     <string name="admin_save">Save</string>
     <string name="admin_saved">Saved.</string>
     <string name="admin_data">Data</string>
-    <string name="admin_sync">🔄 Refresh card data &amp; prices</string>
+    <string name="admin_sync">Refresh card data &amp; prices</string>
     <string name="admin_sync_hint">Refresh card data &amp; prices from Scryfall – also checks for a new CSV import from Nextcloud/Google Drive (if configured).</string>
     <string name="admin_syncing">Updating card data…</string>
     <string name="admin_card_data">Card data: %1$s</string>
@@ -383,8 +377,10 @@
     <string name="scan_result_copy">Copy as list</string>
     <string name="scan_result_copied">Copied ✓</string>
     <string name="scan_result_again">Scan more</string>
-    <string name="nav_handover">Hand over to ManaBox</string>
-    <string name="handover_title">Hand over to ManaBox</string>
+    <string name="handover_title">Export for ManaBox</string>
+    <string name="settings_export">Export for ManaBox</string>
+    <string name="settings_export_hint">Export the cards you added with the app as a ManaBox CSV, and confirm once ManaBox has imported it.</string>
+    <string name="settings_export_open">Export …</string>
     <string name="handover_intro">ManaBox stays the master. Cards you added with the app exist only here so far. Export them as a ManaBox CSV, import the file into ManaBox, then confirm here – from then on they count as ManaBox cards and the next import does not count them twice.</string>
     <string name="handover_export">Create export</string>
     <string name="handover_none">No app cards waiting – nothing to hand over.</string>
@@ -410,4 +406,5 @@
     <string name="binders_rename_hint">If the name exists, the binders are merged.</string>
     <string name="binders_rename_ok">Apply</string>
     <string name="binders_rename_volatile">Renamed – but cards from ManaBox come back under the old name with the next import.</string>
+    <string name="cards_header_counts">%1$s cards · %2$s distinct · purchase value %3$s</string>
 </resources>

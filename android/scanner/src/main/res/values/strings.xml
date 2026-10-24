@@ -14,6 +14,7 @@
     <string name="scanner_permission">Für den Scanner braucht die App die Kamera.</string>
     <string name="scanner_permission_grant">Kamera erlauben</string>
     <string name="scanner_remove">Entfernen</string>
+    <string name="scanner_torch">Licht</string>
     <string name="scanner_search">Suchen</string>
     <string name="scanner_wanted">Wunschliste</string>
     <string name="scanner_defaults">Neue Karten:</string>
