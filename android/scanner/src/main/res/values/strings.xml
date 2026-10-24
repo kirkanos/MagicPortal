@@ -14,6 +14,13 @@
     <string name="scanner_permission">Für den Scanner braucht die App die Kamera.</string>
     <string name="scanner_permission_grant">Kamera erlauben</string>
     <string name="scanner_remove">Entfernen</string>
+    <string name="scanner_search">Suchen</string>
+    <string name="scanner_search_hint">Kartenname (englisch)</string>
+    <string name="scanner_search_none">Nichts gefunden.</string>
+    <plurals name="scanner_search_printings">
+        <item quantity="one">%1$s · %2$d Druck</item>
+        <item quantity="other">%1$s · %2$d Drucke</item>
+    </plurals>
     <string name="scanner_uncertain">Nur am Namen erkannt – Druck bitte prüfen.</string>
     <string name="scanner_other_printings">Andere Drucke</string>
     <string name="scanner_nonfoil">Normal</string>

@@ -148,6 +148,15 @@ class ScannerViewModel(private val store: CatalogStore, private val dumpDir: Fil
 
     fun toggleTorch() = _state.update { it.copy(torch = !it.torch) }
 
+    /** Manual search in the on-device catalog; empty until it is loaded. */
+    fun search(query: String): List<List<Printing>> = matcher?.search(query).orEmpty()
+
+    fun addManual(printings: List<Printing>) {
+        val first = printings.firstOrNull() ?: return
+        session.addManual(first, printings.drop(1).take(30))
+        _state.update { it.copy(items = session.items) }
+    }
+
     fun setQuantity(id: Long, quantity: Int) = edit(id) { it.copy(quantity = quantity.coerceIn(1, 999)) }
     fun setFoil(id: Long, foil: String) = edit(id) { it.copy(foil = foil) }
     fun setLanguage(id: Long, language: String) = edit(id) { it.copy(language = language) }

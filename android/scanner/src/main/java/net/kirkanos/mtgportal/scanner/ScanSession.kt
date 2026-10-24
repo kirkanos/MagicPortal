@@ -111,6 +111,10 @@ class ScanSession(private val window: Int = 3, private val votes: Int = 2) {
         }
     }
 
+    /** A card the user picked by hand: no voting, counted like a scan. */
+    fun addManual(printing: Printing, alternatives: List<Printing>, language: String = "en"): SessionItem =
+        add(Match(printing, 1f, MatchSource.MANUAL, alternatives), language)
+
     fun update(id: Long, change: (SessionItem) -> SessionItem) {
         items = items.map { if (it.id == id) change(it) else it }
     }

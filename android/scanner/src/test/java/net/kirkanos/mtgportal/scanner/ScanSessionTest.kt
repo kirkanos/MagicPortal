@@ -128,4 +128,15 @@ class ScanSessionTest {
         assertEquals("wwk", item.printing.setCode)
         assertEquals(2, item.quantity)
     }
+
+    @Test
+    fun manualCardsSkipTheVoteAndMergeLikeScans() {
+        val s = ScanSession()
+        val p = Printing(9, "ice", "61", "Brainstorm", "id9", true)
+        s.addManual(p, emptyList())
+        s.addManual(p, emptyList())
+        val item = s.items.single()
+        assertEquals(2, item.quantity)
+        assertEquals(MatchSource.MANUAL, item.source)
+    }
 }

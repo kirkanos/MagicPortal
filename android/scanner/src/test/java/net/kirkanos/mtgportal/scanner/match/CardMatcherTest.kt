@@ -151,4 +151,18 @@ class CardMatcherTest {
         val maze = matcher.match(reading("Maze of Shadows"))!!
         assertTrue(maze.confidence >= 0.6f)
     }
+
+    @Test
+    fun manualSearchForgivesPrefixesAndTypos() {
+        // A prefix, newest regular printing first.
+        val counter = matcher.search("counters").first()
+        assertEquals("Counterspell", counter.first().name)
+        assertTrue("several printings", counter.size > 10)
+        assertTrue("regular sets first", index.sets[counter.first().setCode]?.setType !in setOf("promo", "memorabilia"))
+        // A typo in a longer name.
+        assertEquals("Necropotence", matcher.search("necropotance").first().first().name)
+        // Double-faced cards by either face.
+        assertEquals("Bruce Banner // The Incredible Hulk", matcher.search("incredible hulk").first().first().name)
+        assertTrue(matcher.search("x").isEmpty())
+    }
 }

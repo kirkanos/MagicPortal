@@ -187,6 +187,37 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
         return Match(same.first(), conf, MatchSource.HASH, same.drop(1).take(12))
     }
 
+    // ---- manual search ----
+
+    /**
+     * Names for a typed query, best first, each with its printings (regular
+     * sets first, newest first). A prefix beats a substring beats a typo;
+     * the query is typed by a person, so it is short and partial.
+     */
+    fun search(query: String, limit: Int = 10): List<List<Printing>> {
+        val q = NameNormalizer.normalize(query)
+        if (q.length < 2) return emptyList()
+        val scored = ArrayList<Pair<String, Float>>()
+        for (name in index.byName.keys) {
+            val s = when {
+                name.startsWith(q) -> 3f - name.length / 1000f
+                name.contains(q) -> 2f - name.length / 1000f
+                q.length >= 4 && kotlin.math.abs(name.length - q.length) <= 2 -> {
+                    val d = NameNormalizer.levenshtein(q, name)
+                    if (d <= maxOf(1, q.length / 4)) 1f - d / 10f else continue
+                }
+                else -> continue
+            }
+            scored += name to s
+        }
+        return scored.sortedByDescending { it.second }.take(limit).map { (name, _) ->
+            index.byName.getValue(name).map(index::printing).sortedWith(
+                compareBy<Printing> { if (index.sets[it.setCode]?.setType in SIDE_SET_TYPES) 1 else 0 }
+                    .thenByDescending { index.sets[it.setCode]?.releasedAt.orEmpty() },
+            ).distinctBy { it.i }
+        }
+    }
+
     // ---- names ----
 
     /**

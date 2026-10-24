@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,6 +44,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -130,6 +132,7 @@ private fun ScannerContent(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<Long?>(null) }
+    var searching by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
     val tone = remember { runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 60) }.getOrNull() }
     DisposableEffect(Unit) { onDispose { tone?.release() } }
@@ -144,6 +147,7 @@ private fun ScannerContent(
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onClose) { Text(stringResource(R.string.scanner_close)) }
             Text(stringResource(R.string.scanner_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { searching = true }, enabled = state.catalog is CatalogState.Ready) { Text(stringResource(R.string.scanner_search)) }
             val count = state.items.sumOf { it.quantity }
             Button(onClick = onDone, enabled = count > 0) { Text(pluralStringResource(R.plurals.scanner_done, count, count)) }
         }
@@ -174,6 +178,45 @@ private fun ScannerContent(
 
     state.items.firstOrNull { it.id == editing }?.let { item ->
         EditSheet(item, vm, onDismiss = { editing = null })
+    }
+    if (searching) SearchSheet(vm, onDismiss = { searching = false })
+}
+
+/**
+ * For cards the camera does not get: type the name (typos forgiven, works
+ * offline on the device's catalog), tap a result to add it - the newest
+ * regular printing, the others to pick from in the edit sheet.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchSheet(vm: ScannerViewModel, onDismiss: () -> Unit) {
+    var query by remember { mutableStateOf("") }
+    val results = remember(query) { vm.search(query) }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 16.dp).imePadding()) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.scanner_search_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (query.length >= 2 && results.isEmpty()) {
+                Text(stringResource(R.string.scanner_search_none), modifier = Modifier.padding(vertical = 12.dp))
+            }
+            LazyColumn {
+                items(results, key = { it.first().i }) { printings ->
+                    val p = printings.first()
+                    ListItem(
+                        modifier = Modifier.clickable { vm.addManual(printings); onDismiss() },
+                        headlineContent = { Text(p.name) },
+                        supportingContent = {
+                            Text(pluralStringResource(R.plurals.scanner_search_printings, printings.size, p.setCode.uppercase(), printings.size))
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 

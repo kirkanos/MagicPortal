@@ -13,6 +13,13 @@
     <string name="scanner_permission">The scanner needs access to the camera.</string>
     <string name="scanner_permission_grant">Allow camera</string>
     <string name="scanner_remove">Remove</string>
+    <string name="scanner_search">Search</string>
+    <string name="scanner_search_hint">Card name</string>
+    <string name="scanner_search_none">Nothing found.</string>
+    <plurals name="scanner_search_printings">
+        <item quantity="one">%1$s · %2$d printing</item>
+        <item quantity="other">%1$s · %2$d printings</item>
+    </plurals>
     <string name="scanner_uncertain">Recognised by name only – please check the printing.</string>
     <string name="scanner_other_printings">Other printings</string>
     <string name="scanner_nonfoil">Non-foil</string>
