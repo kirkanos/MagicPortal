@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Magic Portal logo (app/images/magic-portal-icon.svg): the box -
+     a cube - between the five mana colours. Scaled from its 200 box into the
+     inner 66 of the 108 adaptive canvas, so round masks keep all of it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.44" android:scaleY="0.44" android:translateX="10" android:translateY="10">
+        <group android:translateX="122.5" android:translateY="61" android:rotation="30">
+            <path android:fillColor="#F2C144" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
+        </group>
+        <group android:translateX="163" android:translateY="100" android:rotation="90">
+            <path android:fillColor="#2F6FD0" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
+        </group>
+        <group android:translateX="122.5" android:translateY="139" android:rotation="-30">
+            <path android:fillColor="#3A3A40" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
+        </group>
+        <group android:translateX="77.5" android:translateY="139" android:rotation="30">
+            <path android:fillColor="#DF4038" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
+        </group>
+        <group android:translateX="37" android:translateY="100" android:rotation="90">
+            <path android:fillColor="#57AD4E" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
+        </group>
+        <group android:translateX="77.5" android:translateY="61" android:rotation="-30">
+            <path android:fillColor="#ECECEC" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
+        </group>
+        <path android:pathData="M100,48 L145,74 L100,100 L55,74 Z" android:strokeColor="#111114" android:strokeWidth="4" android:strokeLineJoin="round">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="radial" android:centerX="100" android:centerY="69" android:gradientRadius="62">
+                    <item android:offset="0" android:color="#FFD9C6FF" />
+                    <item android:offset="0.55" android:color="#FF9A6CF0" />
+                    <item android:offset="1" android:color="#FF5C33B8" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:fillColor="#4A4A52" android:pathData="M55,74 L100,100 L100,152 L55,126 Z" android:strokeColor="#111114" android:strokeWidth="4" android:strokeLineJoin="round" />
+        <path android:fillColor="#2E2E34" android:pathData="M145,74 L100,100 L100,152 L145,126 Z" android:strokeColor="#111114" android:strokeWidth="4" android:strokeLineJoin="round" />
+    </group>
+</vector>

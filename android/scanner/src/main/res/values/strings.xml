@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scanner_title" translatable="false">Scanner</string>
+    <string name="scanner_close">Schließen</string>
+    <plurals name="scanner_done">
+        <item quantity="one">Fertig (%d)</item>
+        <item quantity="other">Fertig (%d)</item>
+    </plurals>
+    <string name="scanner_empty">Karte in den Rahmen legen. Erkannte Karten erscheinen hier; antippen zum Ändern.</string>
+    <string name="scanner_hint">Karte in den Rahmen legen</string>
+    <string name="scanner_catalog_loading">Katalog wird geladen …</string>
+    <string name="scanner_catalog_failed">Katalog nicht verfügbar: %s (antippen zum Wiederholen)</string>
+    <string name="scanner_catalog_offline">Offline – älterer Katalog</string>
+    <string name="scanner_permission">Für den Scanner braucht die App die Kamera.</string>
+    <string name="scanner_permission_grant">Kamera erlauben</string>
+    <string name="scanner_remove">Entfernen</string>
+    <string name="scanner_torch">Licht</string>
+    <string name="scanner_search">Suchen</string>
+    <string name="scanner_wanted">Wunschliste</string>
+    <string name="scanner_defaults">Neue Karten:</string>
+    <string name="scanner_language_auto">Sprache wie gelesen</string>
+    <string name="scanner_search_hint">Kartenname (englisch)</string>
+    <string name="scanner_search_none">Nichts gefunden.</string>
+    <plurals name="scanner_search_printings">
+        <item quantity="one">%1$s · %2$d Druck</item>
+        <item quantity="other">%1$s · %2$d Drucke</item>
+    </plurals>
+    <string name="scanner_uncertain">Nur am Namen erkannt – Druck bitte prüfen.</string>
+    <string name="scanner_other_printings">Andere Drucke</string>
+    <string name="scanner_nonfoil">Normal</string>
+    <string name="scanner_foil" translatable="false">Foil</string>
+    <string name="scanner_etched" translatable="false">Etched</string>
+</resources>

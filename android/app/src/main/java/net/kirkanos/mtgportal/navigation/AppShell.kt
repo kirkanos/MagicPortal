@@ -1,0 +1,209 @@
+package net.kirkanos.mtgportal.navigation
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import net.kirkanos.mtgportal.R
+import net.kirkanos.mtgportal.core.data.AuthState
+import net.kirkanos.mtgportal.core.ui.appContainer
+import net.kirkanos.mtgportal.core.ui.theme.PortalColors
+import androidx.navigation.toRoute
+import net.kirkanos.mtgportal.feature.binders.BindersScreen
+import net.kirkanos.mtgportal.feature.cards.CardsScreen
+import net.kirkanos.mtgportal.feature.dashboard.DashboardScreen
+import net.kirkanos.mtgportal.feature.deckchecker.DeckCheckerScreen
+import net.kirkanos.mtgportal.feature.decks.DecksScreen
+import net.kirkanos.mtgportal.feature.editions.EditionsScreen
+import net.kirkanos.mtgportal.feature.editions.SetCardsScreen
+import net.kirkanos.mtgportal.feature.reserved.ReservedScreen
+import net.kirkanos.mtgportal.feature.wishlist.WishlistScreen
+import net.kirkanos.mtgportal.feature.activity.ActivityScreen
+import net.kirkanos.mtgportal.feature.settings.AdminScreen
+import net.kirkanos.mtgportal.feature.settings.SettingsScreen
+import net.kirkanos.mtgportal.feature.collection.HandoverScreen
+import net.kirkanos.mtgportal.feature.collection.ScanResultScreen
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.graphics.Color
+import net.kirkanos.mtgportal.core.ui.icons.AppIcon
+import net.kirkanos.mtgportal.core.ui.icons.AppIconView
+import net.kirkanos.mtgportal.core.ui.icons.Icons
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppShell() {
+    val container = appContainer()
+    val nav = rememberNavController()
+    val config by container.config.config.collectAsStateWithLifecycle()
+    val auth by container.auth.state.collectAsStateWithLifecycle()
+    var moreOpen by remember { mutableStateOf(false) }
+
+    val visible = NavItem.entries.filter { it.navKey !in config.hiddenNav }
+    val unlocked = auth == AuthState.Open || auth == AuthState.Unlocked
+
+    val entry by nav.currentBackStackEntryAsState()
+    // The scanner wants every pixel for the camera and its list.
+    val scanning = entry?.destination?.hasRoute(ScannerRoute::class) == true
+
+    Scaffold(
+        bottomBar = {
+            if (!scanning) NavigationBar(containerColor = PortalColors.BgElevated) {
+                val dest = entry?.destination
+                val primary = visible.filter { it.primary }
+                @Composable
+                fun RowScope.Section(item: NavItem) {
+                    val selected = dest?.hasRoute(item.route::class) == true
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = { nav.navigateTop(item.route) },
+                        icon = { AppIconView(item.icon, if (selected) PortalColors.Accent else PortalColors.TextDim) },
+                        label = { Text(stringResource(item.label), maxLines = 1) },
+                        colors = navColors(),
+                    )
+                }
+                // Like ManaBox: the scanner is the big button in the middle.
+                primary.take(2).forEach { Section(it) }
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { nav.navigate(ScannerRoute) { launchSingleTop = true } },
+                    icon = {
+                        val label = stringResource(R.string.nav_scanner)
+                        Box(
+                            Modifier.size(56.dp).clip(CircleShape).background(PortalColors.Accent)
+                                .semantics { contentDescription = label },
+                            contentAlignment = Alignment.Center,
+                        ) { AppIconView(Icons.Camera, PortalColors.Bg, size = 28.dp) }
+                    },
+                    // No label, like ManaBox: the button alone, centred.
+                    alwaysShowLabel = false,
+                    colors = navColors(indicator = Color.Transparent),
+                )
+                primary.drop(2).forEach { Section(it) }
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { moreOpen = true },
+                    icon = { AppIconView(Icons.Menu, PortalColors.TextDim) },
+                    label = { Text(stringResource(R.string.nav_more), maxLines = 1) },
+                    colors = navColors(),
+                )
+            }
+        },
+    ) { padding ->
+        // imePadding: edge-to-edge, Android no longer shrinks the window for the
+        // keyboard, so without it the keyboard covers whatever is below a field.
+        NavHost(
+            nav,
+            startDestination = CardsRoute(),
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding).imePadding(),
+        ) {
+            composable<CardsRoute> { entry ->
+                val r = entry.toRoute<CardsRoute>()
+                CardsScreen(binder = r.binder, set = r.set)
+            }
+            composable<EditionsRoute> { EditionsScreen(onOpenSet = { nav.navigate(SetCardsRoute(it)) }) }
+            composable<SetCardsRoute> { entry -> SetCardsScreen(entry.toRoute<SetCardsRoute>().code) }
+            composable<ReservedRoute> { ReservedScreen() }
+            composable<WishlistRoute> { WishlistScreen() }
+            composable<BindersRoute> { entry ->
+                // Like index.html?binder=: the grid, filtered to that folder.
+                BindersScreen(entry.toRoute<BindersRoute>().type, onOpen = { nav.navigate(CardsRoute(binder = it)) })
+            }
+            composable<DecksRoute> { DecksScreen() }
+            composable<DashboardRoute> { DashboardScreen() }
+            composable<DeckCheckerRoute> { DeckCheckerScreen() }
+            composable<ActivityRoute> { ActivityScreen() }
+            composable<SettingsRoute> { SettingsScreen(onOpenAdmin = { nav.navigate(AdminRoute) }, onOpenExport = { nav.navigate(HandoverRoute) }) }
+            composable<AdminRoute> { AdminScreen() }
+            composable<ScannerRoute> {
+                container.scanner.Screen(
+                    onResult = { result ->
+                        container.lastScan = result
+                        nav.navigate(ScanResultRoute) { popUpTo<ScannerRoute> { inclusive = true } }
+                    },
+                    onClose = { nav.popBackStack() },
+                )
+            }
+            composable<HandoverRoute> { HandoverScreen() }
+            composable<ScanResultRoute> {
+                ScanResultScreen(
+                    container.lastScan,
+                    onScanAgain = { nav.navigate(ScannerRoute) { popUpTo<ScanResultRoute> { inclusive = true } } },
+                    onOpenBinder = { nav.navigate(CardsRoute(binder = it)) { popUpTo<ScanResultRoute> { inclusive = true } } },
+                )
+            }
+        }
+    }
+
+    if (moreOpen) {
+        ModalBottomSheet(onDismissRequest = { moreOpen = false }) {
+            Column(Modifier.padding(bottom = 24.dp)) {
+                val go = { route: Any -> moreOpen = false; nav.navigateTop(route) }
+                visible.filter { !it.primary }.forEach { item ->
+                    MoreEntry(item.icon, stringResource(item.label)) { go(item.route) }
+                }
+                // Like #nav-activity: only shown when write access is there.
+                if (unlocked) MoreEntry(Icons.History, stringResource(R.string.nav_activity)) { go(ActivityRoute) }
+                HorizontalDivider()
+                MoreEntry(Icons.Settings, stringResource(R.string.nav_settings)) { go(SettingsRoute) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun navColors(indicator: Color = PortalColors.BgCard) = NavigationBarItemDefaults.colors(
+    selectedTextColor = PortalColors.Accent,
+    unselectedTextColor = PortalColors.TextDim,
+    indicatorColor = indicator,
+)
+
+@Composable
+private fun MoreEntry(icon: AppIcon, label: String, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(label) },
+        leadingContent = { AppIconView(icon, PortalColors.Accent) },
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    )
+}
+
+/** Top-level navigation: one entry per section, state kept when switching back. */
+fun NavHostController.navigateTop(route: Any) = navigate(route) {
+    popUpTo(graph.findStartDestination().id) { saveState = true }
+    launchSingleTop = true
+    restoreState = true
+}

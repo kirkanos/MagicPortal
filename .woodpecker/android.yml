@@ -1,0 +1,58 @@
+# Android app: unit tests, lint and a debug build, whenever something under
+# android/ changes - on a push to any branch and on pull requests. Pushes
+# also build a signed release APK: the key is sops-encrypted in
+# android/signing/ and decrypted with the same age key as .env.enc.
+#
+# The SDK image ships platform 36; the app compiles against 37 (package
+# "platforms;android-37.0" - from 37 on the name carries a minor version), which is
+# installed per run (a few MB). Gradle's caches live on the agent's host, so
+# dependencies and the wrapper distribution are fetched once, not per run.
+# The agent is x86_64: AAPT2 from Google's Maven exists for Linux only there.
+labels:
+  backend: docker
+
+when:
+  - event: [push, pull_request]
+    path:
+      include: ["android/**", ".woodpecker/android.yml"]
+
+steps:
+  - name: test, lint, build
+    image: ghcr.io/cirruslabs/android-sdk:36
+    volumes:
+      - /services/common/gradle-android:/root/.gradle
+    environment:
+      GRADLE_OPTS: -Dorg.gradle.daemon=false
+    commands:
+      - yes | sdkmanager --licenses > /dev/null
+      - sdkmanager --install "platforms;android-37.0" > /dev/null
+      - cd android
+      - ./gradlew --console=plain testDebugUnitTest lintDebug :app:assembleDebug
+
+  - name: decrypt release key
+    image: registry.kirkanos.net/images/ci-build:alpine
+    pull: true
+    environment:
+      SOPS_AGE_KEY:
+        from_secret: sops_age_key
+    commands:
+      - sops --decrypt --input-type binary --output-type binary --output android/signing/release.jks android/signing/release.jks.enc
+      - sops --decrypt --input-type dotenv --output-type dotenv --output android/signing/signing.env android/signing/signing.env.enc
+    when:
+      - event: push
+
+  - name: release build
+    image: ghcr.io/cirruslabs/android-sdk:36
+    volumes:
+      - /services/common/gradle-android:/root/.gradle
+    environment:
+      GRADLE_OPTS: -Dorg.gradle.daemon=false
+    commands:
+      - set -a && . android/signing/signing.env && set +a
+      - export MTG_KEYSTORE=$PWD/android/signing/release.jks
+      - cd android
+      - ./gradlew --console=plain :app:assembleRelease
+      - $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk | head -1
+      - rm -f signing/release.jks signing/signing.env
+    when:
+      - event: push

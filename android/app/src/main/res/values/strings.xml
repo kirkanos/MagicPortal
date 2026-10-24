@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- German is the default, as in the web UI. English lives in values-en.
+     Texts are taken over from app/js and app/*.html wherever they exist there. -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name" translatable="false">Magic Portal</string>
+
+    <!-- Navigation (NAV_ITEMS in shared.js) -->
+    <string name="nav_cards">Sammlung</string>
+    <string name="nav_editions">Editionen</string>
+    <string name="nav_reserved">Reserved List</string>
+    <string name="nav_wishlist">Wunschliste</string>
+    <string name="nav_binders">Ordner</string>
+    <string name="nav_lists">Listen</string>
+    <string name="nav_decks">Decks</string>
+    <string name="nav_dashboard">Statistik</string>
+    <string name="nav_deck_checker">Deck-Checker</string>
+    <string name="nav_activity">Aktivität</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="nav_more">Mehr</string>
+
+    <!-- Common -->
+    <string name="common_retry">Erneut versuchen</string>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_wrong_password">Falsches oder fehlendes Passwort</string>
+    <string name="common_server_unreachable">Server nicht erreichbar: %1$s</string>
+    <string name="common_server_error">Fehler vom Server (HTTP %1$d): %2$s</string>
+
+    <!-- Settings -->
+    <string name="settings_server">Server</string>
+    <string name="settings_server_hint">Adresse des Magic Portal, z. B. https://mtg.kirkanos.net</string>
+    <string name="settings_save_test">Speichern und testen</string>
+    <string name="settings_testing">Prüfe …</string>
+    <string name="settings_ok">Backend erreichbar (%1$d ms)</string>
+    <string name="settings_http_error">Backend antwortet mit HTTP %1$d</string>
+    <string name="settings_network_error">Nicht erreichbar: %1$s</string>
+    <string name="settings_language">Sprache</string>
+    <string name="settings_access">Schreibzugriff</string>
+    <string name="settings_state_unknown">Server nicht geprüft oder nicht erreichbar</string>
+    <string name="settings_state_open">Der Server hat kein Passwort – alles ist änderbar.</string>
+    <string name="settings_state_locked">Gesperrt – Anmelden, um Wunschliste, Upload und Einstellungen zu ändern.</string>
+    <string name="settings_state_unlocked">Angemeldet</string>
+    <string name="settings_unlock">Login</string>
+    <string name="settings_lock">Abmelden</string>
+    <string name="settings_version">Version %1$s</string>
+
+    <!-- Unlock dialog -->
+    <string name="unlock_title">Anmelden</string>
+    <string name="unlock_password">Passwort</string>
+    <string name="unlock_submit">Anmelden</string>
+    <string name="unlock_wrong">Falsches Passwort.</string>
+    <string name="unlock_failed">Passwortprüfung fehlgeschlagen: %1$s</string>
+
+    <!-- Cards grid (index.html / grid.js) -->
+    <string name="cards_search">Name, Text, Mana suchen…</string>
+    <string name="cards_filter">Filter</string>
+    <string name="cards_filter_reset">Zurücksetzen</string>
+    <string name="cards_all_sets">Alle Sets</string>
+    <string name="cards_search_set">Set suchen…</string>
+    <string name="cards_all_rarities">Alle Raritäten</string>
+    <string name="cards_all_colors">Alle Farben</string>
+    <string name="cards_all_foils">Normal &amp; Foil</string>
+    <string name="cards_all_binders">Alle Ordner &amp; Listen</string>
+    <string name="cards_all_types">Alle Kartentypen</string>
+    <string name="cards_all_subtypes">Alle Untertypen</string>
+    <string name="cards_sort_name">Sortieren: Name</string>
+    <string name="cards_sort_set">Sortieren: Set</string>
+    <string name="cards_sort_value_desc">Sortieren: Einzelkartenwert (hoch → niedrig)</string>
+    <string name="cards_sort_value_asc">Sortieren: Einzelkartenwert (niedrig → hoch)</string>
+    <string name="cards_sort_price_desc">Sortieren: Kaufpreis (hoch → niedrig)</string>
+    <string name="cards_sort_price_asc">Sortieren: Kaufpreis (niedrig → hoch)</string>
+    <string name="cards_sort_rarity">Sortieren: Rarität</string>
+    <string name="cards_sort_released_desc">Sortieren: Erscheinung (neueste zuerst)</string>
+    <string name="cards_sort_released_asc">Sortieren: Erscheinung (älteste zuerst)</string>
+    <string name="cards_sort_added_desc">Sortieren: zuletzt hinzugefügt</string>
+    <string name="cards_result_count">%1$s von %2$s Karten</string>
+    <string name="cards_no_image">Kein Bild</string>
+    <string name="cards_empty">Keine Karten gefunden.</string>
+    <string name="cards_collection_empty">Die Sammlung ist noch leer. Melde dich an und lade im Web deinen ManaBox-Export hoch.</string>
+    <string name="color_w">Weiß</string>
+    <string name="color_u">Blau</string>
+    <string name="color_b">Schwarz</string>
+    <string name="color_r">Rot</string>
+    <string name="color_g">Grün</string>
+    <string name="color_c">Farblos</string>
+    <!-- Card detail (cardGroupModalHTML in shared.js) -->
+    <string name="detail_rarity">Rarität</string>
+    <string name="detail_copies">Exemplare gesamt</string>
+    <string name="detail_market_total">Marktwert gesamt</string>
+    <string name="detail_wishlist">Wunschliste</string>
+    <string name="detail_languages">Sprachen in deiner Sammlung</string>
+    <string name="detail_other_printings">Weitere Editionen dieser Karte</string>
+    <string name="detail_loading_printings">Lade Varianten…</string>
+    <string name="detail_no_other_printings">Keine weiteren Editionen gefunden.</string>
+    <string name="detail_flip">↻ Umdrehen</string>
+    <string name="detail_added">Hinzugefügt %1$s</string>
+    <string name="detail_price_hint">Marktwert = Cardmarket-Preistrend, von Scryfall einmal täglich übernommen – nicht der aktuell günstigste Kaufpreis.</string>
+    <string name="wish_save_failed">Wunschliste konnte nicht gespeichert werden: %1$s</string>
+    <!-- Folders / lists (binders.js) -->
+    <plurals name="binders_count_binder">
+        <item quantity="one">%1$d Ordner</item>
+        <item quantity="other">%1$d Ordner</item>
+    </plurals>
+    <plurals name="binders_count_list">
+        <item quantity="one">%1$d Liste</item>
+        <item quantity="other">%1$d Listen</item>
+    </plurals>
+    <string name="binders_cards">%1$s Karten</string>
+    <string name="binders_empty">Noch nichts vorhanden – lade eine ManaBox-CSV hoch, die Ordner/Listen enthält.</string>
+
+    <!-- Reserved List (reserved.html / reserved.js) -->
+    <string name="reserved_total">Reserved List gesamt</string>
+    <string name="reserved_collected">Gesammelt</string>
+    <string name="reserved_missing">Fehlt</string>
+    <string name="reserved_completion">Vollständigkeit</string>
+    <string name="reserved_collected_value">Wert gesammelt</string>
+    <string name="reserved_cost_to_complete">Investition für den Rest</string>
+    <string name="reserved_unpriced" tools:ignore="PluralsCandidate">+%1$d ohne Preis</string>
+    <string name="reserved_search">Karte suchen…</string>
+    <string name="reserved_all">Alle Karten</string>
+    <string name="reserved_only_owned">Nur gesammelte</string>
+    <string name="reserved_only_missing">Nur fehlende</string>
+    <string name="reserved_sort_price_desc">Sortieren: Preis (hoch → niedrig)</string>
+    <string name="reserved_sort_price_asc">Sortieren: Preis (niedrig → hoch)</string>
+    <string name="reserved_sort_name">Sortieren: Name (A → Z)</string>
+    <string name="reserved_hint">Die Reserved List ist die Liste von Karten, die von Wizards nie wieder nachgedruckt werden. Eine Karte gilt als gesammelt, sobald du irgendeine Version/Sprache davon besitzt. „Investition für den Rest\" summiert die jeweils günstigste verfügbare Version jeder fehlenden Karte.</string>
+    <string name="reserved_value">Wert: %1$s</string>
+    <string name="reserved_from">ab %1$s</string>
+    <string name="reserved_no_price">kein Preis</string>
+    <string name="reserved_missing_tag">fehlt</string>
+    <plurals name="reserved_result_count">
+        <item quantity="one">%1$d von %2$d Karte</item>
+        <item quantity="other">%1$d von %2$d Karten</item>
+    </plurals>
+    <string name="reserved_empty_filter">Keine Karten für diesen Filter.</string>
+    <string name="cardmarket">Cardmarket ↗</string>
+
+    <!-- Decks (decks.html) -->
+    <string name="decks_title">Decks – in Vorbereitung</string>
+    <string name="decks_text">Hier kannst du künftig Decks importieren und exportieren. Da der genaue Import-Ablauf noch nicht feststeht, sind die Schaltflächen unten noch ohne Funktion.</string>
+    <string name="decks_import">⬇ Deck importieren</string>
+    <string name="decks_export">⬆ Deck exportieren</string>
+    <!-- Wishlist (wishlist.html / wishlist.js) -->
+    <string name="wl_entries">Einträge</string>
+    <string name="wl_total_cost">Kosten gesamt</string>
+    <string name="wl_unpriced" tools:ignore="PluralsCandidate">+%1$d ohne Preis</string>
+    <string name="wl_targets_met">Zielpreis erreicht</string>
+    <string name="wl_upgrades">Upgrade nötig</string>
+    <string name="wl_days">Tage Preisvergleich</string>
+    <string name="wl_hint">Karten, die dir fehlen – markiert aus der Reserved List, einer Edition oder dem Deck-Checker. Der Preis ist der günstigste Druck – oder der, den du festgelegt hast. Der Zustand ist das, was du beim Kauf akzeptieren würdest: Er wandert mit dem Export zu Cardmarket und wird mit dem verglichen, was du schon besitzt – den Preis schärfen kann er nicht, denn Scryfall kennt pro Druck genau einen Preis, ohne Zustandsdimension.</string>
+    <string name="wl_search">Karte suchen…</string>
+    <string name="wl_state_all">Alle Einträge</string>
+    <string name="wl_state_target">Zielpreis erreicht</string>
+    <string name="wl_state_upgrade">Upgrade</string>
+    <string name="wl_state_missing">gar nicht vorhanden</string>
+    <string name="wl_sort_default">Sortieren: Priorität, dann Preis</string>
+    <string name="wl_sort_price_desc">Sortieren: Preis (hoch → niedrig)</string>
+    <string name="wl_sort_price_asc">Sortieren: Preis (niedrig → hoch)</string>
+    <string name="wl_sort_change_asc">Sortieren: Stärkster Preisrückgang</string>
+    <string name="wl_sort_name">Sortieren: Name (A → Z)</string>
+    <string name="wl_sort_added">Sortieren: Zuletzt hinzugefügt</string>
+    <string name="wl_add_name">Karte per Name hinzufügen (exakt wie bei Scryfall)</string>
+    <string name="wl_add">Hinzufügen</string>
+    <string name="wl_export">Für Cardmarket kopieren</string>
+    <string name="wl_export_copied">In die Zwischenablage kopiert – und hier zum Nachlesen:</string>
+    <string name="wl_export_empty">Nichts zu exportieren.</string>
+    <string name="wl_howto_title">Wie es zu Cardmarket kommt</string>
+    <string name="wl_howto">Cardmarkets API nimmt keine neuen Antragsteller mehr an, und der Shopping Wizard lässt sich nicht per URL steuern. Was funktioniert, ist das Decklisten-Einfügefeld:\n\n1. Liste mit dem Button oben kopieren.\n2. Bei Cardmarket „Buying → My Wants → Add Decklist“ öffnen.\n3. Pro Wants-Liste einen Block einfügen – der Export ist schon nach Mindestzustand gruppiert und auf 150 Einträge gestückelt, das ist Cardmarkets Grenze pro Liste.\n4. Den Mindestzustand einmal für die Liste setzen, dann von dort den Shopping Wizard starten.\n\nFestgelegte Drucke werden mit ihrer Edition exportiert. Die Sammlernummer bleibt bewusst weg: Cardmarkets „(V.1)“ ist ein Versionszähler innerhalb einer Edition, keine Sammlernummer.</string>
+    <plurals name="wl_result_count">
+        <item quantity="one">%1$d von %2$d Eintrag</item>
+        <item quantity="other">%1$d von %2$d Einträgen</item>
+    </plurals>
+    <string name="wl_empty_filter">Keine Einträge für diesen Filter.</string>
+    <string name="wl_empty">Noch nichts auf der Wunschliste. Markiere Karten mit dem ☆ in der Reserved List, in einer Edition oder im Deck-Checker.</string>
+    <string name="wl_unknown_name">unbekannter Name</string>
+    <string name="wl_no_price">kein Preis</string>
+    <string name="wl_not_owned">nicht vorhanden</string>
+    <string name="wl_unknown_condition">unbekannt</string>
+    <string name="wl_upgrade_tag">Upgrade</string>
+    <plurals name="wl_days_ago">
+        <item quantity="one">vor %1$d Tag: %2$s</item>
+        <item quantity="other">vor %1$d Tagen: %2$s</item>
+    </plurals>
+    <string name="wl_target">Zielpreis</string>
+    <string name="wl_min_condition">Mindestzustand</string>
+    <string name="wl_any">egal</string>
+    <string name="wl_priority">Priorität</string>
+    <string name="wl_prio_0">normal</string>
+    <string name="wl_prio_1">hoch</string>
+    <string name="wl_prio_2">sehr hoch</string>
+    <string name="wl_note">Notiz</string>
+    <string name="wl_edit">Bearbeiten</string>
+    <string name="wl_done">Fertig</string>
+    <string name="wl_remove">Von der Wunschliste entfernen</string>
+    <string name="wl_save_failed">Speichern fehlgeschlagen: %1$s</string>
+    <!-- Editions (editions.html / editions.js) -->
+    <string name="ed_collected">Gesammelte Editionen</string>
+    <string name="ed_distinct">Verschiedene Karten</string>
+    <string name="ed_complete">Komplette Editionen</string>
+    <string name="ed_dupes">Karten mehrfach vorhanden</string>
+    <string name="ed_search">Edition suchen (Name oder Code)…</string>
+    <string name="ed_all">Alle Editionen</string>
+    <string name="ed_only_owned">Nur gesammelte</string>
+    <string name="ed_only_missing">Nur noch nicht gesammelte</string>
+    <string name="ed_types_collectable">Sammelbare Typen</string>
+    <string name="ed_types_all">Alle Typen</string>
+    <string name="ed_types_none">Keine Typen</string>
+    <plurals name="ed_types_n">
+        <item quantity="one">%1$d Typ</item>
+        <item quantity="other">%1$d Typen</item>
+    </plurals>
+    <string name="ed_sort_value_desc">Sortieren: Marktwert (hoch → niedrig)</string>
+    <string name="ed_sort_name">Sortieren: Name (A → Z)</string>
+    <string name="ed_sort_owned_desc">Sortieren: meiste verschiedene Karten</string>
+    <string name="ed_sort_missing_desc">Sortieren: meiste fehlende Karten</string>
+    <string name="ed_sort_missing_asc">Sortieren: wenigste fehlende Karten</string>
+    <string name="ed_sort_complete_desc">Sortieren: höchste Vollständigkeit</string>
+    <string name="ed_sort_dupes_desc">Sortieren: meiste mehrfach vorhandene</string>
+    <string name="ed_sort_released_desc">Sortieren: Erscheinung (neueste zuerst)</string>
+    <string name="ed_sort_released_asc">Sortieren: Erscheinung (älteste zuerst)</string>
+    <string name="ed_hint">„Verschiedene Karten“ zählen jede Karte einmal – dieselbe Karte in mehreren Sprachen oder Ausführungen (Foil) wird nicht doppelt gezählt. Ein Tipp auf eine Edition öffnet alle Karten mit Bild – besessene Karten normal, fehlende ausgegraut. Es werden auch Editionen angezeigt, aus denen du noch keine Karte besitzt (Haupt-Set-Typen wie Core, Erweiterung, Masters, Commander).</string>
+    <plurals name="ed_result_count">
+        <item quantity="one">%1$d von %2$d Edition</item>
+        <item quantity="other">%1$d von %2$d Editionen</item>
+    </plurals>
+    <string name="ed_of_total" tools:ignore="PluralsCandidate">%1$d von %2$d</string>
+    <plurals name="ed_cards_unknown_size">
+        <item quantity="one">%1$d Karte · Set-Größe unbekannt</item>
+        <item quantity="other">%1$d Karten · Set-Größe unbekannt</item>
+    </plurals>
+    <string name="ed_missing_n">%1$s fehlen</string>
+    <string name="ed_complete_tag">✓ komplett</string>
+    <string name="ed_missing_unknown">unbekannt</string>
+    <plurals name="ed_dupes_n">
+        <item quantity="one">%1$d mehrfach (+%2$d Ex.)</item>
+        <item quantity="other">%1$d mehrfach (+%2$d Ex.)</item>
+    </plurals>
+    <string name="ed_copies">%1$s Exemplare</string>
+    <string name="ed_type_filter_title">Set-Typen</string>
+    <string name="ed_close">Schließen</string>
+    <string name="eo_all">Alle</string>
+    <string name="eo_only_owned">Nur besessene</string>
+    <string name="eo_only_missing">Nur fehlende</string>
+    <string name="eo_sub" tools:ignore="PluralsCandidate">%1$d von %2$d Karten (%3$d%%) · %4$d fehlen für %5$s</string>
+    <string name="eo_number">Nummer</string>
+    <string name="eo_market">Marktwert</string>
+    <string name="eo_market_foil">Marktwert (Foil)</string>
+    <string name="eo_view_cardmarket">Auf Cardmarket ansehen ↗</string>
+    <string name="eo_in_collection">In deiner Sammlung (%1$d×)</string>
+    <string name="eo_folder">Ordner: %1$s</string>
+    <string name="eo_missing_card">Diese Karte fehlt dir noch.</string>
+    <string name="set_type_core">Core</string>
+    <string name="set_type_expansion">Erweiterung</string>
+    <string name="set_type_draft_innovation">Draft-Innovation</string>
+    <string name="set_type_box">Box-Set</string>
+    <string name="set_type_funny">Spaß-Set</string>
+    <!-- Deck checker (deck-checker.html / deck-checker.js) -->
+    <string name="dc_label">Deckliste einfügen (Format: 1 Lightning Bolt oder 4x Brainstorm, eine Karte pro Zeile)</string>
+    <string name="dc_placeholder">1 Lightning Bolt\n4 Brainstorm\n1 Black Lotus</string>
+    <string name="dc_check">Deck prüfen</string>
+    <string name="dc_no_lines">Keine gültigen Zeilen erkannt.</string>
+    <string name="dc_lines">Kartenzeilen</string>
+    <string name="dc_complete">Vollständig</string>
+    <string name="dc_partial">Teilweise</string>
+    <string name="dc_missing">Fehlt</string>
+    <string name="dc_needed_owned">benötigt %1$d · im Besitz %2$d</string>
+    <plurals name="dc_bulk">
+        <item quantity="one">☆ %1$d fehlende Karte auf die Wunschliste</item>
+        <item quantity="other">☆ Alle %1$d fehlenden auf die Wunschliste</item>
+    </plurals>
+    <string name="dc_bulk_all_there">Alle fehlenden Karten stehen schon auf der Wunschliste.</string>
+    <plurals name="dc_bulk_confirm">
+        <item quantity="one">%1$d Karte auf die Wunschliste setzen?</item>
+        <item quantity="other">%1$d Karten auf die Wunschliste setzen?</item>
+    </plurals>
+    <plurals name="dc_bulk_failed">
+        <item quantity="one">%1$d Karte konnte nicht gespeichert werden.</item>
+        <item quantity="other">%1$d Karten konnten nicht gespeichert werden.</item>
+    </plurals>
+    <plurals name="dc_bulk_done">
+        <item quantity="one">%1$d Karte auf die Wunschliste gesetzt.</item>
+        <item quantity="other">%1$d Karten auf die Wunschliste gesetzt.</item>
+    </plurals>
+    <string name="common_ok">OK</string>
+    <!-- Statistics (dashboard.html / dashboard.js) -->
+    <string name="db_entries">Einzelkarten</string>
+    <string name="db_distinct">Verschiedene Karten</string>
+    <string name="db_total">Karten gesamt</string>
+    <string name="db_editions">Editionen</string>
+    <string name="db_folders">Ordner</string>
+    <string name="db_purchase">Kaufwert</string>
+    <string name="db_market">Marktwert</string>
+    <string name="db_gain">Wertzuwachs (Markt − Kauf)</string>
+    <string name="db_avg">Ø Wert / Karte</string>
+    <string name="db_foil_share">Foil-Anteil</string>
+    <string name="db_top_card">Teuerste Karte: %1$s</string>
+    <string name="db_history">Wertentwicklung (Markt vs. Kauf)</string>
+    <string name="db_range_30">30 T</string>
+    <string name="db_range_90">90 T</string>
+    <string name="db_range_365">1 J</string>
+    <string name="db_range_all">Alles</string>
+    <string name="db_no_history">Noch keine Historie – die Wertentwicklung wird ab jetzt täglich aufgezeichnet.</string>
+    <string name="db_one_point">Erst ein Messpunkt vorhanden – ab morgen entsteht eine Kurve.</string>
+    <string name="db_movers">Größte Bewegungen (Wert-Einfluss)</string>
+    <plurals name="db_days_n">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+    <string name="db_year">1 Jahr</string>
+    <string name="db_gainers">Gewinner</string>
+    <string name="db_losers">Verlierer</string>
+    <string name="db_no_movement">Keine Bewegungen im Zeitraum.</string>
+    <string name="db_rarity">Rarität</string>
+    <string name="db_colors">Farben</string>
+    <string name="db_top_sets">Top 10 Sets nach Kartenanzahl</string>
+    <string name="db_top_set_value">Top 10 Editionen nach Marktwert</string>
+    <string name="db_foil">Normal vs. Foil vs. Etched</string>
+    <string name="db_purchase_month">Kaufwert pro Monat (kumulativ)</string>
+    <string name="db_top_purchase">Top 10 wertvollste Karten (Kaufpreis)</string>
+    <string name="db_top_market">Top 10 wertvollste Karten (Marktwert)</string>
+    <string name="db_types">Kartentypen</string>
+    <string name="db_languages">Sprachen</string>
+    <string name="db_condition">Zustand</string>
+    <string name="db_cmc">Manawert-Verteilung</string>
+    <string name="db_value_dist">Wertverteilung (Preisklassen)</string>
+    <string name="db_value_color">Marktwert nach Farbe</string>
+    <string name="db_value_rarity">Marktwert nach Rarität</string>
+    <string name="db_added_month">Zugänge pro Monat</string>
+    <string name="db_rarity_table">Rarität im Detail</string>
+    <string name="db_set_table">Editionen im Detail (Top nach Wert)</string>
+    <string name="db_col_copies">Exemplare</string>
+    <string name="db_col_avg">Ø/Karte</string>
+    <string name="db_col_share">Wertanteil</string>
+    <string name="db_legend_market">Marktwert</string>
+    <string name="db_legend_purchase">Kaufwert</string>
+    <string name="db_unknown">unbekannt</string>
+    <string name="color_multi">Mehrfarbig</string>
+    <!-- Activity (activity.html / activity.js) -->
+    <string name="act_refresh">⟳ Aktualisieren</string>
+    <string name="act_clear">Protokoll leeren</string>
+    <string name="act_clear_confirm">Protokoll wirklich leeren? Die bisherigen Einträge werden gelöscht.</string>
+    <string name="act_empty">Noch keine Einträge.</string>
+    <string name="act_login_needed">Bitte zuerst in den Einstellungen anmelden, um das Protokoll zu sehen.</string>
+    <string name="act_src_restore">Wiederherstellung</string>
+    <string name="act_src_reset">Leeren</string>
+    <string name="act_src_log">Protokoll</string>
+
+    <!-- Admin (buildAdminOverlay / initCollectionUpload in shared.js) -->
+    <string name="admin_open">Verwaltung</string>
+    <string name="admin_random">Zufallskarten</string>
+    <string name="admin_random_enabled">Zufällige Karten auf der Karten-Seite anzeigen</string>
+    <string name="admin_random_count">Anzahl</string>
+    <string name="admin_menu">Menüpunkte</string>
+    <string name="admin_menu_hint">Abgewählte Punkte werden im Menü ausgeblendet.</string>
+    <string name="admin_save">Speichern</string>
+    <string name="admin_saved">Gespeichert.</string>
+    <string name="admin_data">Daten</string>
+    <string name="admin_sync">Kartendaten &amp; Preise aktualisieren</string>
+    <string name="admin_sync_hint">Kartendaten &amp; Preise von Scryfall aktualisieren – prüft zusätzlich auf einen neuen CSV-Import aus Nextcloud/Google Drive (falls konfiguriert).</string>
+    <string name="admin_syncing">Aktualisiere Kartendaten…</string>
+    <string name="admin_card_data">Kartendaten: %1$s</string>
+    <string name="admin_sync_error">Letzter Sync-Fehler: %1$s</string>
+    <string name="admin_counts">Sammlung: %1$s · Karten-DB: %2$s · Sets: %3$s</string>
+    <string name="admin_upload">⬆ CSV hochladen</string>
+    <string name="admin_upload_confirm">Die hochgeladene Datei ersetzt die gesamte Sammlung. Fortfahren?</string>
+    <plurals name="admin_upload_done">
+        <item quantity="one">Import: %1$d Karte (%2$d neu, %3$d aktualisiert).</item>
+        <item quantity="other">Import: %1$d Karten (%2$d neu, %3$d aktualisiert).</item>
+    </plurals>
+    <string name="admin_images">Bildspiegel jetzt aktualisieren</string>
+    <string name="admin_maintenance">Wartung</string>
+    <string name="admin_reset">Sammlung leeren</string>
+    <string name="admin_reset_confirm">Gesamte Sammlung leeren? Danach kannst du eine neue CSV hochladen.</string>
+    <string name="admin_backup">💾 Backup</string>
+    <string name="admin_restore">⟲ Wiederherstellen</string>
+    <string name="admin_restore_confirm">Neuestes Backup wiederherstellen? Die aktuelle Sammlung und Wert-Historie werden ersetzt.</string>
+    <string name="admin_started">Gestartet.</string>
+    <string name="admin_done">Erledigt.</string>
+    <string name="nav_scanner" translatable="false">Scanner</string>
+    <plurals name="scan_result_title">
+        <item quantity="one">%d Karte gescannt</item>
+        <item quantity="other">%d Karten gescannt</item>
+    </plurals>
+    <plurals name="scan_wanted">
+        <item quantity="one">★ %d Karte steht auf deiner Wunschliste.</item>
+        <item quantity="other">★ %d Karten stehen auf deiner Wunschliste.</item>
+    </plurals>
+    <string name="scan_add_target">In welchen Ordner?</string>
+    <string name="scan_add_no_binder">Ohne Ordner</string>
+    <string name="scan_add_new_binder">Neuer Ordner</string>
+    <string name="scan_add_new_binder_ok">Übernehmen</string>
+    <string name="scan_add_exists">Den gibt es schon – die Karten kommen dazu.</string>
+    <string name="scan_add_condition">Zustand</string>
+    <string name="scan_add_button">In die Sammlung übernehmen</string>
+    <string name="scan_add_failed">Nicht übernommen: %s</string>
+    <string name="scan_add_locked">Zum Übernehmen in die Sammlung erst in den Einstellungen entsperren.</string>
+    <string name="scan_add_done" tools:ignore="PluralsCandidate">Übernommen: %1$d neu, %2$d zu vorhandenen dazugezählt</string>
+    <string name="scan_add_open_binder">Ordner ansehen</string>
+    <string name="scan_result_copy">Als Liste kopieren</string>
+    <string name="scan_result_copied">Kopiert ✓</string>
+    <string name="scan_result_again">Weiter scannen</string>
+    <string name="handover_title">Export für ManaBox</string>
+    <string name="settings_export">Export für ManaBox</string>
+    <string name="settings_export_hint">Karten, die du mit der App hinzugefügt hast, als ManaBox-CSV exportieren und nach dem Import in ManaBox bestätigen.</string>
+    <string name="settings_export_open">Exportieren …</string>
+    <string name="handover_intro">ManaBox bleibt führend. Karten, die du mit der App hinzugefügt hast, gibt es erst hier. Exportiere sie als ManaBox-CSV, importiere die Datei in ManaBox und bestätige dann hier – danach zählen sie als ManaBox-Karten und werden beim nächsten Import nicht doppelt gezählt.</string>
+    <string name="handover_export">Export erstellen</string>
+    <string name="handover_none">Keine App-Karten offen – nichts zu übergeben.</string>
+    <plurals name="handover_pending">
+        <item quantity="one">%d Karte exportiert</item>
+        <item quantity="other">%d Karten exportiert</item>
+    </plurals>
+    <string name="handover_step_import">1. Die Datei an ManaBox teilen oder speichern und in ManaBox importieren.</string>
+    <string name="handover_share">Teilen</string>
+    <string name="handover_save">Speichern …</string>
+    <string name="handover_step_confirm">2. Erst wenn ManaBox sie importiert hat:</string>
+    <string name="handover_confirm">In ManaBox importiert – bestätigen</string>
+    <string name="handover_discard">Export verwerfen</string>
+    <plurals name="handover_done">
+        <item quantity="one">Übergeben: %1$d Karte zählt jetzt als ManaBox-Karte (%2$d inzwischen entfernt).</item>
+        <item quantity="other">Übergeben: %1$d Karten zählen jetzt als ManaBox-Karten (%2$d inzwischen entfernt).</item>
+    </plurals>
+    <string name="detail_move">Verschieben</string>
+    <string name="detail_origin_app">aus der App</string>
+    <string name="detail_edit_volatile">Geändert – aber das ist eine ManaBox-Zeile: der nächste ManaBox-Import setzt sie zurück.</string>
+    <string name="binders_rename">Umbenennen</string>
+    <string name="binders_rename_title">Ordner umbenennen</string>
+    <string name="binders_rename_hint">Gibt es den Namen schon, werden die Ordner zusammengeführt.</string>
+    <string name="binders_rename_ok">Übernehmen</string>
+    <string name="binders_rename_volatile">Umbenannt – Karten aus ManaBox kommen beim nächsten Import aber wieder unter dem alten Namen.</string>
+    <string name="cards_header_counts">%1$s Karten · %2$s verschieden · Kaufwert %3$s</string>
+</resources>
