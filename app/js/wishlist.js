@@ -228,7 +228,7 @@ async function copyExport() {
       alert(t('Nichts zu exportieren.', 'Nothing to export.'));
       return;
     }
-    document.getElementById('wl-howto').open = true;
+    openHelp(document.getElementById('wl-howto'));
     let copied = false;
     try {
       await navigator.clipboard.writeText(text);

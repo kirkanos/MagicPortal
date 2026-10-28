@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.BuildConfig
 import net.kirkanos.mtgportal.R
+import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.data.AuthRepository
 import net.kirkanos.mtgportal.core.data.AuthState
 import net.kirkanos.mtgportal.core.network.safeCall
@@ -101,7 +103,7 @@ fun SettingsScreen(onOpenAdmin: () -> Unit, onOpenExport: () -> Unit = {}) {
             value = url,
             onValueChange = { url = it },
             singleLine = true,
-            supportingText = { Text(stringResource(R.string.settings_server_hint)) },
+            placeholder = { Text("https://mtg.example.org") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -142,8 +144,10 @@ fun SettingsScreen(onOpenAdmin: () -> Unit, onOpenExport: () -> Unit = {}) {
 
         // Handing app cards over to ManaBox, which stays the master.
         if (auth == AuthState.Open || auth == AuthState.Unlocked) {
-            Text(stringResource(R.string.settings_export), style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.settings_export_hint), color = PortalColors.TextDim)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.settings_export), style = MaterialTheme.typography.titleMedium)
+                HelpButton(stringResource(R.string.settings_export_hint))
+            }
             OutlinedButton(onClick = onOpenExport) { Text(stringResource(R.string.settings_export_open)) }
         }
 

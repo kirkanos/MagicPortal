@@ -10,7 +10,7 @@ package net.kirkanos.mtgportal.core.model
  * own /img/cards and nginx decides per file whether it serves the local copy or
  * fetches it from Scryfall - the app does not need to know which.
  *
- * @param portalBaseUrl e.g. "https://mtg.kirkanos.net", without trailing slash
+ * @param portalBaseUrl e.g. "https://mtg.example.org", without trailing slash
  */
 class ImageUrls(portalBaseUrl: String, private val mirror: Boolean) {
 

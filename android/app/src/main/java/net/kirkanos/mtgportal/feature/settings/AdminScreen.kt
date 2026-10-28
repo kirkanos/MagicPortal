@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
+import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.dto.StatusDto
 import net.kirkanos.mtgportal.core.network.dto.UiConfigInputDto
@@ -188,8 +189,10 @@ fun AdminScreen() {
             Text(stringResource(R.string.admin_counts, Format.count(s.collectionCount), Format.count(s.cardCount), Format.count(s.setCount)), fontSize = 12.sp, color = PortalColors.TextDim)
             if (s.lastError.isNotEmpty()) Text(stringResource(R.string.admin_sync_error, s.lastError), fontSize = 12.sp, color = PortalColors.Red)
         }
-        Button(enabled = !st.busy, onClick = { vm.sync(started) }) { Text(stringResource(R.string.admin_sync)) }
-        Text(stringResource(R.string.admin_sync_hint), fontSize = 12.sp, color = PortalColors.TextDim)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Button(enabled = !st.busy, onClick = { vm.sync(started) }) { Text(stringResource(R.string.admin_sync)) }
+            HelpButton(stringResource(R.string.admin_sync_hint))
+        }
         OutlinedButton(enabled = !st.busy, onClick = { picker.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "*/*")) }) {
             Text(stringResource(R.string.admin_upload))
         }
@@ -211,8 +214,10 @@ fun AdminScreen() {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(140.dp),
         )
-        Text(stringResource(R.string.admin_menu), style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(R.string.admin_menu_hint), fontSize = 12.sp, color = PortalColors.TextDim)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.admin_menu), style = MaterialTheme.typography.titleMedium)
+            HelpButton(stringResource(R.string.admin_menu_hint))
+        }
         NavItem.entries.forEach { item ->
             Row(
                 Modifier.fillMaxWidth().clickable { hidden = if (item.navKey in hidden) hidden - item.navKey else hidden + item.navKey },

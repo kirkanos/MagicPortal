@@ -4,6 +4,7 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.Response
+import java.io.IOException
 
 /** Placeholder Retrofit is built with; every request is rewritten to the real server. */
 const val PLACEHOLDER_BASE = "http://portal.invalid/api/"
@@ -24,8 +25,11 @@ class BaseUrlInterceptor(private val baseUrl: () -> String) : Interceptor {
 
     companion object {
         fun rewrite(url: HttpUrl, base: String): HttpUrl {
+            // An IOException, not an IllegalStateException: OkHttp rethrows
+            // anything else from an interceptor on its own thread and the app
+            // dies - here it is a failed request like any other.
             val b = base.trim().trimEnd('/').toHttpUrlOrNull()
-                ?: throw IllegalStateException("Invalid server address: $base")
+                ?: throw IOException(if (base.isBlank()) "No server configured" else "Invalid server address: $base")
             val prefix = b.encodedPath.trimEnd('/')
             return url.newBuilder()
                 .scheme(b.scheme)

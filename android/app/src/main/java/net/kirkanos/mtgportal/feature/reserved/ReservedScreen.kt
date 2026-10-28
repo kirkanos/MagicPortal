@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
+import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.dto.ReservedCardDto
@@ -142,8 +143,13 @@ fun ReservedScreen() {
                                     })
                                 }
                         }
-                        Text(stringResource(R.string.reserved_hint), fontSize = 12.sp, color = PortalColors.TextDim)
-                        Text(pluralStringResource(R.plurals.reserved_result_count, r.data.cards.size, shown.size, r.data.cards.size), fontSize = 13.sp, color = PortalColors.TextDim)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                pluralStringResource(R.plurals.reserved_result_count, r.data.cards.size, shown.size, r.data.cards.size),
+                                fontSize = 13.sp, color = PortalColors.TextDim, modifier = Modifier.weight(1f),
+                            )
+                            HelpButton(stringResource(R.string.reserved_hint))
+                        }
                     }
                 }
                 if (shown.isEmpty()) item(span = full) { Text(stringResource(R.string.reserved_empty_filter), color = PortalColors.TextDim) }

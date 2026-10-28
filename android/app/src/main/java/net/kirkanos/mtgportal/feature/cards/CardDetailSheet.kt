@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
+import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.model.Condition
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.model.Language
@@ -131,8 +133,7 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
             Fact("Set", "${g.setName} (${g.setCode} #${g.collectorNumber})")
             Fact(stringResource(R.string.detail_rarity), rarityLabel(g.rarity))
             Fact(stringResource(R.string.detail_copies), variants.sumOf { it.quantity }.toString())
-            Fact(stringResource(R.string.detail_market_total), Format.eur(totalMarket))
-            Text(stringResource(R.string.detail_price_hint), fontSize = 11.sp, color = PortalColors.TextDim)
+            Fact(stringResource(R.string.detail_market_total), Format.eur(totalMarket), help = stringResource(R.string.detail_price_hint))
 
             WishStar(g.name, label = stringResource(R.string.detail_wishlist))
 
@@ -217,10 +218,11 @@ private fun MoveDialog(v: VariantDto, binders: List<BinderDto>, onPick: (BinderT
 }
 
 @Composable
-private fun Fact(label: String, value: String) {
-    Row {
+private fun Fact(label: String, value: String, help: String? = null) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = PortalColors.TextDim, modifier = Modifier.width(150.dp))
         Text(value, fontWeight = FontWeight.Medium)
+        help?.let { HelpButton(it, Modifier.height(20.dp)) }
     }
 }
 

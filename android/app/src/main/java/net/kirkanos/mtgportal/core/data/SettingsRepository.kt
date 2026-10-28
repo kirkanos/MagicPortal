@@ -45,13 +45,17 @@ class SettingsRepository(
         _pendingExport = MutableStateFlow(prefs[pendingExportKey])
     }
 
+    /** The server address; empty until the first-run setup has stored one. */
     val baseUrl: StateFlow<String> = _baseUrl.asStateFlow()
+
+    val hasServer: Boolean get() = _baseUrl.value.isNotEmpty()
 
     /** The upload password in clear, only in memory. */
     val secret: StateFlow<String?> = _secret.asStateFlow()
 
     suspend fun setBaseUrl(url: String) {
-        val clean = url.trim().trimEnd('/').ifEmpty { defaultBaseUrl }
+        val clean = normalizeUrl(url).ifEmpty { defaultBaseUrl }
+        if (clean.isEmpty()) return
         context.settingsStore.edit { it[baseUrlKey] = clean }
         _baseUrl.value = clean
     }
@@ -85,5 +89,18 @@ class SettingsRepository(
     suspend fun setPendingExport(encoded: String) {
         context.settingsStore.edit { it[pendingExportKey] = encoded }
         _pendingExport.value = encoded
+    }
+
+    companion object {
+        /**
+         * What someone types into the address field, as a base URL: trimmed,
+         * no trailing slash, https:// when no scheme is given - the release
+         * build talks HTTPS only.
+         */
+        fun normalizeUrl(input: String): String {
+            val s = input.trim().trimEnd('/')
+            if (s.isEmpty() || "://" in s) return s
+            return "https://$s"
+        }
     }
 }

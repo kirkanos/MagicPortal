@@ -44,13 +44,6 @@
 <main>
   <div class="stats-bar" id="stats-bar"></div>
 
-  <p class="section-hint" id="section-hint" data-en-html="Cards you are missing, marked from the Reserved List, an edition or the deck checker. The price is the cheapest printing &ndash; or the one you pinned. The <strong>condition</strong> is what you would accept when buying: it travels to Cardmarket with the export and is compared against what you already own, but it cannot sharpen the price &ndash; Scryfall knows exactly one price per printing, with no condition dimension.">
-    Karten, die dir fehlen – markiert aus der Reserved List, einer Edition oder dem Deck-Checker.
-    Der Preis ist der günstigste Druck – oder der, den du festgelegt hast.
-    Der <strong>Zustand</strong> ist das, was du beim Kauf akzeptieren würdest: Er wandert mit dem Export zu
-    Cardmarket und wird mit dem verglichen, was du schon besitzt – den Preis schärfen kann er nicht,
-    denn Scryfall kennt pro Druck genau einen Preis, ohne Zustandsdimension.
-  </p>
 
   <div class="controls">
     <input type="text" id="search" placeholder="Karte suchen..." data-en-placeholder="Search card...">
@@ -68,6 +61,11 @@
       <option value="name" data-en="Sort: Name (A → Z)">Sortieren: Name (A → Z)</option>
       <option value="added" data-en="Sort: Recently added">Sortieren: Zuletzt hinzugefügt</option>
     </select>
+    <span class="help"><button type="button" class="help-btn" aria-expanded="false" aria-label="Hilfe" data-en-aria="Help">?</button><span class="help-pop" role="tooltip" data-en-html="Cards you are missing, marked from the Reserved List, an edition or the deck checker. The price is the cheapest printing &ndash; or the one you pinned. The <strong>condition</strong> is what you would accept when buying: it travels to Cardmarket with the export and is compared against what you already own, but it cannot sharpen the price &ndash; Scryfall knows exactly one price per printing, with no condition dimension.">Karten, die dir fehlen – markiert aus der Reserved List, einer Edition oder dem Deck-Checker.
+    Der Preis ist der günstigste Druck – oder der, den du festgelegt hast.
+    Der <strong>Zustand</strong> ist das, was du beim Kauf akzeptieren würdest: Er wandert mit dem Export zu
+    Cardmarket und wird mit dem verglichen, was du schon besitzt – den Preis schärfen kann er nicht,
+    denn Scryfall kennt pro Druck genau einen Preis, ohne Zustandsdimension.</span></span>
   </div>
 
   <div class="wl-bar">
@@ -76,29 +74,24 @@
       <button type="submit" class="upload-btn" data-en="Add">Hinzufügen</button>
     </form>
     <button type="button" id="wl-export" class="reset-btn" title="Liste im Cardmarket-Deckformat in die Zwischenablage kopieren" data-en-title="Copy the list in Cardmarket's decklist format to the clipboard" data-en="📋 Copy for Cardmarket">📋 Für Cardmarket kopieren</button>
-  </div>
-
-  <details class="wl-howto" id="wl-howto">
-    <summary data-en="How it gets to Cardmarket">Wie es zu Cardmarket kommt</summary>
-    <div class="wl-howto-body" data-en-html="Cardmarket&rsquo;s API is closed to new applicants and the Shopping Wizard cannot be driven by a URL. What does work is the decklist paste field:
-      <ol><li>Copy the list with the button above.</li>
+    <div class="help" id="wl-howto"><button type="button" class="help-btn" aria-expanded="false" aria-label="Hilfe" data-en-aria="Help">?</button><div class="help-pop" role="tooltip" data-en-html="Cardmarket&rsquo;s API is closed to new applicants and the Shopping Wizard cannot be driven by a URL. What does work is the decklist paste field:
+      <ol><li>Copy the list with the button next to this.</li>
       <li>Open <em>Buying → My Wants → Add Decklist</em> at Cardmarket.</li>
       <li>Paste one block per wants list &ndash; the export is already grouped by minimum condition and chunked to 150 entries, which is Cardmarket&rsquo;s limit per list.</li>
       <li>Set the minimum condition once for the list, then start the Shopping Wizard from there.</li></ol>
-      Pinned printings are exported with their expansion. The collector number is deliberately left out: Cardmarket&rsquo;s &ldquo;(V.1)&rdquo; is a version counter within an expansion, not a collector number.">
-      <p>Cardmarkets API nimmt keine neuen Antragsteller mehr an, und der Shopping Wizard lässt sich nicht
+      Pinned printings are exported with their expansion. The collector number is deliberately left out: Cardmarket&rsquo;s &ldquo;(V.1)&rdquo; is a version counter within an expansion, not a collector number."><p>Cardmarkets API nimmt keine neuen Antragsteller mehr an, und der Shopping Wizard lässt sich nicht
       per URL steuern. Was funktioniert, ist das Decklisten-Einfügefeld:</p>
       <ol>
-        <li>Liste mit dem Button oben kopieren.</li>
+        <li>Liste mit dem Button daneben kopieren.</li>
         <li>Bei Cardmarket <em>Buying → My Wants → Add Decklist</em> öffnen.</li>
         <li>Pro Wants-Liste einen Block einfügen – der Export ist schon nach Mindestzustand gruppiert und
         auf 150 Einträge gestückelt, das ist Cardmarkets Grenze pro Liste.</li>
         <li>Den Mindestzustand einmal für die Liste setzen, dann von dort den Shopping Wizard starten.</li>
       </ol>
       <p>Festgelegte Drucke werden mit ihrer Edition exportiert. Die Sammlernummer bleibt bewusst weg:
-      Cardmarkets „(V.1)" ist ein Versionszähler innerhalb einer Edition, keine Sammlernummer.</p>
-    </div>
-  </details>
+      Cardmarkets „(V.1)" ist ein Versionszähler innerhalb einer Edition, keine Sammlernummer.</p></div></div>
+  </div>
+
 
   <div class="wl-export-out" id="wl-export-out" hidden></div>
 

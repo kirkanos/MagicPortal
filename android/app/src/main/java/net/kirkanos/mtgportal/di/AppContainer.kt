@@ -28,6 +28,7 @@ import net.kirkanos.mtgportal.core.network.dto.SetDto
 import net.kirkanos.mtgportal.core.network.safeCall
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.ui.components.CardImage
+import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.ui.components.SetSymbol
 import net.kirkanos.mtgportal.scanner.CameraScanner
 import net.kirkanos.mtgportal.scanner.ScanSessionResult
@@ -80,6 +81,7 @@ class AppContainer(context: Context) {
             val images by config.imageUrls.collectAsState()
             CardImage(images.card(id, if (large) ImageUrls.Size.NORMAL else ImageUrls.Size.SMALL), "", modifier)
         },
+        help = { HelpButton(it) },
     )
 
     /** /api/sets for the symbols in the scanner's set picker, loaded on first use. */
@@ -110,6 +112,8 @@ class AppContainer(context: Context) {
     }
 
     suspend fun refreshServerState() {
+        // Before the first-run setup there is nobody to ask.
+        if (!settings.hasServer) return
         auth.probe()
         config.refresh()
         wishlist.load()

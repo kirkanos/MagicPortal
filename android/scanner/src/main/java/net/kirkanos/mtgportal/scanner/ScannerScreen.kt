@@ -120,6 +120,8 @@ class CameraScanner(
     private val setSymbol: @Composable (String) -> Boolean = { false },
     /** Draws a printing's card image (Scryfall ID), small or large. */
     private val cardImage: @Composable (scryfallId: String, large: Boolean, modifier: Modifier) -> Unit = { _, _, _ -> },
+    /** The app's "?" that shows an explanation on tap. */
+    private val help: @Composable (text: String) -> Unit = {},
 ) : ScannerEntry {
     // The orientation lock is deliberate, see below.
     @SuppressLint("SourceLockedOrientationActivity")
@@ -141,7 +143,7 @@ class CameraScanner(
             onDispose { if (before != null) activity.requestedOrientation = before }
         }
         LaunchedEffect(Unit) { if (!granted) ask.launch(Manifest.permission.CAMERA) }
-        ScannerContent(vm, granted, isWanted, setSymbol, cardImage, onAskPermission = { ask.launch(Manifest.permission.CAMERA) }, onDone = { onResult(vm.result()) }, onClose = onClose)
+        ScannerContent(vm, granted, isWanted, setSymbol, cardImage, help, onAskPermission = { ask.launch(Manifest.permission.CAMERA) }, onDone = { onResult(vm.result()) }, onClose = onClose)
     }
 }
 
@@ -170,6 +172,7 @@ private fun ScannerContent(
     isWanted: (String) -> Boolean,
     setSymbol: @Composable (String) -> Boolean,
     cardImage: @Composable (String, Boolean, Modifier) -> Unit,
+    help: @Composable (String) -> Unit,
     onAskPermission: () -> Unit,
     onDone: () -> Unit,
     onClose: () -> Unit,
@@ -234,7 +237,7 @@ private fun ScannerContent(
     }
     if (searching) SearchSheet(vm, onDismiss = { searching = false })
     zoomed?.let { ZoomedCard(it, cardImage) { zoomed = null } }
-    if (pickingSets) SetPickerSheet(vm, state.sets, setSymbol, onDismiss = { pickingSets = false })
+    if (pickingSets) SetPickerSheet(vm, state.sets, setSymbol, help, onDismiss = { pickingSets = false })
 }
 
 /** Shows the set filter at all times: a forgotten one would hide cards. */
@@ -266,7 +269,13 @@ private fun SetsButton(sets: Set<String>, setSymbol: @Composable (String) -> Boo
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SetPickerSheet(vm: ScannerViewModel, selected: Set<String>, setSymbol: @Composable (String) -> Boolean, onDismiss: () -> Unit) {
+private fun SetPickerSheet(
+    vm: ScannerViewModel,
+    selected: Set<String>,
+    setSymbol: @Composable (String) -> Boolean,
+    help: @Composable (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
     var query by remember { mutableStateOf("") }
     val all = remember { vm.allSets() }
     val shown = remember(query, all) {
@@ -279,11 +288,12 @@ private fun SetPickerSheet(vm: ScannerViewModel, selected: Set<String>, setSymbo
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).imePadding()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.scanner_sets_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.scanner_sets_title), style = MaterialTheme.typography.titleLarge)
+                help(stringResource(R.string.scanner_sets_hint))
+                Spacer(Modifier.weight(1f))
                 TextButton(onClick = { vm.setSets(emptySet()) }, enabled = selected.isNotEmpty()) { Text(stringResource(R.string.scanner_sets_clear)) }
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.scanner_sets_done)) }
             }
-            Text(stringResource(R.string.scanner_sets_hint), style = MaterialTheme.typography.bodySmall)
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },

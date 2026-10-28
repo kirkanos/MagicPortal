@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
+import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.safeCall
@@ -159,7 +160,12 @@ private fun RenameDialog(b: BinderDto, onDismiss: () -> Unit, onRename: (String,
     var type by remember { mutableStateOf(b.type.ifEmpty { "binder" }) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.binders_rename_title)) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.binders_rename_title))
+                HelpButton(stringResource(R.string.binders_rename_hint))
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -168,7 +174,6 @@ private fun RenameDialog(b: BinderDto, onDismiss: () -> Unit, onRename: (String,
                         FilterChip(selected = type == t, onClick = { type = t }, label = { Text(stringResource(label)) })
                     }
                 }
-                Text(stringResource(R.string.binders_rename_hint), fontSize = 12.sp, color = PortalColors.TextDim)
             }
         },
         confirmButton = {

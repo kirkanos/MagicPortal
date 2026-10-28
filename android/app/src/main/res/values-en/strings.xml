@@ -15,12 +15,12 @@
 
     <string name="common_retry">Try again</string>
     <string name="common_cancel">Cancel</string>
+    <string name="common_help">Help</string>
     <string name="common_wrong_password">Wrong or missing password</string>
     <string name="common_server_unreachable">Server not reachable: %1$s</string>
     <string name="common_server_error">Server error (HTTP %1$d): %2$s</string>
 
     <string name="settings_server">Server</string>
-    <string name="settings_server_hint">Address of the Magic Portal, e.g. https://mtg.kirkanos.net</string>
     <string name="settings_save_test">Save and test</string>
     <string name="settings_testing">Checking …</string>
     <string name="settings_ok">Backend reachable (%1$d ms)</string>
@@ -35,6 +35,13 @@
     <string name="settings_unlock">Login</string>
     <string name="settings_lock">Log out</string>
     <string name="settings_version">Version %1$s</string>
+    <string name="setup_title">Welcome to Magic Portal</string>
+    <string name="setup_intro">The app shows the collection of a self-hosted Magic Portal. Enter the address of your server.</string>
+    <string name="setup_server">Server address</string>
+    <string name="setup_connect">Connect</string>
+    <string name="setup_not_portal">No Magic Portal at this address (HTTP %1$d)</string>
+    <string name="setup_password_intro">The server is protected by a password. With it you can add cards and change the wishlist; without it you can view everything. You can also log in later in the settings.</string>
+    <string name="setup_skip">Continue without password</string>
 
     <string name="unlock_title">Log in</string>
     <string name="unlock_password">Password</string>
@@ -149,8 +156,7 @@
     <string name="wl_export">Copy for Cardmarket</string>
     <string name="wl_export_copied">Copied to the clipboard – and here to read back:</string>
     <string name="wl_export_empty">Nothing to export.</string>
-    <string name="wl_howto_title">How it gets to Cardmarket</string>
-    <string name="wl_howto">Cardmarket\'s API is closed to new applicants and the Shopping Wizard cannot be driven by a URL. What does work is the decklist paste field:\n\n1. Copy the list with the button above.\n2. Open \"Buying → My Wants → Add Decklist\" at Cardmarket.\n3. Paste one block per wants list – the export is already grouped by minimum condition and chunked to 150 entries, which is Cardmarket\'s limit per list.\n4. Set the minimum condition once for the list, then start the Shopping Wizard from there.\n\nPinned printings are exported with their expansion. The collector number is deliberately left out: Cardmarket\'s \"(V.1)\" is a version counter within an expansion, not a collector number.</string>
+    <string name="wl_howto">Cardmarket\'s API is closed to new applicants and the Shopping Wizard cannot be driven by a URL. What does work is the decklist paste field:\n\n1. Copy the list with the button next to this.\n2. Open \"Buying → My Wants → Add Decklist\" at Cardmarket.\n3. Paste one block per wants list – the export is already grouped by minimum condition and chunked to 150 entries, which is Cardmarket\'s limit per list.\n4. Set the minimum condition once for the list, then start the Shopping Wizard from there.\n\nPinned printings are exported with their expansion. The collector number is deliberately left out: Cardmarket\'s \"(V.1)\" is a version counter within an expansion, not a collector number.</string>
     <plurals name="wl_result_count">
         <item quantity="one">%1$d of %2$d entry</item>
         <item quantity="other">%1$d of %2$d entries</item>

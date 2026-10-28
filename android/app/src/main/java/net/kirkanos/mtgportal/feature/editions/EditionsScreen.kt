@@ -56,6 +56,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
+import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.dto.EditionDto
 import net.kirkanos.mtgportal.core.network.safeCall
@@ -164,8 +165,13 @@ fun EditionsScreen(onOpenSet: (String) -> Unit) {
                             OutlinedButton(onClick = { typeDialog = true }) { Text(typeButtonLabel(types)) }
                             SortMenu(sort) { sort = it }
                         }
-                        Text(stringResource(R.string.ed_hint), fontSize = 12.sp, color = PortalColors.TextDim)
-                        Text(pluralStringResource(R.plurals.ed_result_count, all.size, shown.size, all.size), fontSize = 13.sp, color = PortalColors.TextDim)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                pluralStringResource(R.plurals.ed_result_count, all.size, shown.size, all.size),
+                                fontSize = 13.sp, color = PortalColors.TextDim, modifier = Modifier.weight(1f),
+                            )
+                            HelpButton(stringResource(R.string.ed_hint))
+                        }
                     }
                 }
                 items(shown, key = { it.code }) { e ->

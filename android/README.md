@@ -57,7 +57,8 @@ docker compose -f docker-compose.local.yml up -d --build   # from the repo root
 ```
 
 The local stack stays bound to `127.0.0.1`; nothing is opened to the network.
-The release build talks HTTPS to `https://mtg.kirkanos.net` only.
+The release build has no server built in: on first start it asks for the
+portal's address (HTTPS only) and, if the server has one, the upload password.
 
 ## Build and run
 

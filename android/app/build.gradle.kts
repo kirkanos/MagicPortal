@@ -18,7 +18,9 @@ android {
         versionCode = build
         versionName = "0.1.$build"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "DEFAULT_BASE_URL", "\"https://mtg.kirkanos.net\"")
+        // No server built in: the release asks for one on first start, so the
+        // same APK works for every self-hosted portal.
+        buildConfigField("String", "DEFAULT_BASE_URL", "\"\"")
     }
 
     // The release key lives sops-encrypted in signing/ (see README); CI

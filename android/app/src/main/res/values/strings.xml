@@ -21,13 +21,13 @@
     <!-- Common -->
     <string name="common_retry">Erneut versuchen</string>
     <string name="common_cancel">Abbrechen</string>
+    <string name="common_help">Hilfe</string>
     <string name="common_wrong_password">Falsches oder fehlendes Passwort</string>
     <string name="common_server_unreachable">Server nicht erreichbar: %1$s</string>
     <string name="common_server_error">Fehler vom Server (HTTP %1$d): %2$s</string>
 
     <!-- Settings -->
     <string name="settings_server">Server</string>
-    <string name="settings_server_hint">Adresse des Magic Portal, z. B. https://mtg.kirkanos.net</string>
     <string name="settings_save_test">Speichern und testen</string>
     <string name="settings_testing">Prüfe …</string>
     <string name="settings_ok">Backend erreichbar (%1$d ms)</string>
@@ -42,6 +42,13 @@
     <string name="settings_unlock">Login</string>
     <string name="settings_lock">Abmelden</string>
     <string name="settings_version">Version %1$s</string>
+    <string name="setup_title">Willkommen bei Magic Portal</string>
+    <string name="setup_intro">Die App zeigt die Sammlung eines selbst betriebenen Magic Portal. Gib die Adresse deines Servers ein.</string>
+    <string name="setup_server">Serveradresse</string>
+    <string name="setup_connect">Verbinden</string>
+    <string name="setup_not_portal">Kein Magic Portal unter dieser Adresse (HTTP %1$d)</string>
+    <string name="setup_password_intro">Der Server ist mit einem Passwort geschützt. Damit kannst du Karten hinzufügen und die Wunschliste ändern; ohne Passwort kannst du alles ansehen. Anmelden geht auch später in den Einstellungen.</string>
+    <string name="setup_skip">Ohne Passwort weiter</string>
 
     <!-- Unlock dialog -->
     <string name="unlock_title">Anmelden</string>
@@ -163,8 +170,7 @@
     <string name="wl_export">Für Cardmarket kopieren</string>
     <string name="wl_export_copied">In die Zwischenablage kopiert – und hier zum Nachlesen:</string>
     <string name="wl_export_empty">Nichts zu exportieren.</string>
-    <string name="wl_howto_title">Wie es zu Cardmarket kommt</string>
-    <string name="wl_howto">Cardmarkets API nimmt keine neuen Antragsteller mehr an, und der Shopping Wizard lässt sich nicht per URL steuern. Was funktioniert, ist das Decklisten-Einfügefeld:\n\n1. Liste mit dem Button oben kopieren.\n2. Bei Cardmarket „Buying → My Wants → Add Decklist“ öffnen.\n3. Pro Wants-Liste einen Block einfügen – der Export ist schon nach Mindestzustand gruppiert und auf 150 Einträge gestückelt, das ist Cardmarkets Grenze pro Liste.\n4. Den Mindestzustand einmal für die Liste setzen, dann von dort den Shopping Wizard starten.\n\nFestgelegte Drucke werden mit ihrer Edition exportiert. Die Sammlernummer bleibt bewusst weg: Cardmarkets „(V.1)“ ist ein Versionszähler innerhalb einer Edition, keine Sammlernummer.</string>
+    <string name="wl_howto">Cardmarkets API nimmt keine neuen Antragsteller mehr an, und der Shopping Wizard lässt sich nicht per URL steuern. Was funktioniert, ist das Decklisten-Einfügefeld:\n\n1. Liste mit dem Button daneben kopieren.\n2. Bei Cardmarket „Buying → My Wants → Add Decklist“ öffnen.\n3. Pro Wants-Liste einen Block einfügen – der Export ist schon nach Mindestzustand gruppiert und auf 150 Einträge gestückelt, das ist Cardmarkets Grenze pro Liste.\n4. Den Mindestzustand einmal für die Liste setzen, dann von dort den Shopping Wizard starten.\n\nFestgelegte Drucke werden mit ihrer Edition exportiert. Die Sammlernummer bleibt bewusst weg: Cardmarkets „(V.1)“ ist ein Versionszähler innerhalb einer Edition, keine Sammlernummer.</string>
     <plurals name="wl_result_count">
         <item quantity="one">%1$d von %2$d Eintrag</item>
         <item quantity="other">%1$d von %2$d Einträgen</item>

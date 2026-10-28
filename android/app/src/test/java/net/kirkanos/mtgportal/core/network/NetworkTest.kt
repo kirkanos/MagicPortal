@@ -37,9 +37,14 @@ class BaseUrlInterceptorTest {
         )
     }
 
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = java.io.IOException::class)
     fun rejectsGarbage() {
         BaseUrlInterceptor.rewrite(placeholder, "not a url")
+    }
+
+    @Test(expected = java.io.IOException::class)
+    fun noServerYet() {
+        BaseUrlInterceptor.rewrite(placeholder, "")
     }
 }
 

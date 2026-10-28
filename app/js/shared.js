@@ -803,8 +803,7 @@ function buildAdminOverlay() {
           <label class="admin-num">${t('Anzahl', 'Count')} <input type="number" id="cfg-random-count" min="1" max="30"></label>
         </section>
         <section class="admin-section">
-          <h3>${t('Menüpunkte', 'Menu items')}</h3>
-          <p class="admin-hint">${t('Abgewählte Punkte werden im Menü ausgeblendet.', 'Unchecked items are hidden from the menu.')}</p>
+          <h3>${t('Menüpunkte', 'Menu items')} ${helpHTML('Abgewählte Punkte werden im Menü ausgeblendet.', 'Unchecked items are hidden from the menu.')}</h3>
           <div id="cfg-nav-list" class="admin-navlist"></div>
         </section>
         <section class="admin-section">
@@ -1070,7 +1069,71 @@ function initNavToggle() {
   nav.querySelectorAll('a:not(.brand)').forEach((a) => a.addEventListener('click', () => setOpen(false)));
 }
 
+/* "?" help: explanations live behind a small button instead of on the page.
+   They show on hover with a mouse and on tap/click (then they stay until a
+   click elsewhere or Escape). The bubble is fixed-positioned so no scrolling
+   container clips it, and moved inside the viewport. */
+function helpHTML(de, en) {
+  return `<span class="help"><button type="button" class="help-btn" aria-expanded="false" aria-label="${t('Hilfe', 'Help')}">?</button>`
+    + `<span class="help-pop" role="tooltip">${t(de, en)}</span></span>`;
+}
+
+function placeHelp(help) {
+  const btn = help.querySelector('.help-btn').getBoundingClientRect();
+  const pop = help.querySelector('.help-pop');
+  const m = 8;
+  const w = pop.offsetWidth;
+  const h = pop.offsetHeight;
+  const left = Math.min(Math.max(btn.left + btn.width / 2 - w / 2, m), window.innerWidth - w - m);
+  const below = btn.bottom + 6;
+  const top = below + h <= window.innerHeight - m ? below : Math.max(m, btn.top - 6 - h);
+  pop.style.left = `${Math.max(m, left)}px`;
+  pop.style.top = `${top}px`;
+}
+
+function openHelp(help, pinned = true) {
+  document.querySelectorAll('.help.open').forEach((h) => { if (h !== help) closeHelp(h); });
+  help.classList.add('open');
+  help.classList.toggle('pinned', pinned);
+  help.querySelector('.help-btn').setAttribute('aria-expanded', 'true');
+  placeHelp(help);
+}
+
+function closeHelp(help) {
+  help.classList.remove('open', 'pinned');
+  help.querySelector('.help-btn').setAttribute('aria-expanded', 'false');
+}
+
+function initHelp() {
+  const hover = window.matchMedia('(hover: hover)');
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.help-btn');
+    if (btn) {
+      const help = btn.closest('.help');
+      if (help.classList.contains('pinned')) closeHelp(help);
+      else openHelp(help);
+      return;
+    }
+    if (!e.target.closest('.help-pop')) document.querySelectorAll('.help.open').forEach(closeHelp);
+  });
+  document.addEventListener('mouseover', (e) => {
+    const help = e.target.closest('.help');
+    if (help && hover.matches && !help.classList.contains('open')) openHelp(help, false);
+  });
+  document.addEventListener('mouseout', (e) => {
+    const help = e.target.closest('.help');
+    if (help && !help.contains(e.relatedTarget) && !help.classList.contains('pinned')) closeHelp(help);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') document.querySelectorAll('.help.open').forEach(closeHelp);
+  });
+  // A fixed bubble would drift away from its button.
+  window.addEventListener('scroll', () => document.querySelectorAll('.help.open').forEach(closeHelp), true);
+  window.addEventListener('resize', () => document.querySelectorAll('.help.open').forEach(closeHelp));
+}
+
 function initShared() {
+  initHelp();
   buildAdminOverlay(); // must exist before initCollectionUpload wires its buttons
   initCollectionUpload();
   initNavToggle();

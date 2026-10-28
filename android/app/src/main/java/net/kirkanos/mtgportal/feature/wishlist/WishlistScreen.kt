@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.kirkanos.mtgportal.R
+import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.model.Condition
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.network.ApiResult
@@ -111,7 +112,6 @@ private fun WishlistContent(data: WishlistDto, exportText: String?, vm: Wishlist
     var state by rememberSaveable { mutableStateOf("all") }
     var sort by rememberSaveable { mutableStateOf("default") }
     var newName by rememberSaveable { mutableStateOf("") }
-    var howtoOpen by rememberSaveable { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
     val shown = filterWishlist(data.items, query, state, sort)
     val s = data.summary
@@ -130,7 +130,6 @@ private fun WishlistContent(data: WishlistDto, exportText: String?, vm: Wishlist
                 ),
             )
         }
-        item { Text(stringResource(R.string.wl_hint), fontSize = 12.sp, color = PortalColors.TextDim) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text(stringResource(R.string.wl_search)) }, modifier = Modifier.fillMaxWidth())
@@ -151,18 +150,15 @@ private fun WishlistContent(data: WishlistDto, exportText: String?, vm: Wishlist
                         Button(enabled = newName.isNotBlank(), onClick = { vm.add(newName); newName = "" }) { Text(stringResource(R.string.wl_add)) }
                     }
                 }
-                OutlinedButton(onClick = {
-                    vm.export { text ->
-                        if (text == null) Toast.makeText(context, emptyMsg, Toast.LENGTH_SHORT).show()
-                        else copyToClipboard(context, text)
-                    }
-                }) { Text(stringResource(R.string.wl_export)) }
-                Text(
-                    (if (howtoOpen) "▾ " else "▸ ") + stringResource(R.string.wl_howto_title),
-                    color = PortalColors.Accent,
-                    modifier = Modifier.clickable { howtoOpen = !howtoOpen },
-                )
-                if (howtoOpen) Text(stringResource(R.string.wl_howto), fontSize = 13.sp, color = PortalColors.TextDim)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = {
+                        vm.export { text ->
+                            if (text == null) Toast.makeText(context, emptyMsg, Toast.LENGTH_SHORT).show()
+                            else copyToClipboard(context, text)
+                        }
+                    }) { Text(stringResource(R.string.wl_export)) }
+                    HelpButton(stringResource(R.string.wl_howto))
+                }
                 exportText?.let {
                     Text(stringResource(R.string.wl_export_copied), fontSize = 12.sp, color = PortalColors.TextDim)
                     SelectionContainer {

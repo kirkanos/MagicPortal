@@ -43,16 +43,13 @@
 
 <main>
   <div class="activity-head">
-    <h1 data-en="Recent activity">Letzte Aktivitäten</h1>
+    <h1><span data-en="Recent activity">Letzte Aktivitäten</span> <span class="help"><button type="button" class="help-btn" aria-expanded="false" aria-label="Hilfe" data-en-aria="Help">?</button><span class="help-pop" role="tooltip" data-en-html="Persistent log of what the tool did – imports, syncs, backups, restores – and any errors. Survives restarts; clear it any time.">Dauerhaftes Protokoll dessen, was das Tool getan hat – Importe, Aktualisierungen, Backups, Wiederherstellungen – sowie eventuelle Fehler.
+    Bleibt über Neustarts erhalten; jederzeit leerbar.</span></span></h1>
     <span class="activity-actions">
       <button type="button" id="act-refresh" class="reset-btn" data-en="Refresh">Aktualisieren</button>
       <button type="button" id="act-clear" class="reset-btn" data-en="Clear log">Protokoll leeren</button>
     </span>
   </div>
-  <p class="section-hint" data-en-html="Persistent log of what the tool did – imports, syncs, backups, restores – and any errors. Survives restarts; clear it any time.">
-    Dauerhaftes Protokoll dessen, was das Tool getan hat – Importe, Aktualisierungen, Backups, Wiederherstellungen – sowie eventuelle Fehler.
-    Bleibt über Neustarts erhalten; jederzeit leerbar.
-  </p>
   <div id="activity-list"></div>
 </main>
 

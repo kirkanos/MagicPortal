@@ -3,12 +3,15 @@ package net.kirkanos.mtgportal.core.network
 import kotlinx.serialization.json.Json
 import okhttp3.Cache
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
@@ -61,6 +64,17 @@ class HttpClients(
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
+
+    /**
+     * GET <base>/api/health, past the settings: the first-run setup tests an
+     * address before it stores it. No auth header, no cache. Blocking.
+     */
+    fun health(base: String): Int {
+        val url = "${base.trimEnd('/')}/api/health".toHttpUrlOrNull() ?: throw IOException("Invalid server address: $base")
+        return images.newBuilder().cache(null).build()
+            .newCall(Request.Builder().url(url).build())
+            .execute().use { it.code }
+    }
 
     val portalApi: PortalApi = Retrofit.Builder()
         .baseUrl(PLACEHOLDER_BASE)

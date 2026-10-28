@@ -595,18 +595,6 @@ async function init() {
   document.getElementById('filter-owned').addEventListener('change', renderTable);
   // The type multi-select wires its own listeners in populateTypeFilter().
 
-  const hintBtn = document.getElementById('hint-toggle');
-  const hint = document.getElementById('section-hint');
-  if (hintBtn && hint) {
-    const setHint = (open) => {
-      hint.hidden = !open;
-      hintBtn.textContent = open ? t('Erklärung ausblenden', 'Hide explanation') : t('Erklärung anzeigen', 'Show explanation');
-      hintBtn.classList.toggle('open', open);
-    };
-    setHint(false);
-    hintBtn.addEventListener('click', () => setHint(hint.hidden));
-  }
-
   document.getElementById('editions-table').addEventListener('click', (e) => {
     const row = e.target.closest('.edition-row');
     if (row) openEditionOverlay(editionByCode[row.dataset.code]);
