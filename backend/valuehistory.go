@@ -181,15 +181,20 @@ func handleValueMovers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Quantities per print as a map, not as a LEFT JOIN on the grouped
+	// collection: SQLite gives that subquery no index and scans it once per
+	// price row - ~13k x 13k comparisons, 15 s on the server.
+	qty, err := collectionQuantities()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
 	rows, err := db.Query(`
-		SELECT now.name, now.price_eur, base.price_eur, COALESCE(q.qty, 0)
+		SELECT now.scryfall_key, now.name, now.price_eur, base.price_eur
 		FROM price_history now
 		JOIN price_history base
 			ON base.scryfall_key = now.scryfall_key AND base.date = ?
-		LEFT JOIN (
-			SELECT set_code || '|' || collector_number AS k, SUM(quantity) AS qty
-			FROM collection GROUP BY k
-		) q ON q.k = now.scryfall_key
 		WHERE now.date = ?
 			AND now.price_eur IS NOT NULL AND base.price_eur IS NOT NULL`,
 		base.String, latest)
@@ -202,10 +207,12 @@ func handleValueMovers(w http.ResponseWriter, r *http.Request) {
 	movers := []mover{}
 	for rows.Next() {
 		var m mover
-		if err := rows.Scan(&m.Name, &m.PriceNow, &m.PriceThen, &m.Quantity); err != nil {
+		var key string
+		if err := rows.Scan(&key, &m.Name, &m.PriceNow, &m.PriceThen); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
+		m.Quantity = qty[key]
 		m.Delta = m.PriceNow - m.PriceThen
 		if m.PriceThen > 0 {
 			m.Pct = (m.Delta / m.PriceThen) * 100
@@ -225,6 +232,28 @@ func handleValueMovers(w http.ResponseWriter, r *http.Request) {
 		"days": days, "baseDate": base.String, "latestDate": latest,
 		"gainers": gainers, "losers": losers,
 	})
+}
+
+// collectionQuantities sums the owned copies per print, keyed like
+// price_history.scryfall_key ("set_code|collector_number").
+func collectionQuantities() (map[string]int, error) {
+	rows, err := db.Query(`
+		SELECT set_code || '|' || collector_number, SUM(quantity)
+		FROM collection GROUP BY 1`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	qty := map[string]int{}
+	for rows.Next() {
+		var k string
+		var n int
+		if err := rows.Scan(&k, &n); err != nil {
+			return nil, err
+		}
+		qty[k] = n
+	}
+	return qty, rows.Err()
 }
 
 func topPositive(sorted []mover, n int) []mover {
