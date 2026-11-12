@@ -31,6 +31,7 @@ import net.kirkanos.mtgportal.core.ui.components.CardImage
 import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.ui.components.SetSymbol
 import net.kirkanos.mtgportal.scanner.CameraScanner
+import net.kirkanos.mtgportal.scanner.CardPrice
 import net.kirkanos.mtgportal.scanner.ScanSessionResult
 import net.kirkanos.mtgportal.scanner.ScannerEntry
 import net.kirkanos.mtgportal.scanner.catalog.CatalogStore
@@ -82,6 +83,9 @@ class AppContainer(context: Context) {
             CardImage(images.card(id, if (large) ImageUrls.Size.NORMAL else ImageUrls.Size.SMALL), "", modifier)
         },
         help = { HelpButton(it) },
+        price = { set, number ->
+            (safeCall { api.catalogCard(set, number) } as? ApiResult.Success)?.data?.let { CardPrice(it.priceEur, it.priceEurFoil) }
+        },
     )
 
     /** /api/sets for the symbols in the scanner's set picker, loaded on first use. */

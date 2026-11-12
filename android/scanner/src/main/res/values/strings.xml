@@ -17,6 +17,7 @@
     <string name="scanner_torch">Licht</string>
     <string name="scanner_search">Suchen</string>
     <string name="scanner_wanted">Wunschliste</string>
+    <string name="scanner_total">Summe: %1$s</string>
     <string name="scanner_defaults">Neue Karten:</string>
     <string name="scanner_language_auto">Sprache wie gelesen</string>
     <string name="scanner_search_hint">Kartenname (englisch)</string>
@@ -26,7 +27,12 @@
         <item quantity="other">%1$s · %2$d Drucke</item>
     </plurals>
     <string name="scanner_uncertain">Nur am Namen erkannt – Druck bitte prüfen.</string>
-    <string name="scanner_other_printings">Andere Drucke</string>
+    <string name="scanner_change_printing">Edition ändern</string>
+    <string name="scanner_check_printing">Edition prüfen</string>
+    <plurals name="scanner_printings_count">
+        <item quantity="one">%d Druck</item>
+        <item quantity="other">%d Drucke</item>
+    </plurals>
     <string name="scanner_nonfoil">Normal</string>
     <string name="scanner_foil" translatable="false">Foil</string>
     <string name="scanner_etched" translatable="false">Etched</string>

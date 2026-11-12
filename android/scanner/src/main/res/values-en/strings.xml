@@ -16,6 +16,7 @@
     <string name="scanner_torch">Light</string>
     <string name="scanner_search">Search</string>
     <string name="scanner_wanted">Wishlist</string>
+    <string name="scanner_total">Total: %1$s</string>
     <string name="scanner_defaults">New cards:</string>
     <string name="scanner_language_auto">Language as read</string>
     <string name="scanner_search_hint">Card name</string>
@@ -25,7 +26,12 @@
         <item quantity="other">%1$s · %2$d printings</item>
     </plurals>
     <string name="scanner_uncertain">Recognised by name only – please check the printing.</string>
-    <string name="scanner_other_printings">Other printings</string>
+    <string name="scanner_change_printing">Change edition</string>
+    <string name="scanner_check_printing">Check edition</string>
+    <plurals name="scanner_printings_count">
+        <item quantity="one">%d printing</item>
+        <item quantity="other">%d printings</item>
+    </plurals>
     <string name="scanner_nonfoil">Non-foil</string>
     <string name="scanner_sets_all">All sets</string>
     <string name="scanner_sets_title">Sets</string>

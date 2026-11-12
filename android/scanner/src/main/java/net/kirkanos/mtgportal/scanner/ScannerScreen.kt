@@ -38,6 +38,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -45,10 +47,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -96,6 +100,8 @@ import net.kirkanos.mtgportal.scanner.camera.Quad
 import net.kirkanos.mtgportal.scanner.catalog.CatalogStore
 import net.kirkanos.mtgportal.scanner.catalog.Printing
 import java.io.File
+import java.text.NumberFormat
+import java.util.Currency
 import java.util.Locale
 import java.util.concurrent.Executors
 import androidx.compose.material3.FilledTonalIconButton
@@ -122,13 +128,15 @@ class CameraScanner(
     private val cardImage: @Composable (scryfallId: String, large: Boolean, modifier: Modifier) -> Unit = { _, _, _ -> },
     /** The app's "?" that shows an explanation on tap. */
     private val help: @Composable (text: String) -> Unit = {},
+    /** A printing's prices from the server (lowercase set code, collector number); null when unknown or offline. */
+    private val price: suspend (setCode: String, collectorNumber: String) -> CardPrice? = { _, _ -> null },
 ) : ScannerEntry {
     // The orientation lock is deliberate, see below.
     @SuppressLint("SourceLockedOrientationActivity")
     @Composable
     override fun Screen(onResult: (ScanSessionResult) -> Unit, onClose: () -> Unit) {
         val context = LocalContext.current
-        val vm: ScannerViewModel = viewModel(factory = viewModelFactory { initializer { ScannerViewModel(store, dumpDir, ScannerPrefs(context.applicationContext)) } })
+        val vm: ScannerViewModel = viewModel(factory = viewModelFactory { initializer { ScannerViewModel(store, dumpDir, ScannerPrefs(context.applicationContext), price) } })
         var granted by remember {
             mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
         }
@@ -217,6 +225,13 @@ private fun ScannerContent(
         }
 
         DefaultsRow(state, vm)
+        if (state.hasPrices) {
+            Text(
+                stringResource(R.string.scanner_total, euros(state.total)),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
         if (state.items.isEmpty()) {
             Text(
                 stringResource(R.string.scanner_empty),
@@ -224,16 +239,32 @@ private fun ScannerContent(
                 modifier = Modifier.padding(16.dp),
             )
         }
+        val last = state.items.firstOrNull { it.id == state.last }
+        last?.let { item ->
+            LastCard(
+                item,
+                state.prices[item.printing.scryfallId]?.forFinish(item.foil),
+                isWanted(item.printing.name),
+                vm,
+                setSymbol,
+                cardImage,
+                onZoom = { zoomed = it },
+                onOpen = { editing = item.id },
+            )
+        }
         LazyColumn(Modifier.weight(1f)) {
-            items(state.items, key = { it.id }) { item ->
-                SessionRow(item, isWanted(item.printing.name), setSymbol, cardImage, onZoom = { zoomed = it }) { editing = item.id }
+            items(state.items.filter { it.id != last?.id }, key = { it.id }) { item ->
+                SessionRow(item, state.prices[item.printing.scryfallId]?.forFinish(item.foil), isWanted(item.printing.name), setSymbol, cardImage, onZoom = { zoomed = it }) { editing = item.id }
                 HorizontalDivider()
             }
         }
     }
 
     state.items.firstOrNull { it.id == editing }?.let { item ->
-        EditSheet(item, vm, setSymbol, cardImage, onDismiss = { editing = null })
+        EditSheet(item, vm, setSymbol, cardImage, onPickPrinting = { editing = null; vm.pickPrinting(item.id) }, onDismiss = { editing = null })
+    }
+    state.items.firstOrNull { it.id == state.picking }?.let { item ->
+        PrintingPickerSheet(item, state.prices, vm, setSymbol, cardImage, onDismiss = { vm.pickPrinting(null) })
     }
     if (searching) SearchSheet(vm, onDismiss = { searching = false })
     zoomed?.let { ZoomedCard(it, cardImage) { zoomed = null } }
@@ -526,6 +557,7 @@ private fun PermissionHint(onAsk: () -> Unit) {
 @Composable
 private fun SessionRow(
     item: SessionItem,
+    price: Double?,
     wanted: Boolean,
     setSymbol: @Composable (String) -> Boolean,
     cardImage: @Composable (String, Boolean, Modifier) -> Unit,
@@ -552,6 +584,8 @@ private fun SessionRow(
         },
         trailingContent = {
             Column(horizontalAlignment = Alignment.End) {
+                // The price of one copy, like the card tiles of the app.
+                price?.let { Text(euros(it), style = MaterialTheme.typography.titleSmall) }
                 if (item.uncertain) Text("?", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleLarge)
                 if (wanted) Text(stringResource(R.string.scanner_wanted), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             }
@@ -566,6 +600,7 @@ private fun EditSheet(
     vm: ScannerViewModel,
     setSymbol: @Composable (String) -> Boolean,
     cardImage: @Composable (String, Boolean, Modifier) -> Unit,
+    onPickPrinting: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     // The printing whose image is shown large; a tap anywhere closes it.
@@ -609,27 +644,126 @@ private fun EditSheet(
                         FilterChip(selected = item.language == l, onClick = { vm.setLanguage(item.id, l) }, label = { Text(l.uppercase()) })
                     }
                 }
-                if (item.alternatives.isNotEmpty()) {
-                    Text(
-                        stringResource(R.string.scanner_other_printings),
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-                    )
+                OutlinedButton(onClick = onPickPrinting, modifier = Modifier.padding(top = 12.dp)) {
+                    Text(stringResource(R.string.scanner_change_printing))
                 }
             }
-            items(item.alternatives, key = { it.i }) { p ->
-                ListItem(
-                    modifier = Modifier.clickable { vm.setPrinting(item.id, p) },
-                    // The image opens large; the rest of the row picks the printing.
-                    leadingContent = { cardImage(p.scryfallId, false, Modifier.width(48.dp).clickable { zoomed = p }) },
-                    headlineContent = { PrintingLine(p, setSymbol) },
-                    supportingContent = {
-                        val set = vm.set(p.setCode)?.let { "${it.name} · ${it.releasedAt.take(4)}" }
-                        Text(listOfNotNull(p.name.takeIf { it != item.printing.name }, set).joinToString("\n"))
-                    },
+            item { Spacer(Modifier.width(1.dp).padding(bottom = 24.dp)) }
+        }
+    }
+    zoomed?.let { ZoomedCard(it, cardImage) { zoomed = null } }
+}
+
+/**
+ * The card scanned last, until the next one is taken: finish, language and
+ * printing change right here, without looking for it in the list. The camera
+ * cannot tell foil and often not the printing - the user can at a glance.
+ * A tap on the card opens the full edit sheet.
+ */
+@Composable
+private fun LastCard(
+    item: SessionItem,
+    price: Double?,
+    wanted: Boolean,
+    vm: ScannerViewModel,
+    setSymbol: @Composable (String) -> Boolean,
+    cardImage: @Composable (String, Boolean, Modifier) -> Unit,
+    onZoom: (Printing) -> Unit,
+    onOpen: () -> Unit,
+) {
+    val p = item.printing
+    var languages by remember { mutableStateOf(false) }
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Row(Modifier.clickable(onClick = onOpen), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                cardImage(p.scryfallId, false, Modifier.width(48.dp).clickable { onZoom(p) })
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        (if (item.quantity > 1) "${item.quantity}× " else "") + (if (wanted) "★ " else "") + p.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    PrintingLine(p, setSymbol, vm.set(p.setCode)?.let { " · ${it.name}" }.orEmpty())
+                }
+                price?.let { Text(euros(it), style = MaterialTheme.typography.titleMedium) }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Only finishes the printing exists in; a single one needs no choice.
+                val finishes = Printing.FINISH_ORDER.filter(p::hasFinish)
+                if (finishes.size > 1) finishes.forEach { f ->
+                    FilterChip(selected = item.foil == f, onClick = { vm.setFoil(item.id, f) }, label = { Text(finishLabel(f)) })
+                }
+                Box {
+                    FilterChip(selected = item.language != "en", onClick = { languages = true }, label = { Text(item.language.uppercase()) })
+                    DropdownMenu(expanded = languages, onDismissRequest = { languages = false }) {
+                        LANGUAGES.forEach { l ->
+                            DropdownMenuItem(
+                                text = { Text(l.uppercase()) },
+                                onClick = { vm.setLanguage(item.id, l); languages = false },
+                                trailingIcon = { if (l == item.language) Text("✓") },
+                            )
+                        }
+                    }
+                }
+                // Marked when the scanner only knew the name and guessed the printing.
+                AssistChip(
+                    onClick = { vm.pickPrinting(item.id) },
+                    label = { Text(stringResource(if (item.uncertain) R.string.scanner_check_printing else R.string.scanner_change_printing)) },
+                    border = if (item.uncertain) BorderStroke(1.dp, MaterialTheme.colorScheme.error) else AssistChipDefaults.assistChipBorder(true),
                 )
             }
-            item { Spacer(Modifier.width(1.dp).padding(bottom = 24.dp)) }
+        }
+    }
+}
+
+/**
+ * All printings of a card to pick from: picture, set, year, number and the
+ * price in the line's finish. Opens from the last card, the edit sheet, and
+ * by itself when the scanner could only read the name.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PrintingPickerSheet(
+    item: SessionItem,
+    prices: Map<String, CardPrice>,
+    vm: ScannerViewModel,
+    setSymbol: @Composable (String) -> Boolean,
+    cardImage: @Composable (String, Boolean, Modifier) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val printings = remember(item.id, item.printing.name) { vm.printingsOf(item) }
+    var zoomed by remember { mutableStateOf<Printing?>(null) }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            Text(item.printing.name, style = MaterialTheme.typography.titleLarge)
+            Text(
+                pluralStringResource(R.plurals.scanner_printings_count, printings.size, printings.size),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+            LazyColumn {
+                items(printings, key = { it.i }) { p ->
+                    LaunchedEffect(p.scryfallId) { vm.ensurePrice(p) }
+                    val current = p.i == item.printing.i
+                    val set = vm.set(p.setCode)
+                    ListItem(
+                        modifier = Modifier.clickable { vm.setPrinting(item.id, p); onDismiss() },
+                        colors = if (current) ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer) else ListItemDefaults.colors(),
+                        // The image opens large; the rest of the row picks the printing.
+                        leadingContent = { cardImage(p.scryfallId, false, Modifier.width(48.dp).clickable { zoomed = p }) },
+                        headlineContent = { Text(set?.name ?: p.setCode.uppercase(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = { PrintingLine(p, setSymbol, set?.year?.let { " · $it" }.orEmpty()) },
+                        trailingContent = {
+                            Column(horizontalAlignment = Alignment.End) {
+                                prices[p.scryfallId]?.forFinish(p.finishFor(item.foil))?.let { Text(euros(it)) }
+                                if (current) Text("✓", color = MaterialTheme.colorScheme.primary)
+                            }
+                        },
+                    )
+                }
+                item { Spacer(Modifier.padding(bottom = 24.dp)) }
+            }
         }
     }
     zoomed?.let { ZoomedCard(it, cardImage) { zoomed = null } }
@@ -644,6 +778,9 @@ private fun ZoomedCard(p: Printing, cardImage: @Composable (String, Boolean, Mod
         }
     }
 }
+
+/** Euro amounts formatted like the rest of the app (de-DE in both languages). */
+private fun euros(v: Double) = NumberFormat.getCurrencyInstance(Locale.GERMANY).apply { currency = Currency.getInstance("EUR") }.format(v)
 
 @Composable
 private fun finishLabel(f: String) = when (f) {

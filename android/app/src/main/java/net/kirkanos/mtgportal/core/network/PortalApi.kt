@@ -3,6 +3,7 @@ package net.kirkanos.mtgportal.core.network
 import net.kirkanos.mtgportal.core.network.dto.ActivityDto
 import net.kirkanos.mtgportal.core.network.dto.AddCardsRequest
 import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
+import net.kirkanos.mtgportal.core.network.dto.CatalogCardDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
@@ -162,6 +163,9 @@ interface PortalApi {
 
     @GET("value-movers")
     suspend fun valueMovers(@Query("days") days: Int): MoversDto
+
+    @GET("catalog/card")
+    suspend fun catalogCard(@Query("set") set: String, @Query("number") number: String): CatalogCardDto
 
     // ---- Admin: everything below needs the upload password ----
 

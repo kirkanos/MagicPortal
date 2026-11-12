@@ -195,4 +195,16 @@ class CardMatcherTest {
         // Other cards stay findable.
         assertEquals("Counterspell", m.search("counterspell").first().first().name)
     }
+
+    @Test
+    fun printingsOfListsEveryPrintingChosenSetsFirst() {
+        val all = matcher.printingsOf("Lightning Bolt")
+        assertEquals(69, all.size)
+        assertEquals(all.size, all.map { it.i }.distinct().size)
+        assertTrue(all.all { it.name == "Lightning Bolt" })
+        assertTrue(matcher.printingsOf("No Such Card").isEmpty())
+
+        val scoped = CardMatcher(index).apply { restrictTo(setOf("2x2")) }.printingsOf("lightning bolt")
+        assertEquals("2x2", scoped.first().setCode)
+    }
 }

@@ -39,3 +39,12 @@ data class ScannedCard(
 )
 
 data class ScanSessionResult(val items: List<ScannedCard>)
+
+/** Scryfall's Cardmarket prices of a printing, in euros; null = none known. */
+data class CardPrice(val eur: Double?, val eurFoil: Double?) {
+    /**
+     * The price of one copy in a finish. Same rule as Pricing.marketPrice in
+     * the app: anything but normal is foil, falling back to the normal price.
+     */
+    fun forFinish(foil: String): Double? = if (foil != "normal" && eurFoil != null) eurFoil else eur
+}

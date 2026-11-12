@@ -4,13 +4,17 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.kirkanos.mtgportal.scanner.catalog.CatalogSet
 import net.kirkanos.mtgportal.scanner.catalog.CatalogStore
 import net.kirkanos.mtgportal.scanner.catalog.Printing
@@ -53,16 +57,36 @@ data class ScannerUiState(
     val sets: Set<String> = emptySet(),
     /** [CameraChoice.key] of the camera in use, null = the phone's default. */
     val camera: String? = null,
-)
+    /** The line the last scan added or counted up; shown with quick edits until the next one. */
+    val last: Long? = null,
+    /**
+     * The line whose printing is being picked from all printings of the
+     * card; scanning pauses meanwhile. Opens by itself when a card was only
+     * recognised by its name.
+     */
+    val picking: Long? = null,
+    /** Prices of the printings in the list, by Scryfall ID, as far as loaded. */
+    val prices: Map<String, CardPrice> = emptyMap(),
+) {
+    /** Whether any line has a known price; without one a total of 0 € would mislead. */
+    val hasPrices: Boolean
+        get() = items.any { prices[it.printing.scryfallId]?.forFinish(it.foil) != null }
+
+    /** What the list is worth, counting only lines with a known price. */
+    val total: Double
+        get() = items.sumOf { item -> prices[item.printing.scryfallId]?.forFinish(item.foil)?.let { it * item.quantity } ?: 0.0 }
+}
 
 /**
  * [dumpDir]: debug builds save camera frames there (at most one a second)
- * to tune the scanner offline.
+ * to tune the scanner offline. [price] asks the server for a printing's
+ * prices; the on-device catalog has none, they change daily.
  */
 class ScannerViewModel(
     private val store: CatalogStore,
     private val dumpDir: File? = null,
     private val prefs: ScannerPrefs? = null,
+    private val price: suspend (setCode: String, collectorNumber: String) -> CardPrice? = { _, _ -> null },
 ) : ViewModel() {
     private val _state = MutableStateFlow(ScannerUiState(sets = prefs?.sets.orEmpty(), camera = prefs?.camera))
     val state: StateFlow<ScannerUiState> = _state
@@ -81,8 +105,35 @@ class ScannerViewModel(
     private var catalogSets: List<CatalogSet> = emptyList()
     private var setsByCode: Map<String, CatalogSet> = emptyMap()
 
+    /** Printings whose price is loaded or on its way. */
+    private val pricing = mutableSetOf<String>()
+
     init {
         loadCatalog()
+        viewModelScope.launch {
+            _state.map { s -> s.items.map { it.printing } }.distinctUntilChanged().collect { loadPrices(it) }
+        }
+    }
+
+    /**
+     * Loads the prices of new printings in the list, one request each. Offline
+     * the list simply shows none; a failed printing is retried when the list
+     * changes next.
+     */
+    private fun loadPrices(printings: List<Printing>) {
+        printings.filter { pricing.add(it.scryfallId) }.forEach { p ->
+            viewModelScope.launch {
+                val r = try {
+                    withContext(Dispatchers.IO) { price(p.setCode, p.collectorNumber) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    null
+                }
+                if (r == null) pricing.remove(p.scryfallId)
+                else _state.update { it.copy(prices = it.prices + (p.scryfallId to r)) }
+            }
+        }
     }
 
     fun loadCatalog() {
@@ -104,6 +155,13 @@ class ScannerViewModel(
 
     /** Called from the analyzer thread with [busy] already set. */
     fun onFrame(frame: Bitmap) {
+        // While a printing is picked the card is still under the camera; a
+        // frame now could only count it again or correct the user's choice.
+        if (_state.value.picking != null) {
+            frame.recycle()
+            busy.set(false)
+            return
+        }
         viewModelScope.launch(Dispatchers.Default) {
             val card = cutCard(frame)
             try {
@@ -117,7 +175,15 @@ class ScannerViewModel(
                 dump(frame, raw.name ?: match?.printing?.name ?: "none")
                 val defaults = _state.value
                 val added = session.offer(match, reading.language ?: defaults.defaultLanguage, defaults.defaultFoil)
-                _state.update { it.copy(items = session.items, seeing = match?.printing?.name, outline = outline) }
+                _state.update { st ->
+                    st.copy(
+                        items = session.items,
+                        seeing = match?.printing?.name,
+                        outline = outline,
+                        last = added?.id ?: st.last,
+                        picking = if (added?.uncertain == true) added.id else st.picking,
+                    )
+                }
                 if (added != null) _accepted.tryEmit(added)
             } catch (e: Exception) {
                 Log.w(TAG, "frame failed", e)
@@ -195,8 +261,8 @@ class ScannerViewModel(
     fun addManual(printings: List<Printing>) {
         val first = printings.firstOrNull() ?: return
         val s = _state.value
-        session.addManual(first, printings.drop(1).take(30), s.defaultLanguage ?: "en", s.defaultFoil)
-        _state.update { it.copy(items = session.items) }
+        val added = session.addManual(first, printings.drop(1).take(30), s.defaultLanguage ?: "en", s.defaultFoil)
+        _state.update { it.copy(items = session.items, last = added.id) }
     }
 
     fun setQuantity(id: Long, quantity: Int) = edit(id) { it.copy(quantity = quantity.coerceIn(1, 999)) }
@@ -210,8 +276,19 @@ class ScannerViewModel(
 
     fun remove(id: Long) {
         session.remove(id)
-        _state.update { it.copy(items = session.items) }
+        _state.update { it.copy(items = session.items, last = it.last.takeIf { l -> l != id }, picking = it.picking.takeIf { p -> p != id }) }
     }
+
+    /** Opens the printing picker for a line, or closes it (null) and scans on. */
+    fun pickPrinting(id: Long?) = _state.update { it.copy(picking = id) }
+
+    /** All printings of a line's card, its own and the matcher's alternatives as a fallback. */
+    fun printingsOf(item: SessionItem): List<Printing> =
+        matcher?.printingsOf(item.printing.name)?.takeIf { it.isNotEmpty() }
+            ?: (listOf(item.printing) + item.alternatives).distinctBy { it.i }
+
+    /** Loads a printing's price if it is not there yet, for the printing picker. */
+    fun ensurePrice(p: Printing) = loadPrices(listOf(p))
 
     fun result() = session.result()
 

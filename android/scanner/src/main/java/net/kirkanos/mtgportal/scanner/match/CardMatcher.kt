@@ -240,13 +240,18 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
             scored += name to s + if (scoped?.containsKey(name) == true) 10f else 0f
         }
         return scored.sortedByDescending { it.second }.take(limit).map { (name, _) ->
-            index.byName.getValue(name).map(index::printing).sortedWith(
-                compareBy<Printing> { if (inScope(it.setCode)) 0 else 1 }
-                    .thenBy { if (isSide(it.setCode)) 1 else 0 }
-                    .thenByDescending { index.sets[it.setCode]?.releasedAt.orEmpty() },
-            ).distinctBy { it.i }
+            index.byName.getValue(name).map(index::printing).sortedWith(offerOrder).distinctBy { it.i }
         }
     }
+
+    /** Every printing of a card (catalog name), in the order the search offers them. */
+    fun printingsOf(name: String): List<Printing> =
+        index.byName[NameNormalizer.normalize(name)]?.map(index::printing)?.sortedWith(offerOrder)?.distinctBy { it.i }.orEmpty()
+
+    /** Chosen sets first, then regular sets before side products, newest first. */
+    private val offerOrder = compareBy<Printing> { if (inScope(it.setCode)) 0 else 1 }
+        .thenBy { if (isSide(it.setCode)) 1 else 0 }
+        .thenByDescending { index.sets[it.setCode]?.releasedAt.orEmpty() }
 
     // ---- names ----
 

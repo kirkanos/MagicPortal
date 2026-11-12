@@ -357,6 +357,17 @@ data class ValuePointDto(
     val distinctCount: Int = 0,
 )
 
+/** GET /api/catalog/card: one printing of the catalog; the scanner uses its prices. */
+@Serializable
+data class CatalogCardDto(
+    val setCode: String = "",
+    val collectorNumber: String = "",
+    val name: String = "",
+    val scryfallId: String = "",
+    val priceEur: Double? = null,
+    val priceEurFoil: Double? = null,
+)
+
 @Serializable
 data class MoversDto(
     val days: Int = 30,
