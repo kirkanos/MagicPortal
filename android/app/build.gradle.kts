@@ -17,6 +17,9 @@ android {
         val build = System.getenv("CI_PIPELINE_NUMBER")?.toIntOrNull() ?: 1
         versionCode = build
         versionName = "0.1.$build"
+        // The commit the build came from, shown under "About"; "dev" locally.
+        val commit = System.getenv("CI_COMMIT_SHA")?.take(7) ?: "dev"
+        buildConfigField("String", "GIT_COMMIT", "\"$commit\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // No server built in: the release asks for one on first start, so the
         // same APK works for every self-hosted portal.

@@ -1,5 +1,8 @@
 package net.kirkanos.mtgportal.feature.settings
 
+import androidx.compose.runtime.rememberCoroutineScope
+import net.kirkanos.mtgportal.core.data.UpdateCheck
+import net.kirkanos.mtgportal.core.ui.appContainer
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -154,7 +158,7 @@ fun SettingsScreen(onOpenAdmin: () -> Unit, onOpenExport: () -> Unit = {}) {
         Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleMedium)
         LanguagePicker()
 
-        Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME), color = PortalColors.TextDim)
+        About()
     }
 
     // The dialog is its own window: hiding the keyboard from inside it does
@@ -170,6 +174,60 @@ fun SettingsScreen(onOpenAdmin: () -> Unit, onOpenExport: () -> Unit = {}) {
     }
     if (unlockOpen) UnlockDialog(onUnlock = vm::unlock, onDismiss = { unlockOpen = false })
 }
+
+/** Version, author, licence and the credits the card data needs. */
+@Composable
+private fun About() {
+    val uri = LocalUriHandler.current
+    Text(stringResource(R.string.settings_about), style = MaterialTheme.typography.titleMedium)
+    Text(
+        stringResource(R.string.settings_version, BuildConfig.VERSION_NAME) +
+            " · " + stringResource(R.string.settings_build, BuildConfig.VERSION_CODE, BuildConfig.GIT_COMMIT),
+    )
+    Text(stringResource(R.string.settings_author), color = PortalColors.TextDim)
+    Text(stringResource(R.string.settings_manabox), color = PortalColors.TextDim)
+    Text(stringResource(R.string.settings_license), color = PortalColors.TextDim)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = { uri.openUri(SOURCE_URL) }) { Text(stringResource(R.string.settings_source)) }
+        OutlinedButton(onClick = { uri.openUri("$SOURCE_URL/blob/main/LICENSE") }) {
+            Text(stringResource(R.string.settings_license_open))
+        }
+    }
+    UpdateCheckRow()
+    Text(
+        stringResource(R.string.settings_credits),
+        style = MaterialTheme.typography.bodySmall,
+        color = PortalColors.TextDim,
+    )
+}
+
+/** The same check as at start, on request - and the place to see "up to date". */
+@Composable
+private fun UpdateCheckRow() {
+    val updates = appContainer().updates
+    val check by updates.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val uri = LocalUriHandler.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        when (val c = check) {
+            is UpdateCheck.Available -> Button(onClick = { uri.openUri(updates.apkUrl) }) {
+                Text(stringResource(R.string.update_download_version, c.release.versionName))
+            }
+            else -> OutlinedButton(
+                onClick = { scope.launch { updates.check() } },
+                enabled = c != UpdateCheck.Running,
+            ) { Text(stringResource(R.string.update_check)) }
+        }
+        val status = when (check) {
+            UpdateCheck.UpToDate -> R.string.update_up_to_date
+            UpdateCheck.Unavailable -> R.string.update_unavailable
+            else -> null
+        }
+        if (status != null) Text(stringResource(status), color = PortalColors.TextDim)
+    }
+}
+
+private const val SOURCE_URL = "https://github.com/kirkanos/MagicPortal"
 
 /**
  * Switches the app language without a restart: AppCompat recreates the

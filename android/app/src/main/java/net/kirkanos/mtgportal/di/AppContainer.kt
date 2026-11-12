@@ -20,6 +20,7 @@ import net.kirkanos.mtgportal.core.data.CollectionWriteRepository
 import net.kirkanos.mtgportal.core.data.ConfigRepository
 import net.kirkanos.mtgportal.core.data.SecretStore
 import net.kirkanos.mtgportal.core.data.SettingsRepository
+import net.kirkanos.mtgportal.core.data.UpdateRepository
 import net.kirkanos.mtgportal.core.data.WishlistRepository
 import net.kirkanos.mtgportal.core.network.HttpClients
 import net.kirkanos.mtgportal.core.network.ApiResult
@@ -51,7 +52,7 @@ class AppContainer(context: Context) {
         baseUrl = { settings.baseUrl.value },
         secret = { settings.secret.value },
         debug = BuildConfig.DEBUG,
-        userAgent = "MagicPortal-Android/${BuildConfig.VERSION_NAME} (+https://github.com/kirkanos/mtg-portal)",
+        userAgent = "MagicPortal-Android/${BuildConfig.VERSION_NAME} (+https://github.com/kirkanos/MagicPortal)",
     )
 
     val api = http.portalApi
@@ -59,6 +60,9 @@ class AppContainer(context: Context) {
     val config = ConfigRepository(api, settings, appScope)
     val wishlist = WishlistRepository(api, auth)
     val collectionWrite = CollectionWriteRepository(api)
+
+    /** Newer APK on the portal? Plain client: the password stays out of it. */
+    val updates = UpdateRepository(http.images, http.json, { settings.baseUrl.value }, BuildConfig.VERSION_CODE)
 
     /** The camera scanner; its catalog comes through the API client like everything else. */
     val scanner: ScannerEntry = CameraScanner(
@@ -121,5 +125,7 @@ class AppContainer(context: Context) {
         auth.probe()
         config.refresh()
         wishlist.load()
+        // Local debug builds are version 1 - every release would look newer.
+        if (!BuildConfig.DEBUG) updates.check()
     }
 }

@@ -1,5 +1,10 @@
 package net.kirkanos.mtgportal.navigation
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalUriHandler
+import net.kirkanos.mtgportal.core.data.UpdateCheck
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -126,45 +131,48 @@ fun AppShell() {
     ) { padding ->
         // imePadding: edge-to-edge, Android no longer shrinks the window for the
         // keyboard, so without it the keyboard covers whatever is below a field.
-        NavHost(
-            nav,
-            startDestination = CardsRoute(),
-            modifier = Modifier.padding(padding).consumeWindowInsets(padding).imePadding(),
-        ) {
-            composable<CardsRoute> { entry ->
-                val r = entry.toRoute<CardsRoute>()
-                CardsScreen(binder = r.binder, set = r.set)
-            }
-            composable<EditionsRoute> { EditionsScreen(onOpenSet = { nav.navigate(SetCardsRoute(it)) }) }
-            composable<SetCardsRoute> { entry -> SetCardsScreen(entry.toRoute<SetCardsRoute>().code) }
-            composable<ReservedRoute> { ReservedScreen() }
-            composable<WishlistRoute> { WishlistScreen() }
-            composable<BindersRoute> { entry ->
-                // Like index.html?binder=: the grid, filtered to that folder.
-                BindersScreen(entry.toRoute<BindersRoute>().type, onOpen = { nav.navigate(CardsRoute(binder = it)) })
-            }
-            composable<DecksRoute> { DecksScreen() }
-            composable<DashboardRoute> { DashboardScreen() }
-            composable<DeckCheckerRoute> { DeckCheckerScreen() }
-            composable<ActivityRoute> { ActivityScreen() }
-            composable<SettingsRoute> { SettingsScreen(onOpenAdmin = { nav.navigate(AdminRoute) }, onOpenExport = { nav.navigate(HandoverRoute) }) }
-            composable<AdminRoute> { AdminScreen() }
-            composable<ScannerRoute> {
-                container.scanner.Screen(
-                    onResult = { result ->
-                        container.lastScan = result
-                        nav.navigate(ScanResultRoute) { popUpTo<ScannerRoute> { inclusive = true } }
-                    },
-                    onClose = { nav.popBackStack() },
-                )
-            }
-            composable<HandoverRoute> { HandoverScreen() }
-            composable<ScanResultRoute> {
-                ScanResultScreen(
-                    container.lastScan,
-                    onScanAgain = { nav.navigate(ScannerRoute) { popUpTo<ScanResultRoute> { inclusive = true } } },
-                    onOpenBinder = { nav.navigate(CardsRoute(binder = it)) { popUpTo<ScanResultRoute> { inclusive = true } } },
-                )
+        Column(Modifier.padding(padding).consumeWindowInsets(padding).imePadding()) {
+            if (!scanning) UpdateBanner()
+            NavHost(
+                nav,
+                startDestination = CardsRoute(),
+                modifier = Modifier.weight(1f),
+            ) {
+                composable<CardsRoute> { entry ->
+                    val r = entry.toRoute<CardsRoute>()
+                    CardsScreen(binder = r.binder, set = r.set)
+                }
+                composable<EditionsRoute> { EditionsScreen(onOpenSet = { nav.navigate(SetCardsRoute(it)) }) }
+                composable<SetCardsRoute> { entry -> SetCardsScreen(entry.toRoute<SetCardsRoute>().code) }
+                composable<ReservedRoute> { ReservedScreen() }
+                composable<WishlistRoute> { WishlistScreen() }
+                composable<BindersRoute> { entry ->
+                    // Like index.html?binder=: the grid, filtered to that folder.
+                    BindersScreen(entry.toRoute<BindersRoute>().type, onOpen = { nav.navigate(CardsRoute(binder = it)) })
+                }
+                composable<DecksRoute> { DecksScreen() }
+                composable<DashboardRoute> { DashboardScreen() }
+                composable<DeckCheckerRoute> { DeckCheckerScreen() }
+                composable<ActivityRoute> { ActivityScreen() }
+                composable<SettingsRoute> { SettingsScreen(onOpenAdmin = { nav.navigate(AdminRoute) }, onOpenExport = { nav.navigate(HandoverRoute) }) }
+                composable<AdminRoute> { AdminScreen() }
+                composable<ScannerRoute> {
+                    container.scanner.Screen(
+                        onResult = { result ->
+                            container.lastScan = result
+                            nav.navigate(ScanResultRoute) { popUpTo<ScannerRoute> { inclusive = true } }
+                        },
+                        onClose = { nav.popBackStack() },
+                    )
+                }
+                composable<HandoverRoute> { HandoverScreen() }
+                composable<ScanResultRoute> {
+                    ScanResultScreen(
+                        container.lastScan,
+                        onScanAgain = { nav.navigate(ScannerRoute) { popUpTo<ScanResultRoute> { inclusive = true } } },
+                        onOpenBinder = { nav.navigate(CardsRoute(binder = it)) { popUpTo<ScanResultRoute> { inclusive = true } } },
+                    )
+                }
             }
         }
     }
@@ -206,4 +214,27 @@ fun NavHostController.navigateTop(route: Any) = navigate(route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }
     launchSingleTop = true
     restoreState = true
+}
+
+/** "New version available" under the status bar, until opened or closed. */
+@Composable
+private fun UpdateBanner() {
+    val updates = appContainer().updates
+    val check by updates.state.collectAsStateWithLifecycle()
+    val dismissed by updates.dismissed.collectAsStateWithLifecycle()
+    val release = (check as? UpdateCheck.Available)?.release ?: return
+    if (release.versionCode <= dismissed) return
+    val uri = LocalUriHandler.current
+    Surface(color = PortalColors.BgElevated, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.update_available, release.versionName), Modifier.weight(1f))
+            TextButton(onClick = { uri.openUri(updates.apkUrl); updates.dismiss(release.versionCode) }) {
+                Text(stringResource(R.string.update_download))
+            }
+            TextButton(onClick = { updates.dismiss(release.versionCode) }) { Text(stringResource(R.string.update_later)) }
+        }
+    }
 }
