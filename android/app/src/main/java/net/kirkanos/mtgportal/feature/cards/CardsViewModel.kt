@@ -67,6 +67,7 @@ class CardsViewModel(
             filters = CardFilters(
                 binder = initialBinder.orEmpty(),
                 set = initialSet?.let(SetCode::display).orEmpty(),
+                sort = c.settings.sortFor("cards") ?: "name",
             ),
         ),
     )
@@ -126,6 +127,8 @@ class CardsViewModel(
             if (f.type != st.filters.type) f = f.copy(subtype = "")
             st.copy(filters = f, subtypes = subtypesFor(f.type))
         }
+        val sort = _state.value.filters.sort
+        viewModelScope.launch { c.settings.setSort("cards", sort) }
         runQuery()
     }
 

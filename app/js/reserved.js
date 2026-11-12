@@ -93,6 +93,7 @@ function renderGrid() {
 }
 
 async function init() {
+  rememberSelect('sort-by', 'mtg_sort_reserved');
   showLoading(t('Lade Reserved List...', 'Loading Reserved List...'));
   try {
     await Promise.all([loadReserved(), loadWishlistNames()]);

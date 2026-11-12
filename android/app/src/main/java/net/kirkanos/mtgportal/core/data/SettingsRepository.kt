@@ -35,6 +35,7 @@ class SettingsRepository(
     private val _editionTypes: MutableStateFlow<String?>
     private val _lastBinder: MutableStateFlow<String?>
     private val _pendingExport: MutableStateFlow<String?>
+    private val sorts: MutableMap<String, String>
 
     init {
         val prefs = runBlocking { context.settingsStore.data.first() }
@@ -43,6 +44,10 @@ class SettingsRepository(
         _editionTypes = MutableStateFlow(prefs[editionTypesKey])
         _lastBinder = MutableStateFlow(prefs[lastBinderKey])
         _pendingExport = MutableStateFlow(prefs[pendingExportKey])
+        sorts = prefs.asMap().entries
+            .filter { it.key.name.startsWith(SORT_PREFIX) }
+            .associate { it.key.name.removePrefix(SORT_PREFIX) to it.value.toString() }
+            .toMutableMap()
     }
 
     /** The server address; empty until the first-run setup has stored one. */
@@ -91,7 +96,18 @@ class SettingsRepository(
         _pendingExport.value = encoded
     }
 
+    /** A screen's last sort order, like localStorage['mtg_sort_<page>'] on the web. */
+    fun sortFor(page: String): String? = sorts[page]
+
+    suspend fun setSort(page: String, sort: String) {
+        if (sorts[page] == sort) return
+        sorts[page] = sort
+        context.settingsStore.edit { it[stringPreferencesKey(SORT_PREFIX + page)] = sort }
+    }
+
     companion object {
+        private const val SORT_PREFIX = "sort_"
+
         /**
          * What someone types into the address field, as a base URL: trimmed,
          * no trailing slash, https:// when no scheme is given - the release

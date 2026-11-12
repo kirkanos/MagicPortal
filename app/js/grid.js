@@ -333,6 +333,7 @@ async function renderRandomStrip() {
 }
 
 async function init() {
+  rememberSelect('sort-by', 'mtg_sort_cards');
   initModal();
   showLoading(t('Lade Sammlung...', 'Loading collection...'));
   try {

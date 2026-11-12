@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.ui.components.HelpButton
+import net.kirkanos.mtgportal.core.ui.rememberSort
 import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.dto.EditionDto
 import net.kirkanos.mtgportal.core.network.safeCall
@@ -129,7 +130,7 @@ fun EditionsScreen(onOpenSet: (String) -> Unit) {
     val images by appContainer().config.imageUrls.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     var owned by rememberSaveable { mutableStateOf("all") }
-    var sort by rememberSaveable { mutableStateOf("value-desc") }
+    var sort by rememberSort("editions", "value-desc")
     var typeDialog by remember { mutableStateOf(false) }
 
     when (val r = data) {

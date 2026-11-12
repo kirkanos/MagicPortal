@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.ui.components.HelpButton
+import net.kirkanos.mtgportal.core.ui.rememberSort
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.dto.ReservedCardDto
@@ -93,7 +94,7 @@ fun ReservedScreen() {
     val images by appContainer().config.imageUrls.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     var owned by rememberSaveable { mutableStateOf("all") }
-    var sort by rememberSaveable { mutableStateOf("price-desc") }
+    var sort by rememberSort("reserved", "price-desc")
 
     when (val r = st) {
         null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }

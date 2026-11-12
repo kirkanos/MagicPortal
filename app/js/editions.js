@@ -570,6 +570,7 @@ function closeEditionCardOverlay() {
 }
 
 async function init() {
+  rememberSelect('sort-by', 'mtg_sort_editions');
   showLoading(t('Lade Sammlung...', 'Loading collection...'));
   try {
     allCards = await loadCollection(updateLoadingProgress);

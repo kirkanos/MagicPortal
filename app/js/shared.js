@@ -1132,6 +1132,26 @@ function initHelp() {
   window.addEventListener('resize', () => document.querySelectorAll('.help.open').forEach(closeHelp));
 }
 
+/* Restores a select's last value and stores every change - the sort order
+   of a page survives reloads. Call it before the page's first render. */
+function rememberSelect(id, key) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  try {
+    const v = localStorage.getItem(key);
+    if (v !== null && [...el.options].some((o) => o.value === v)) el.value = v;
+  } catch (e) {
+    /* ignore */
+  }
+  el.addEventListener('change', () => {
+    try {
+      localStorage.setItem(key, el.value);
+    } catch (e) {
+      /* ignore */
+    }
+  });
+}
+
 function initShared() {
   initHelp();
   buildAdminOverlay(); // must exist before initCollectionUpload wires its buttons

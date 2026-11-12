@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.ui.components.HelpButton
+import net.kirkanos.mtgportal.core.ui.rememberSort
 import net.kirkanos.mtgportal.core.model.Condition
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.network.ApiResult
@@ -110,7 +111,7 @@ private fun WishlistContent(data: WishlistDto, exportText: String?, vm: Wishlist
     val context = LocalContext.current
     var query by rememberSaveable { mutableStateOf("") }
     var state by rememberSaveable { mutableStateOf("all") }
-    var sort by rememberSaveable { mutableStateOf("default") }
+    var sort by rememberSort("wishlist", "default")
     var newName by rememberSaveable { mutableStateOf("") }
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
     val shown = filterWishlist(data.items, query, state, sort)

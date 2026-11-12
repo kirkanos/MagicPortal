@@ -268,6 +268,7 @@ function applyUnlocked(unlocked) {
 }
 
 async function init() {
+  rememberSelect('sort-by', 'mtg_sort_wishlist');
   showLoading(t('Lade Wunschliste...', 'Loading wishlist...'));
   try {
     await uiConfigReady; // decides whether images come from the mirror
