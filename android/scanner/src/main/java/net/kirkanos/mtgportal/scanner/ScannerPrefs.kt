@@ -20,7 +20,12 @@ class ScannerPrefs(context: Context) {
         get() = prefs.getString(CAMERA, null)
         set(value) = prefs.edit { putString(CAMERA, value) }
 
+    var sound: Boolean
+        get() = prefs.getBoolean(SOUND, true)
+        set(value) = prefs.edit { putBoolean(SOUND, value) }
+
     private companion object {
+        const val SOUND = "sound"
         const val SETS = "sets"
         const val CAMERA = "camera"
     }

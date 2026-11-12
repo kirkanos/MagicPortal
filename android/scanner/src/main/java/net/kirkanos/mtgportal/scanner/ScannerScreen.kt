@@ -7,8 +7,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
-import android.media.AudioManager
-import android.media.ToneGenerator
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageAnalysis
@@ -35,6 +33,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -171,6 +173,15 @@ private fun materialIcon(name: String, d: String) = ImageVector.Builder(name, 24
 private val FlashOn = materialIcon("flash_on", "m460-272 186-268H520l81-280H340v360h120v188Zm251-257L441-139q-5 7-11.5 8.5t-13.4-.66q-6.9-2.15-11.5-7.54-4.6-5.39-4.6-13.3v-248h-60q-24.75 0-42.37-17.63Q280-435.25 280-460v-360q0-24.75 17.63-42.38Q315.25-880 340-880h278q23 0 38 18.5t8 41.5l-64 220h74q26.87 0 39.94 24Q727-552 711-529Zm-251 69H340h120Z")
 private val FlashOff = materialIcon("flash_off", "m664-820-64 220h74q26.87 0 39.94 24Q727-552 711-529l-59 85q-8.43 11.05-22.21 12.53Q616-430 606-440q-8-8-8.5-18t5.5-19l43-63h-86q-15.45 0-24.73-12-9.27-12-4.27-26l70-242H310q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h308q23 0 38 18.5t8 41.5ZM792-83 561-313 441-139q-5 7-11.5 8.5t-13.4-.66q-6.9-2.15-11.5-7.54-4.6-5.39-4.6-13.3v-248h-60q-24.75 0-42.37-17.63Q280-435.25 280-460v-134L82-792q-9-9.07-9-21.53Q73-826 82.05-835q9.06-9 21.5-9 12.45 0 21.45 9l710 710q9 9 9 21t-9.05 21q-9.06 9-21.5 9Q801-74 792-83ZM463-639Z")
 
+/** Classic Material icons in their 24 box. */
+private fun icon24(name: String, d: String) = ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
+    .addPath(addPathNodes(d), fill = SolidColor(Color.Black))
+    .build()
+
+private val VolumeOn = icon24("volume_up", "M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z")
+private val VolumeOff = icon24("volume_off", "M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z")
+private val ListIcon = icon24("list", "M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z")
+
 private val LANGUAGES = listOf("en", "de", "fr", "it", "es", "pt", "ja", "ko", "ru", "zhs", "zht")
 
 @Composable
@@ -191,19 +202,23 @@ private fun ScannerContent(
     var pickingSets by remember { mutableStateOf(false) }
     var zoomed by remember { mutableStateOf<Printing?>(null) }
     val haptics = LocalHapticFeedback.current
-    val tone = remember { runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 60) }.getOrNull() }
-    DisposableEffect(Unit) { onDispose { tone?.release() } }
-    LaunchedEffect(vm) {
-        vm.accepted.collect {
-            haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-            tone?.startTone(ToneGenerator.TONE_PROP_BEEP, 80)
-        }
-    }
+    val sounds = remember { ScanSounds() }
+    DisposableEffect(Unit) { onDispose { sounds.release() } }
+    LaunchedEffect(vm) { vm.accepted.collect { haptics.performHapticFeedback(HapticFeedbackType.Confirm) } }
+    LaunchedEffect(vm) { vm.priced.collect { sounds.play(it) } }
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onClose) { Text(stringResource(R.string.scanner_close)) }
-            Text(stringResource(R.string.scanner_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            // The worth of everything scanned so far takes the title's place
+            // once there is one; the count is on the done button.
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                if (state.hasPrices) {
+                    Text(euros(state.total), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                } else {
+                    Text(stringResource(R.string.scanner_title), style = MaterialTheme.typography.titleMedium)
+                }
+            }
             TextButton(onClick = { searching = true }, enabled = state.catalog is CatalogState.Ready) { Text(stringResource(R.string.scanner_search)) }
             val count = state.items.sumOf { it.quantity }
             Button(onClick = onDone, enabled = count > 0) { Text(pluralStringResource(R.plurals.scanner_done, count, count)) }
@@ -214,6 +229,9 @@ private fun ScannerContent(
             GuideOverlay(Modifier.fillMaxSize(), state.outline)
             SetsButton(state.sets, setSymbol, Modifier.align(Alignment.TopStart).padding(8.dp), enabled = state.catalog is CatalogState.Ready) { pickingSets = true }
             Row(Modifier.align(Alignment.TopEnd).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalIconButton(onClick = vm::toggleSound) {
+                    Icon(if (state.sound) VolumeOn else VolumeOff, contentDescription = stringResource(R.string.scanner_sound))
+                }
                 if (granted) {
                     CameraButton(state.camera, vm::setCamera)
                     FilledTonalIconButton(onClick = vm::toggleTorch) {
@@ -225,41 +243,35 @@ private fun ScannerContent(
         }
 
         DefaultsRow(state, vm)
-        if (state.hasPrices) {
-            Text(
-                stringResource(R.string.scanner_total, euros(state.total)),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-        }
-        if (state.items.isEmpty()) {
-            Text(
-                stringResource(R.string.scanner_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(16.dp),
-            )
-        }
-        val last = state.items.firstOrNull { it.id == state.last }
-        last?.let { item ->
-            LastCard(
-                item,
-                state.prices[item.printing.scryfallId]?.forFinish(item.foil),
-                isWanted(item.printing.name),
-                vm,
-                setSymbol,
-                cardImage,
-                onZoom = { zoomed = it },
-                onOpen = { editing = item.id },
-            )
-        }
-        LazyColumn(Modifier.weight(1f)) {
-            items(state.items.filter { it.id != last?.id }, key = { it.id }) { item ->
-                SessionRow(item, state.prices[item.printing.scryfallId]?.forFinish(item.foil), isWanted(item.printing.name), setSymbol, cardImage, onZoom = { zoomed = it }) { editing = item.id }
-                HorizontalDivider()
+        // Only the card just scanned; the others are behind the list button,
+        // so the quick edits never cover anything.
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            val last = state.items.firstOrNull { it.id == state.last }
+            if (last != null) {
+                LastCard(
+                    last,
+                    state.priceOf(last),
+                    state.priceLoading(last),
+                    isWanted(last.printing.name),
+                    vm,
+                    setSymbol,
+                    cardImage,
+                    onZoom = { zoomed = it },
+                    onOpen = { editing = last.id },
+                )
+            } else if (state.items.isEmpty()) {
+                Text(
+                    stringResource(R.string.scanner_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp),
+                )
             }
         }
     }
 
+    if (state.browsing) {
+        SessionListSheet(state, isWanted, setSymbol, cardImage, onZoom = { zoomed = it }, onEdit = { editing = it }, onDismiss = { vm.setBrowsing(false) })
+    }
     state.items.firstOrNull { it.id == editing }?.let { item ->
         EditSheet(item, vm, setSymbol, cardImage, onPickPrinting = { editing = null; vm.pickPrinting(item.id) }, onDismiss = { editing = null })
     }
@@ -269,6 +281,37 @@ private fun ScannerContent(
     if (searching) SearchSheet(vm, onDismiss = { searching = false })
     zoomed?.let { ZoomedCard(it, cardImage) { zoomed = null } }
     if (pickingSets) SetPickerSheet(vm, state.sets, setSymbol, help, onDismiss = { pickingSets = false })
+}
+
+/** All cards of the session, newest first, with count and worth; a tap edits one. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SessionListSheet(
+    state: ScannerUiState,
+    isWanted: (String) -> Boolean,
+    setSymbol: @Composable (String) -> Boolean,
+    cardImage: @Composable (String, Boolean, Modifier) -> Unit,
+    onZoom: (Printing) -> Unit,
+    onEdit: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        val count = state.items.sumOf { it.quantity }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(pluralStringResource(R.plurals.scanner_list_title, count, count), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            if (state.hasPrices) Text(euros(state.total), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+        }
+        if (state.items.isEmpty()) {
+            Text(stringResource(R.string.scanner_list_empty), modifier = Modifier.padding(16.dp))
+        }
+        LazyColumn {
+            items(state.items, key = { it.id }) { item ->
+                SessionRow(item, state.priceOf(item), isWanted(item.printing.name), setSymbol, cardImage, onZoom = onZoom) { onEdit(item.id) }
+                HorizontalDivider()
+            }
+            item { Spacer(Modifier.padding(bottom = 24.dp)) }
+        }
+    }
 }
 
 /** Shows the set filter at all times: a forgotten one would hide cards. */
@@ -446,6 +489,14 @@ private fun DefaultsRow(state: ScannerUiState, vm: ScannerViewModel) {
                 LANGUAGES.forEach { l ->
                     DropdownMenuItem(text = { Text(l.uppercase()) }, onClick = { vm.setDefaultLanguage(l); languages = false })
                 }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        // The session list, like ManaBox behind a button; the badge counts copies.
+        val count = state.items.sumOf { it.quantity }
+        FilledTonalIconButton(onClick = { vm.setBrowsing(true) }) {
+            BadgedBox(badge = { if (count > 0) Badge { Text("$count") } }) {
+                Icon(ListIcon, contentDescription = stringResource(R.string.scanner_list))
             }
         }
     }
@@ -664,6 +715,7 @@ private fun EditSheet(
 private fun LastCard(
     item: SessionItem,
     price: Double?,
+    priceLoading: Boolean,
     wanted: Boolean,
     vm: ScannerViewModel,
     setSymbol: @Composable (String) -> Boolean,
@@ -673,10 +725,10 @@ private fun LastCard(
 ) {
     val p = item.printing
     var languages by remember { mutableStateOf(false) }
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(Modifier.clickable(onClick = onOpen), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                cardImage(p.scryfallId, false, Modifier.width(48.dp).clickable { onZoom(p) })
+                cardImage(p.scryfallId, false, Modifier.width(64.dp).clickable { onZoom(p) })
                 Column(Modifier.weight(1f)) {
                     Text(
                         (if (item.quantity > 1) "${item.quantity}× " else "") + (if (wanted) "★ " else "") + p.name,
@@ -686,7 +738,12 @@ private fun LastCard(
                     )
                     PrintingLine(p, setSymbol, vm.set(p.setCode)?.let { " · ${it.name}" }.orEmpty())
                 }
-                price?.let { Text(euros(it), style = MaterialTheme.typography.titleMedium) }
+                // "…" while the server is asked, "–" when it knows no price.
+                Text(
+                    price?.let(::euros) ?: if (priceLoading) "…" else "–",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = if (price != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 // Only finishes the printing exists in; a single one needs no choice.

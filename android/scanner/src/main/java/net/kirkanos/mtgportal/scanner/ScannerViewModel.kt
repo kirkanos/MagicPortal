@@ -11,10 +11,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import net.kirkanos.mtgportal.scanner.catalog.CatalogSet
 import net.kirkanos.mtgportal.scanner.catalog.CatalogStore
 import net.kirkanos.mtgportal.scanner.catalog.Printing
@@ -67,7 +69,19 @@ data class ScannerUiState(
     val picking: Long? = null,
     /** Prices of the printings in the list, by Scryfall ID, as far as loaded. */
     val prices: Map<String, CardPrice> = emptyMap(),
+    /** Printings whose price could not be loaded (offline, or unknown to the server). */
+    val noPrice: Set<String> = emptySet(),
+    /** The list of scanned cards is open; scanning pauses meanwhile. */
+    val browsing: Boolean = false,
+    /** Play a sound for each scanned card. */
+    val sound: Boolean = true,
 ) {
+    /** A line's price of one copy; null while loading or when none is known. */
+    fun priceOf(item: SessionItem): Double? = prices[item.printing.scryfallId]?.forFinish(item.foil)
+
+    /** Whether a line's price is still on its way. */
+    fun priceLoading(item: SessionItem): Boolean = item.printing.scryfallId.let { it !in prices && it !in noPrice }
+
     /** Whether any line has a known price; without one a total of 0 € would mislead. */
     val hasPrices: Boolean
         get() = items.any { prices[it.printing.scryfallId]?.forFinish(it.foil) != null }
@@ -88,12 +102,19 @@ class ScannerViewModel(
     private val prefs: ScannerPrefs? = null,
     private val price: suspend (setCode: String, collectorNumber: String) -> CardPrice? = { _, _ -> null },
 ) : ViewModel() {
-    private val _state = MutableStateFlow(ScannerUiState(sets = prefs?.sets.orEmpty(), camera = prefs?.camera))
+    private val _state = MutableStateFlow(ScannerUiState(sets = prefs?.sets.orEmpty(), camera = prefs?.camera, sound = prefs?.sound ?: true))
     val state: StateFlow<ScannerUiState> = _state
 
-    /** Fires once per card taken into the list: beep and vibrate. */
+    /** Fires once per card taken into the list, at once: vibrate. */
     private val _accepted = MutableSharedFlow<SessionItem>(extraBufferCapacity = 4)
     val accepted: SharedFlow<SessionItem> = _accepted
+
+    /**
+     * Fires once per card taken into the list when its price is known (or
+     * did not come in time), with the price of one copy: the sound.
+     */
+    private val _priced = MutableSharedFlow<Double?>(extraBufferCapacity = 4)
+    val priced: SharedFlow<Double?> = _priced
 
     /** Set while a frame is being read; the analyzer drops frames meanwhile. */
     val busy = AtomicBoolean(true)
@@ -130,8 +151,12 @@ class ScannerViewModel(
                 } catch (e: Exception) {
                     null
                 }
-                if (r == null) pricing.remove(p.scryfallId)
-                else _state.update { it.copy(prices = it.prices + (p.scryfallId to r)) }
+                if (r == null) {
+                    pricing.remove(p.scryfallId)
+                    _state.update { it.copy(noPrice = it.noPrice + p.scryfallId) }
+                } else {
+                    _state.update { it.copy(prices = it.prices + (p.scryfallId to r), noPrice = it.noPrice - p.scryfallId) }
+                }
             }
         }
     }
@@ -157,7 +182,7 @@ class ScannerViewModel(
     fun onFrame(frame: Bitmap) {
         // While a printing is picked the card is still under the camera; a
         // frame now could only count it again or correct the user's choice.
-        if (_state.value.picking != null) {
+        if (_state.value.picking != null || _state.value.browsing) {
             frame.recycle()
             busy.set(false)
             return
@@ -184,7 +209,10 @@ class ScannerViewModel(
                         picking = if (added?.uncertain == true) added.id else st.picking,
                     )
                 }
-                if (added != null) _accepted.tryEmit(added)
+                if (added != null) {
+                    _accepted.tryEmit(added)
+                    announcePrice(added)
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "frame failed", e)
             } finally {
@@ -232,6 +260,29 @@ class ScannerViewModel(
             File(dir, "${now}_$safe.jpg").outputStream().use { frame.compress(Bitmap.CompressFormat.JPEG, 92, it) }
         }
     }
+
+    /**
+     * Waits for the price of a card just taken (the list change starts its
+     * request), then emits it for the sound. A slow server costs at most a
+     * moment of silence, not the sound.
+     */
+    private fun announcePrice(item: SessionItem) {
+        if (!_state.value.sound) return
+        viewModelScope.launch {
+            val id = item.printing.scryfallId
+            val st = withTimeoutOrNull(PRICE_WAIT_MS) { _state.first { id in it.prices || id in it.noPrice } }
+            _priced.tryEmit(st?.prices?.get(id)?.forFinish(item.foil))
+        }
+    }
+
+    fun toggleSound() {
+        val on = !_state.value.sound
+        prefs?.sound = on
+        _state.update { it.copy(sound = on) }
+    }
+
+    /** Opens or closes the list of scanned cards; scanning pauses while it is open. */
+    fun setBrowsing(open: Boolean) = _state.update { it.copy(browsing = open) }
 
     fun toggleTorch() = _state.update { it.copy(torch = !it.torch) }
 
@@ -303,5 +354,6 @@ class ScannerViewModel(
 
     private companion object {
         const val TAG = "Scanner"
+        const val PRICE_WAIT_MS = 1500L
     }
 }

@@ -5,7 +5,7 @@
         <item quantity="one">Done (%d)</item>
         <item quantity="other">Done (%d)</item>
     </plurals>
-    <string name="scanner_empty">Place a card in the frame. Recognised cards appear here; tap one to change it.</string>
+    <string name="scanner_empty">Place a card in the frame. The recognised card appears here, all others in the list on the right.</string>
     <string name="scanner_hint">Place a card in the frame</string>
     <string name="scanner_catalog_loading">Loading catalog …</string>
     <string name="scanner_catalog_failed">Catalog unavailable: %s (tap to retry)</string>
@@ -41,4 +41,11 @@
     <string name="scanner_sets_done">Done</string>
     <string name="scanner_camera_auto">Auto</string>
     <string name="scanner_camera_focus">%1$s · from %2$d cm</string>
+    <string name="scanner_sound">Scan sound</string>
+    <string name="scanner_list">Scanned cards</string>
+    <string name="scanner_list_empty">No card scanned yet.</string>
+    <plurals name="scanner_list_title">
+        <item quantity="one">%d card</item>
+        <item quantity="other">%d cards</item>
+    </plurals>
 </resources>

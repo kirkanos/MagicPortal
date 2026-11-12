@@ -6,7 +6,7 @@
         <item quantity="one">Fertig (%d)</item>
         <item quantity="other">Fertig (%d)</item>
     </plurals>
-    <string name="scanner_empty">Karte in den Rahmen legen. Erkannte Karten erscheinen hier; antippen zum Ändern.</string>
+    <string name="scanner_empty">Karte in den Rahmen legen. Die erkannte Karte erscheint hier, alle bisherigen in der Liste rechts.</string>
     <string name="scanner_hint">Karte in den Rahmen legen</string>
     <string name="scanner_catalog_loading">Katalog wird geladen …</string>
     <string name="scanner_catalog_failed">Katalog nicht verfügbar: %s (antippen zum Wiederholen)</string>
@@ -44,4 +44,11 @@
     <string name="scanner_sets_done">Fertig</string>
     <string name="scanner_camera_auto">Auto</string>
     <string name="scanner_camera_focus">%1$s · ab %2$d cm</string>
+    <string name="scanner_sound">Ton beim Scannen</string>
+    <string name="scanner_list">Gescannte Karten</string>
+    <string name="scanner_list_empty">Noch keine Karte gescannt.</string>
+    <plurals name="scanner_list_title">
+        <item quantity="one">%d Karte</item>
+        <item quantity="other">%d Karten</item>
+    </plurals>
 </resources>
