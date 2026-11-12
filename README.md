@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="images/magic-portal-logo-solid.png" alt="Magic Portal – A ManaBox Interface" width="520">
+  <img src="images/magic-portal-logo-solid.png" alt="Magic Portal – Scan · Collect · Track" width="520">
 </p>
 
 <p align="center">
-  <strong>A self-hosted web portal for your Magic: The Gathering collection, built from a ManaBox CSV export.</strong>
+  <strong>A self-hosted portal for your Magic: The Gathering collection, with an Android app and card scanner.<br>Works with ManaBox CSV exports.</strong>
 </p>
 
 <p align="center">

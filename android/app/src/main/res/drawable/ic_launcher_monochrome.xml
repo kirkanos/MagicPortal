@@ -1,34 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Monochrome logo for themed icons; the launcher tints it. From the logo (app/images/magic-portal-icon.svg): the box -
-     a cube - between the five mana colours. Scaled from its 200 box into the
-     inner 66 of the 108 adaptive canvas, so round masks keep all of it. -->
+<!-- Monochrome launcher icon for themed icons: ring and card only, since one colour cannot separate the mana symbols from the ring. Generated with the web icon (app/images/magic-portal-icon.svg): a card
+     in a violet portal, the five mana symbols on its ring. Scaled so the
+     artwork stays inside the 66 dp circle every launcher mask keeps. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group android:scaleX="0.44" android:scaleY="0.44" android:translateX="10" android:translateY="10">
-        <group android:translateX="122.5" android:translateY="61" android:rotation="30">
-            <path android:fillColor="#FFFFFFFF" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
+    <group android:scaleX="0.39" android:scaleY="0.39" android:translateX="15.00" android:translateY="15.00">
+        <path android:fillColor="#59FFFFFF" android:pathData="M34,100 A66,66 0 1,0 166,100 A66,66 0 1,0 34,100 Z" />
+        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="10" android:pathData="M34,100 A66,66 0 1,0 166,100 A66,66 0 1,0 34,100 Z" />
+        <group android:rotation="-12" android:pivotX="100" android:pivotY="102">
+            <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M83,69 H117 A6,6 0 0 1 123,75 V127 A6,6 0 0 1 117,133 H83 A6,6 0 0 1 77,127 V75 A6,6 0 0 1 83,69 Z M85,76 H115 A2,2 0 0 1 117,78 V99 A2,2 0 0 1 115,101 H85 A2,2 0 0 1 83,99 V78 A2,2 0 0 1 85,76 Z M85,106 H115 A2,2 0 0 1 117,108 V108 A2,2 0 0 1 115,110 H85 A2,2 0 0 1 83,108 V108 A2,2 0 0 1 85,106 Z M85,114 H105 A2,2 0 0 1 107,116 V116 A2,2 0 0 1 105,118 H85 A2,2 0 0 1 83,116 V116 A2,2 0 0 1 85,114 Z" />
         </group>
-        <group android:translateX="163" android:translateY="100" android:rotation="90">
-            <path android:fillColor="#FFFFFFFF" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
-        </group>
-        <group android:translateX="122.5" android:translateY="139" android:rotation="-30">
-            <path android:fillColor="#FFFFFFFF" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
-        </group>
-        <group android:translateX="77.5" android:translateY="139" android:rotation="30">
-            <path android:fillColor="#FFFFFFFF" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
-        </group>
-        <group android:translateX="37" android:translateY="100" android:rotation="90">
-            <path android:fillColor="#FFFFFFFF" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
-        </group>
-        <group android:translateX="77.5" android:translateY="61" android:rotation="-30">
-            <path android:fillColor="#FFFFFFFF" android:pathData="M-14.5,-7.5 L14.5,-7.5 A7.5,7.5 0 0 1 14.5,7.5 L-14.5,7.5 A7.5,7.5 0 0 1 -14.5,-7.5 Z" />
-        </group>
-        <path android:fillColor="#FFFFFFFF" android:pathData="M100,48 L145,74 L100,100 L55,74 Z" />
-        <path android:fillColor="#99FFFFFF" android:pathData="M55,74 L100,100 L100,152 L55,126 Z" />
-        <path android:fillColor="#66FFFFFF" android:pathData="M145,74 L100,100 L100,152 L145,126 Z" />
     </group>
 </vector>

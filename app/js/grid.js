@@ -396,7 +396,7 @@ function renderEmptyState() {
   stopIncremental(grid);
   grid.innerHTML = `
     <div class="empty-state">
-      <img src="images/magic-portal-logo.svg" alt="Magic Portal – A ManaBox Interface" class="empty-logo">
+      <img src="images/magic-portal-logo.svg" alt="Magic Portal – Scan · Collect · Track" class="empty-logo">
       <h2>${t('Deine Sammlung ist noch leer', 'Your collection is empty')}</h2>
       <p>${t(
         'Lade oben rechts über <strong>„🔑 Login"</strong> → <strong>„⬆ CSV hochladen"</strong> deinen ManaBox-CSV-Export hoch, um deine Karten hier zu sehen.',
