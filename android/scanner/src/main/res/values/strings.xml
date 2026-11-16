@@ -51,4 +51,5 @@
         <item quantity="one">%d Karte</item>
         <item quantity="other">%d Karten</item>
     </plurals>
+    <string name="scanner_art_card">Art-Karte</string>
 </resources>

@@ -32,11 +32,13 @@ data class CardFilters(
     val binder: String = "",
     val type: String = "",
     val subtype: String = "",
+    /** A card variant (see FacetsDto.styles). */
+    val style: String = "",
     val sort: String = "name",
 ) {
     /** Filters behind the "Filter" button, for its badge. Search and sort are visible anyway. */
     val activeCount: Int
-        get() = listOf(set, rarity, color, foil, binder, type, subtype).count { it.isNotEmpty() }
+        get() = listOf(set, rarity, color, foil, style, binder, type, subtype).count { it.isNotEmpty() }
 }
 
 data class CardsUiState(
@@ -185,6 +187,7 @@ class CardsViewModel(
                 binder = f.binder.ifEmpty { null },
                 type = f.type.ifEmpty { null },
                 subtype = f.subtype.ifEmpty { null },
+                style = f.style.ifEmpty { null },
                 sort = f.sort,
                 offset = offset,
             )

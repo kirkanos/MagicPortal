@@ -215,12 +215,15 @@ func hashSyncFailed(err error) {
 // sets are left out: nobody scans an MTGO card.
 func hashTargets(scope string) ([]hashTarget, error) {
 	where := `1 = 1`
+	// Art Series cards carry no name or number the OCR could use - the
+	// picture is all there is - so they are always indexed (~5,000 scans).
+	artSeries := `COALESCE(sc.styles, '') LIKE '%artseries%'`
 	owned := `EXISTS (SELECT 1 FROM collection c WHERE c.set_code = sc.set_code AND c.collector_number = sc.collector_number)`
 	switch scope {
 	case "old":
-		where = `(st.released_at < '2003-07-28' OR ` + owned + `)`
+		where = `(st.released_at < '2003-07-28' OR ` + owned + ` OR ` + artSeries + `)`
 	case "collection":
-		where = owned
+		where = `(` + owned + ` OR ` + artSeries + `)`
 	}
 	rows, err := db.Query(`
 		SELECT sc.set_code, sc.collector_number, sc.scryfall_id, sc.image_small

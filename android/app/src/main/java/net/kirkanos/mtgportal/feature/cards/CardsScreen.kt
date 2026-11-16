@@ -1,7 +1,24 @@
 package net.kirkanos.mtgportal.feature.cards
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.Button
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.alpha
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import kotlinx.coroutines.launch
+import net.kirkanos.mtgportal.core.data.BinderTarget
+import net.kirkanos.mtgportal.core.network.ApiResult
+import net.kirkanos.mtgportal.core.network.dto.BinderDto
+import net.kirkanos.mtgportal.core.network.safeCall
+import net.kirkanos.mtgportal.core.ui.components.isUnlocked
+import net.kirkanos.mtgportal.feature.collection.BinderPickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -105,6 +122,18 @@ fun CardsScreen(binder: String?, set: String?) {
     val images by appContainer().config.imageUrls.collectAsStateWithLifecycle()
     var filtersOpen by remember { mutableStateOf(false) }
     val grid = rememberLazyGridState()
+    // Multi selection to move many cards at once: a long press starts it,
+    // taps then toggle. Only with write access.
+    val unlocked = isUnlocked()
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    val selecting = selected.isNotEmpty()
+    var picking by remember { mutableStateOf(false) }
+    var binders by remember { mutableStateOf<List<BinderDto>>(emptyList()) }
+    var moving by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val res = LocalResources.current
+    val c = appContainer()
 
     // Infinite scroll: the web's IntersectionObserver with a 600 px margin,
     // here "a dozen tiles before the end".
@@ -120,6 +149,7 @@ fun CardsScreen(binder: String?, set: String?) {
 
     // Laid out like ManaBox's collection: value up top, one search row, a
     // dense three-column grid.
+    Box(Modifier.fillMaxSize()) {
     LazyVerticalGrid(
         state = grid,
         columns = GridCells.Fixed(3),
@@ -159,10 +189,59 @@ fun CardsScreen(binder: String?, set: String?) {
             st.groups.isEmpty() ->
                 item(span = full) { Text(stringResource(R.string.cards_empty), color = PortalColors.TextDim) }
             else -> items(st.groups, key = { it.key }) { g ->
-                CardTile(g, st.sets[SetCode.key(g.setCode)], images, onClick = { onOpenCard(g) })
+                val toggle = { selected = if (g.key in selected) selected - g.key else selected + g.key }
+                CardTile(
+                    g, st.sets[SetCode.key(g.setCode)], images,
+                    selected = g.key in selected,
+                    onClick = { if (selecting) toggle() else onOpenCard(g) },
+                    onLongClick = if (unlocked) toggle else null,
+                )
             }
         }
         if (st.loadingMore) item(span = full) { Loading() }
+        // Room for the selection bar, so it never covers the last row.
+        if (selecting) item(span = full) { Spacer(Modifier.padding(bottom = 64.dp)) }
+    }
+    if (selecting) {
+        val rows = selectedRows(st.groups.filter { it.key in selected }, st.filters.binder)
+        SelectionBar(
+            count = selected.size,
+            copies = rows.sumOf { it.second },
+            busy = moving,
+            onAll = { selected = st.groups.map { it.key }.toSet() },
+            onMove = {
+                picking = true
+                scope.launch { (safeCall { c.api.binders() } as? ApiResult.Success)?.let { binders = it.data } }
+            },
+            onClear = { selected = emptySet() },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+    }
+
+    if (picking) {
+        BinderPickerDialog(binders, BinderTarget(st.filters.binder), onDismiss = { picking = false }, onPick = { target ->
+            picking = false
+            val ids = selectedRows(st.groups.filter { it.key in selected }, st.filters.binder).map { it.first }
+            moving = true
+            scope.launch {
+                val r = c.collectionWrite.moveRows(ids, target)
+                moving = false
+                val text = when (r) {
+                    is ApiResult.Success -> {
+                        selected = emptySet()
+                        val d = r.data
+                        val name = d.binderName.ifEmpty { res.getString(R.string.cards_move_no_binder) }
+                        res.getString(R.string.cards_moved, d.moved, name) +
+                            (if (d.merged > 0) " " + res.getString(R.string.cards_moved_merged, d.merged) else "") +
+                            (if (d.volatile) "\n" + res.getString(R.string.cards_moved_volatile) else "")
+                    }
+                    is ApiResult.HttpError -> r.message
+                    is ApiResult.NetworkError -> res.getString(R.string.cards_move_failed)
+                }
+                Toast.makeText(context, text, Toast.LENGTH_LONG).show()
+            }
+        })
     }
 
     openCard?.let { CardDetailSheet(it, onDismiss = { openCard = null }) }
@@ -240,12 +319,46 @@ private fun Controls(st: CardsUiState, onQuery: (String) -> Unit, onSort: (Strin
 }
 
 /**
- * A grid tile, slim like ManaBox's: the image with quantity, foil and
- * language marks, the name, and set symbol with price.
+ * The collection rows behind selected tiles, with their copies: in a binder
+ * view only the rows in that binder (the tile shows only those), else all.
  */
+internal fun selectedRows(groups: List<CardGroupDto>, binder: String): List<Pair<Long, Int>> =
+    groups.flatMap { g -> g.variants.filter { it.id != 0L && (binder.isEmpty() || it.binderName == binder) } }
+        .map { it.id to it.quantity }
+
 @Composable
-fun CardTile(g: CardGroupDto, set: SetDto?, images: ImageUrls, onClick: () -> Unit) {
-    Column(Modifier.clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+private fun SelectionBar(count: Int, copies: Int, busy: Boolean, onAll: () -> Unit, onMove: () -> Unit, onClear: () -> Unit, modifier: Modifier) {
+    Surface(color = PortalColors.BgCard, shadowElevation = 8.dp, shape = RoundedCornerShape(16.dp), modifier = modifier.padding(10.dp).fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onClear) { AppIconView(Icons.Close, PortalColors.Text) }
+            Text(stringResource(R.string.cards_selected, count, copies), modifier = Modifier.weight(1f), maxLines = 2, fontSize = 14.sp)
+            TextButton(onClick = onAll) { Text(stringResource(R.string.cards_select_all)) }
+            Button(onClick = onMove, enabled = !busy && copies > 0) { Text(stringResource(R.string.detail_move)) }
+        }
+    }
+}
+
+/**
+ * A grid tile, slim like ManaBox's: the image with quantity, foil and
+ * language marks, the name, and set symbol with price. Selected tiles get a
+ * frame and a check mark; unselected ones dim while selecting.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun CardTile(
+    g: CardGroupDto,
+    set: SetDto?,
+    images: ImageUrls,
+    selected: Boolean = false,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+) {
+    Column(
+        Modifier
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .then(if (selected) Modifier.border(3.dp, PortalColors.Accent, RoundedCornerShape(8.dp)).padding(3.dp) else Modifier),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
         Box {
             CardImage(images.card(g.imageId, ImageUrls.Size.SMALL), g.name, Modifier.fillMaxWidth())
             if (g.anyFoil) Badge("Foil", PortalColors.Accent2, foreground = PortalColors.Text, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
@@ -254,6 +367,7 @@ fun CardTile(g: CardGroupDto, set: SetDto?, images: ImageUrls, onClick: () -> Un
             if (flags.isNotEmpty()) {
                 Text(flags, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomStart).padding(4.dp))
             }
+            if (selected) Badge("✓", PortalColors.Accent, modifier = Modifier.align(Alignment.Center))
         }
         Text(g.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -293,6 +407,7 @@ private fun FilterSheet(
                 (if (facets?.colorless == true) listOf("C" to stringResource(R.string.color_c)) else emptyList())
             Filter(R.string.cards_all_colors, f.color, colors) { v -> onChange { it.copy(color = v) } }
             Filter(R.string.cards_all_foils, f.foil, listOf("normal" to "Normal", "foil" to "Foil", "etched" to "Etched")) { v -> onChange { it.copy(foil = v) } }
+            Filter(R.string.cards_all_styles, f.style, facets?.styles.orEmpty().map { it to styleLabel(it) }) { v -> onChange { it.copy(style = v) } }
             Filter(R.string.cards_all_binders, f.binder, facets?.binders.orEmpty().map { it to it }) { v -> onChange { it.copy(binder = v) } }
             Filter(R.string.cards_all_types, f.type, facets?.types.orEmpty().map { it to it }) { v -> onChange { it.copy(type = v) } }
             Filter(
@@ -310,6 +425,17 @@ private fun FilterSheet(
             onDismiss = { setPickerOpen = false },
         )
     }
+}
+
+/** Labels of the card variants, as on the web (STYLE_LABEL in grid.js). */
+@Composable
+private fun styleLabel(style: String) = when (style) {
+    "fullart" -> "Full Art"
+    "borderless" -> stringResource(R.string.cards_style_borderless)
+    "showcase" -> "Showcase"
+    "extendedart" -> "Extended Art"
+    "artseries" -> stringResource(R.string.cards_style_artseries)
+    else -> style
 }
 
 /** A select with an "all" entry first, like the web's selects. */

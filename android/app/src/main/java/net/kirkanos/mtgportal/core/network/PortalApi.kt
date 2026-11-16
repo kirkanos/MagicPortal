@@ -5,6 +5,8 @@ import net.kirkanos.mtgportal.core.network.dto.AddCardsRequest
 import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
 import net.kirkanos.mtgportal.core.network.dto.CatalogCardDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchDto
+import net.kirkanos.mtgportal.core.network.dto.MoveRowsDto
+import net.kirkanos.mtgportal.core.network.dto.MoveRowsResultDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
@@ -80,6 +82,7 @@ interface PortalApi {
         @Query("binder") binder: String? = null,
         @Query("type") type: String? = null,
         @Query("subtype") subtype: String? = null,
+        @Query("style") style: String? = null,
         @Query("sort") sort: String? = null,
         @Query("offset") offset: Int = 0,
         @Query("limit") limit: Int? = null,
@@ -123,6 +126,9 @@ interface PortalApi {
 
     @PATCH("collection/cards/{id}")
     suspend fun patchRow(@Path("id") id: Long, @Body body: RowPatchDto): RowPatchResultDto
+
+    @POST("collection/move")
+    suspend fun moveRows(@Body body: MoveRowsDto): MoveRowsResultDto
 
     @DELETE("collection/cards/{id}")
     suspend fun deleteRow(@Path("id") id: Long): Response<Unit>

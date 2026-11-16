@@ -21,7 +21,12 @@ data class Printing(
     val scryfallId: String,
     val hasImage: Boolean,
     val finishes: Set<String> = emptySet(),
+    /** An Art Series card: a picture to collect, not a playable card. */
+    val artSeries: Boolean = false,
 ) {
+    /** The name to show: an Art Series card is "Name // Name" in the catalog. */
+    val displayName: String get() = if (artSeries) name.substringBefore(" // ") else name
+
     fun hasFinish(f: String) = finishes.isEmpty() || f in finishes
 
     /** [wanted] if this printing exists so, else its first finish: a foil-only promo is foil. */
@@ -29,6 +34,9 @@ data class Printing(
 
     companion object {
         val FINISH_ORDER = listOf("normal", "foil", "etched")
+
+        /** Bit of /api/catalog/index for Art Series cards. */
+        const val ART_SERIES = 32
 
         /** Bits of /api/catalog/index: 4 nonfoil, 8 foil, 16 etched. */
         fun finishes(flags: Int): Set<String> = buildSet {
@@ -76,7 +84,10 @@ class CatalogIndex private constructor(
 
     val size get() = setCodes.size
 
-    fun printing(i: Int) = Printing(i, setCodes[i], numbers[i], names[i], ids[i], flags[i] and 1 != 0, Printing.finishes(flags[i]))
+    fun printing(i: Int) = Printing(i, setCodes[i], numbers[i], names[i], ids[i], flags[i] and 1 != 0, Printing.finishes(flags[i]), isArtSeries(i))
+
+    /** Whether a printing is an Art Series card, without building the [Printing]. */
+    fun isArtSeries(i: Int) = flags[i] and Printing.ART_SERIES != 0
 
     /** Set code of a printing, without building the [Printing]. */
     fun setOf(i: Int) = setCodes[i]

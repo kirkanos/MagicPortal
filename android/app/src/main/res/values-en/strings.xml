@@ -428,4 +428,14 @@
     <string name="binders_rename_ok">Apply</string>
     <string name="binders_rename_volatile">Renamed – but cards from ManaBox come back under the old name with the next import.</string>
     <string name="cards_header_counts">%1$s cards · %2$s distinct · purchase value %3$s</string>
+    <string name="cards_selected">%1$d selected (%2$d cards)</string>
+    <string name="cards_select_all">All</string>
+    <string name="cards_moved">%1$d rows moved to “%2$s”.</string>
+    <string name="cards_moved_merged">%1$d of them merged with cards already there.</string>
+    <string name="cards_moved_volatile">Cards from ManaBox return to their old binder with the next import.</string>
+    <string name="cards_move_no_binder">no binder</string>
+    <string name="cards_move_failed">Moving failed: no connection to the server.</string>
+    <string name="cards_all_styles">All variants</string>
+    <string name="cards_style_borderless">Borderless</string>
+    <string name="cards_style_artseries">Art cards</string>
 </resources>

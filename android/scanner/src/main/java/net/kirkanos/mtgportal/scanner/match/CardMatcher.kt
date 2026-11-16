@@ -200,8 +200,9 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
     private fun byArtwork(hash: CardHash?): Match? {
         val h = hashes ?: return null
         // Side sets (gold-bordered copies, blank cards, tokens) are never
-        // guessed from the picture alone.
-        val hits = h.nearest(hash ?: return null, 60) { p -> index.setOf(p).let { inScope(it) && !isSide(it) } }
+        // guessed from the picture alone - except Art Series cards: they
+        // carry no text the OCR could use, and their pictures are their own.
+        val hits = h.nearest(hash ?: return null, 60) { p -> index.setOf(p).let { inScope(it) && (!isSide(it) || index.isArtSeries(p)) } }
         val best = hits.firstOrNull() ?: return null
         val name = index.printing(best.printing).name
         // The nearest scan of a different card: without a clear gap the
@@ -245,8 +246,14 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
     }
 
     /** Every printing of a card (catalog name), in the order the search offers them. */
-    fun printingsOf(name: String): List<Printing> =
-        index.byName[NameNormalizer.normalize(name)]?.map(index::printing)?.sortedWith(offerOrder)?.distinctBy { it.i }.orEmpty()
+    fun printingsOf(name: String): List<Printing> {
+        // By the first face: an Art Series card ("Name // Name") then also
+        // offers the playable printings and the other way round - the
+        // scanner may have taken one for the other.
+        val face = name.substringBefore(" // ")
+        val ids = (index.byName[NameNormalizer.normalize(name)] ?: IntArray(0)) + (index.byName[NameNormalizer.normalize(face)] ?: IntArray(0))
+        return ids.map(index::printing).sortedWith(offerOrder).distinctBy { it.i }
+    }
 
     /** Chosen sets first, then regular sets before side products, newest first. */
     private val offerOrder = compareBy<Printing> { if (inScope(it.setCode)) 0 else 1 }

@@ -186,6 +186,39 @@ type bulkCard struct {
 	PurchaseUris map[string]string `json:"purchase_uris"`
 	// nonfoil, foil, etched: the finishes this printing exists in.
 	Finishes []string `json:"finishes"`
+
+	// The look of the printing, for cardStyles.
+	FullArt      bool     `json:"full_art"`
+	BorderColor  string   `json:"border_color"`
+	FrameEffects []string `json:"frame_effects"`
+	Layout       string   `json:"layout"`
+}
+
+// Card styles: variants collectors tell apart, as stored in
+// scryfall_cards.styles (comma-separated) and offered as a filter.
+//   - fullart: the art covers the text box (full-art lands, many promos);
+//   - borderless, showcase, extendedart: the alternative frames of modern sets;
+//   - artseries: an Art Series card - a picture with a signature spot, not a
+//     playable card (the catalog names it "Name // Name").
+var cardStyleOrder = []string{"fullart", "borderless", "showcase", "extendedart", "artseries"}
+
+func cardStyles(c bulkCard) string {
+	var out []string
+	if c.FullArt {
+		out = append(out, "fullart")
+	}
+	if c.BorderColor == "borderless" {
+		out = append(out, "borderless")
+	}
+	for _, e := range c.FrameEffects {
+		if e == "showcase" || e == "extendedart" {
+			out = append(out, e)
+		}
+	}
+	if c.Layout == "art_series" {
+		out = append(out, "artseries")
+	}
+	return strings.Join(out, ",")
 }
 
 func parsePrice(s string) interface{} {
@@ -270,8 +303,8 @@ func syncBulk(db *sql.DB, force bool) error {
 		INSERT INTO scryfall_cards
 			(set_code, collector_number, scryfall_id, name, rarity, type_line, colors,
 			 mana_cost, oracle_text, image_normal, image_small, image_back_normal, image_back_small,
-			 cardmarket_uri, reserved, price_eur, price_eur_foil, finishes, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 cardmarket_uri, reserved, price_eur, price_eur_foil, finishes, styles, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(set_code, collector_number) DO UPDATE SET
 			scryfall_id=excluded.scryfall_id, name=excluded.name, rarity=excluded.rarity,
 			type_line=excluded.type_line, colors=excluded.colors,
@@ -280,7 +313,7 @@ func syncBulk(db *sql.DB, force bool) error {
 			image_back_normal=excluded.image_back_normal, image_back_small=excluded.image_back_small,
 			cardmarket_uri=excluded.cardmarket_uri, reserved=excluded.reserved,
 			price_eur=excluded.price_eur, price_eur_foil=excluded.price_eur_foil,
-			finishes=excluded.finishes, updated_at=excluded.updated_at`
+			finishes=excluded.finishes, styles=excluded.styles, updated_at=excluded.updated_at`
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	count := 0
@@ -364,7 +397,7 @@ func syncBulk(db *sql.DB, force bool) error {
 		if _, err := stmt.Exec(c.Set, c.CollectorNumber, c.ID, c.Name, c.Rarity, typeLine,
 			colorsToJSON(colors), manaCost, oracleText, imgN, imgS, imgBackN, imgBackS,
 			cardmarketURI, reserved, parsePrice(c.Prices.Eur), parsePrice(c.Prices.EurFoil),
-			strings.Join(c.Finishes, ","), now); err != nil {
+			strings.Join(c.Finishes, ","), cardStyles(c), now); err != nil {
 			stmt.Close()
 			tx.Rollback()
 			return err

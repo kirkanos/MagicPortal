@@ -19,6 +19,8 @@ import net.kirkanos.mtgportal.core.network.dto.CollectionRowDto
 import net.kirkanos.mtgportal.core.network.dto.ConfirmExportDto
 import net.kirkanos.mtgportal.core.network.dto.VariantDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchDto
+import net.kirkanos.mtgportal.core.network.dto.MoveRowsDto
+import net.kirkanos.mtgportal.core.network.dto.MoveRowsResultDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchResultDto
 import net.kirkanos.mtgportal.core.network.safeCall
 import net.kirkanos.mtgportal.core.network.safeStatus
@@ -79,6 +81,10 @@ class CollectionWriteRepository(private val api: PortalApi) {
     }.withReadableError()
 
     suspend fun confirmExport(id: Long): ApiResult<ConfirmExportDto> = safeCall { api.confirmExport(id) }.withReadableError().noted()
+
+    /** Moves many rows into one binder at once (the grid's multi selection). */
+    suspend fun moveRows(ids: List<Long>, target: BinderTarget): ApiResult<MoveRowsResultDto> =
+        safeCall { api.moveRows(MoveRowsDto(ids, target.name, target.type)) }.withReadableError().noted()
 
     suspend fun renameBinder(name: String, patch: BinderPatchDto): ApiResult<BinderPatchResultDto> = safeCall { api.patchBinder(name, patch) }.withReadableError().noted()
 

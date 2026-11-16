@@ -69,6 +69,8 @@ data class FacetsDto(
     val colorless: Boolean = false,
     val binders: List<String> = emptyList(),
     val foils: List<String> = emptyList(),
+    /** Card variants in the collection: fullart, borderless, showcase, extendedart, artseries. */
+    val styles: List<String> = emptyList(),
     val types: List<String> = emptyList(),
     val subtypesByType: Map<String, List<String>> = emptyMap(),
     val stats: FacetStatsDto = FacetStatsDto(),
@@ -483,6 +485,21 @@ data class ConfirmExportDto(
 
 @Serializable
 data class BinderPatchDto(val name: String? = null, val type: String? = null)
+
+/** POST /api/collection/move: many rows into one binder. */
+@Serializable
+data class MoveRowsDto(val ids: List<Long>, val binderName: String, val binderType: String)
+
+@Serializable
+data class MoveRowsResultDto(
+    val binderName: String = "",
+    val binderType: String = "",
+    val moved: Int = 0,
+    val merged: Int = 0,
+    val unchanged: Int = 0,
+    val missing: Int = 0,
+    val volatile: Boolean = false,
+)
 
 @Serializable
 data class BinderPatchResultDto(

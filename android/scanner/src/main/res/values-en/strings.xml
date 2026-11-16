@@ -48,4 +48,5 @@
         <item quantity="one">%d card</item>
         <item quantity="other">%d cards</item>
     </plurals>
+    <string name="scanner_art_card">Art card</string>
 </resources>

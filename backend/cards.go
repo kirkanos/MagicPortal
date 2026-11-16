@@ -55,6 +55,8 @@ type cardRow struct {
 	HasBack      bool
 	PriceEur     *float64
 	PriceEurFoil *float64
+	// fullart, borderless, showcase, extendedart, artseries (see cardStyles).
+	Styles []string
 
 	// Precomputed at index build: the search haystack and the parsed type line.
 	haystack string
@@ -100,7 +102,7 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 		       c.condition, c.quantity, c.purchase_price, c.currency, c.added, c.binder_name, c.binder_type, c.origin,
 		       s.scryfall_id, COALESCE(s.type_line, ''), COALESCE(s.mana_cost, ''), COALESCE(s.oracle_text, ''),
 		       COALESCE(s.colors, ''), COALESCE(s.image_normal, '') <> '',
-		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil
+		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil, COALESCE(s.styles, '')
 		FROM collection c
 		LEFT JOIN scryfall_cards s
 		       ON s.set_code = c.set_code AND s.collector_number = c.collector_number
@@ -116,12 +118,16 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 		var sID, colorsJSON *string
 		var hasImage bool
 		var priceEur, priceFoil *float64
+		var styles string
 		if err := rows.Scan(&c.ID, &c.Name, &c.SetCode, &c.SetName, &c.CollectorNumber, &c.Rarity, &c.Foil,
 			&c.Language, &c.Condition, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Added,
 			&c.BinderName, &c.BinderType, &c.Origin,
 			&sID, &c.TypeLine, &c.ManaCost, &c.OracleText, &colorsJSON, &hasImage, &c.HasBack,
-			&priceEur, &priceFoil); err != nil {
+			&priceEur, &priceFoil, &styles); err != nil {
 			return nil, nil, err
+		}
+		if styles != "" {
+			c.Styles = strings.Split(styles, ",")
 		}
 		c.SetCode = strings.ToUpper(c.SetCode)
 		c.PriceEur, c.PriceEurFoil = priceEur, priceFoil
@@ -258,6 +264,7 @@ type cardQuery struct {
 	binder  string
 	cType   string
 	subtype string
+	style   string
 	sort    string
 	offset  int
 	limit   int
@@ -273,6 +280,7 @@ func parseCardQuery(r *http.Request) cardQuery {
 		binder:  q.Get("binder"),
 		cType:   q.Get("type"),
 		subtype: q.Get("subtype"),
+		style:   q.Get("style"),
 		sort:    q.Get("sort"),
 		limit:   cardsPageSize,
 	}
@@ -312,6 +320,9 @@ func (cq cardQuery) matches(c *cardRow) bool {
 	if cq.subtype != "" && !contains(c.subtypes, cq.subtype) {
 		return false
 	}
+	if cq.style != "" && !contains(c.Styles, cq.style) {
+		return false
+	}
 	if cq.color != "" {
 		if cq.color == "C" {
 			if len(c.Colors) != 0 {
@@ -322,6 +333,16 @@ func (cq cardQuery) matches(c *cardRow) bool {
 		}
 	}
 	return true
+}
+
+func presentInOrder(order []string, present map[string]bool) []string {
+	out := []string{}
+	for _, s := range order {
+		if present[s] {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func contains(list []string, want string) bool {
@@ -581,6 +602,7 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 	colorless := false
 	binders := map[string]bool{}
 	foils := map[string]bool{}
+	styles := map[string]bool{}
 	types := map[string]bool{}
 	subtypesByType := map[string]map[string]bool{}
 	setNames := map[string]string{}
@@ -604,6 +626,9 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 		}
 		if c.Foil != "" {
 			foils[c.Foil] = true
+		}
+		for _, s := range c.Styles {
+			styles[s] = true
 		}
 		for _, tp := range c.types {
 			types[tp] = true
@@ -635,12 +660,14 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSONCacheable(w, map[string]interface{}{
-		"sets":           setList,
-		"rarities":       sortedKeys(rarities),
-		"colors":         sortedKeys(colors),
-		"colorless":      colorless,
-		"binders":        sortedKeys(binders),
-		"foils":          sortedKeys(foils),
+		"sets":      setList,
+		"rarities":  sortedKeys(rarities),
+		"colors":    sortedKeys(colors),
+		"colorless": colorless,
+		"binders":   sortedKeys(binders),
+		"foils":     sortedKeys(foils),
+		// In cardStyleOrder, only those the collection has.
+		"styles":         presentInOrder(cardStyleOrder, styles),
 		"types":          sortedKeys(types),
 		"subtypesByType": subs,
 		"stats": map[string]interface{}{

@@ -30,6 +30,7 @@ func call(t *testing.T, method, path, body string, header ...string) *httptest.R
 	mux.HandleFunc("GET /api/collection/cards/{id}", handleCollectionRow)
 	mux.HandleFunc("PATCH /api/collection/cards/{id}", handleCollectionPatch)
 	mux.HandleFunc("DELETE /api/collection/cards/{id}", handleCollectionDelete)
+	mux.HandleFunc("POST /api/collection/move", handleCollectionMove)
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	for i := 0; i+1 < len(header); i += 2 {
 		req.Header.Set(header[i], header[i+1])
@@ -214,4 +215,31 @@ func TestWriteRouteLabels(t *testing.T) {
 func itoa64(n int64) string {
 	b, _ := json.Marshal(n)
 	return string(b)
+}
+
+func TestMoveManyRows(t *testing.T) {
+	newTestDB(t)
+	seedWriteCatalog(t)
+	res := decode[addResult](t, call(t, "POST", "/api/collection/cards", `{"items":[
+		{"setCode":"snc","collectorNumber":"47","binderName":"Scans","quantity":2},
+		{"setCode":"ice","collectorNumber":"61","binderName":"Scans"},
+		{"setCode":"snc","collectorNumber":"47","binderName":"Box","binderType":"list"},
+		{"setCode":"ice","collectorNumber":"61","binderName":"Box","language":"de"}]}`))
+	ids := []int64{res.Items[0].ID, res.Items[1].ID, res.Items[2].ID, 99999}
+	body := `{"ids":[` + itoa64(ids[0]) + `,` + itoa64(ids[1]) + `,` + itoa64(ids[2]) + `,` + itoa64(ids[3]) + `,` + itoa64(ids[0]) + `],"binderName":"Box","binderType":"binder"}`
+	m := decode[moveResult](t, call(t, "POST", "/api/collection/move", body))
+	// Ledger merges into Box's copy, Brainstorm (en) moves, Box's own row
+	// stays, the unknown id is missing; the existing binder keeps its type.
+	if m.Moved != 2 || m.Merged != 1 || m.Unchanged != 1 || m.Missing != 1 || m.BinderType != "list" {
+		t.Errorf("move: %+v", m)
+	}
+	var qty, scans int
+	db.QueryRow(`SELECT quantity FROM collection WHERE id = ?`, ids[2]).Scan(&qty)
+	db.QueryRow(`SELECT COUNT(*) FROM collection WHERE binder_name = 'Scans'`).Scan(&scans)
+	if qty != 3 || scans != 0 {
+		t.Errorf("after move: ledger qty %d, rows left in Scans %d", qty, scans)
+	}
+	if rec := call(t, "POST", "/api/collection/move", `{"ids":[],"binderName":"Box"}`); rec.Code != 400 {
+		t.Errorf("empty move: %d", rec.Code)
+	}
 }

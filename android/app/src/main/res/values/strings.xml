@@ -449,4 +449,14 @@
     <string name="binders_rename_ok">Übernehmen</string>
     <string name="binders_rename_volatile">Umbenannt – Karten aus ManaBox kommen beim nächsten Import aber wieder unter dem alten Namen.</string>
     <string name="cards_header_counts">%1$s Karten · %2$s verschieden · Kaufwert %3$s</string>
+    <string name="cards_selected">%1$d ausgewählt (%2$d Karten)</string>
+    <string name="cards_select_all">Alle</string>
+    <string name="cards_moved">%1$d Zeilen nach „%2$s“ verschoben.</string>
+    <string name="cards_moved_merged">%1$d davon mit vorhandenen Karten zusammengeführt.</string>
+    <string name="cards_moved_volatile">Karten aus ManaBox kommen beim nächsten Import wieder in ihren alten Ordner.</string>
+    <string name="cards_move_no_binder">ohne Ordner</string>
+    <string name="cards_move_failed">Verschieben fehlgeschlagen: keine Verbindung zum Server.</string>
+    <string name="cards_all_styles">Alle Varianten</string>
+    <string name="cards_style_borderless">Randlos</string>
+    <string name="cards_style_artseries">Art-Karten</string>
 </resources>

@@ -625,7 +625,7 @@ private fun SessionRow(
                 Text("${item.quantity}×", style = MaterialTheme.typography.titleMedium)
             }
         },
-        headlineContent = { Text((if (wanted) "★ " else "") + p.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        headlineContent = { Text((if (wanted) "★ " else "") + title(p), maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             val extra = buildList {
                 if (item.foil != "normal") add(item.foil)
@@ -662,7 +662,7 @@ private fun EditSheet(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     cardImage(item.printing.scryfallId, false, Modifier.width(72.dp).clickable { zoomed = item.printing })
                     Column(Modifier.weight(1f)) {
-                        Text(item.printing.name, style = MaterialTheme.typography.titleLarge)
+                        Text(title(item.printing), style = MaterialTheme.typography.titleLarge)
                         PrintingLine(item.printing, setSymbol)
                         vm.set(item.printing.setCode)?.let { Text(it.name, style = MaterialTheme.typography.bodySmall) }
                         if (item.uncertain) {
@@ -731,7 +731,7 @@ private fun LastCard(
                 cardImage(p.scryfallId, false, Modifier.width(64.dp).clickable { onZoom(p) })
                 Column(Modifier.weight(1f)) {
                     Text(
-                        (if (item.quantity > 1) "${item.quantity}× " else "") + (if (wanted) "★ " else "") + p.name,
+                        (if (item.quantity > 1) "${item.quantity}× " else "") + (if (wanted) "★ " else "") + title(p),
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -793,7 +793,7 @@ private fun PrintingPickerSheet(
     var zoomed by remember { mutableStateOf<Printing?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp)) {
-            Text(item.printing.name, style = MaterialTheme.typography.titleLarge)
+            Text(item.printing.displayName, style = MaterialTheme.typography.titleLarge)
             Text(
                 pluralStringResource(R.plurals.scanner_printings_count, printings.size, printings.size),
                 style = MaterialTheme.typography.bodySmall,
@@ -810,7 +810,10 @@ private fun PrintingPickerSheet(
                         // The image opens large; the rest of the row picks the printing.
                         leadingContent = { cardImage(p.scryfallId, false, Modifier.width(48.dp).clickable { zoomed = p }) },
                         headlineContent = { Text(set?.name ?: p.setCode.uppercase(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = { PrintingLine(p, setSymbol, set?.year?.let { " · $it" }.orEmpty()) },
+                        supportingContent = {
+                            val art = if (p.artSeries) " · " + stringResource(R.string.scanner_art_card) else ""
+                            PrintingLine(p, setSymbol, set?.year?.let { " · $it" }.orEmpty() + art)
+                        },
                         trailingContent = {
                             Column(horizontalAlignment = Alignment.End) {
                                 prices[p.scryfallId]?.forFinish(p.finishFor(item.foil))?.let { Text(euros(it)) }
@@ -835,6 +838,10 @@ private fun ZoomedCard(p: Printing, cardImage: @Composable (String, Boolean, Mod
         }
     }
 }
+
+/** A printing's name, marked when it is an Art Series card rather than a playable one. */
+@Composable
+private fun title(p: Printing) = if (p.artSeries) "${p.displayName} · ${stringResource(R.string.scanner_art_card)}" else p.name
 
 /** Euro amounts formatted like the rest of the app (de-DE in both languages). */
 private fun euros(v: Double) = NumberFormat.getCurrencyInstance(Locale.GERMANY).apply { currency = Currency.getInstance("EUR") }.format(v)

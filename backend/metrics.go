@@ -167,7 +167,7 @@ func routeLabel(path string) string {
 		}
 	case "collection":
 		switch {
-		case tail == "owned" || tail == "cards" || tail == "export":
+		case tail == "owned" || tail == "cards" || tail == "export" || tail == "move":
 			return "/api/collection/" + tail
 		case strings.HasPrefix(tail, "cards/"):
 			return "/api/collection/cards/{id}"

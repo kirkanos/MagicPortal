@@ -24,6 +24,7 @@ import (
 //   - GET    /api/collection/cards/{id}  one row
 //   - PATCH  /api/collection/cards/{id}  quantity, delta, or a new key (moves)
 //   - DELETE /api/collection/cards/{id}
+//   - POST   /api/collection/move        move many rows into one binder
 //   - PATCH  /api/binders/{name}         rename a binder, change its type
 //
 // Name, set name, rarity and Scryfall ID always come from the catalog, never
@@ -563,6 +564,131 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 		return res, "", err
 	}
 	return res, op, tx.Commit()
+}
+
+// ---- POST /api/collection/move ----
+
+// moveRequest moves many rows into one binder at once - the app's multi
+// selection. Rows already there stay as they are; a row whose card already
+// lies in the target (same key and origin) is merged into it.
+type moveRequest struct {
+	IDs        []int64 `json:"ids"`
+	BinderName string  `json:"binderName"`
+	BinderType string  `json:"binderType"`
+}
+
+type moveResult struct {
+	BinderName string `json:"binderName"`
+	BinderType string `json:"binderType"`
+	// Moved counts rows that changed binder, merged ones included.
+	Moved  int `json:"moved"`
+	Merged int `json:"merged"`
+	// Rows that were in the target binder already, or no longer exist.
+	Unchanged int `json:"unchanged"`
+	Missing   int `json:"missing"`
+	// Some moved rows come from the CSV import: the next ManaBox export puts
+	// them back into their old binder.
+	Volatile bool `json:"volatile,omitempty"`
+}
+
+const maxMoveRows = 5000
+
+func handleCollectionMove(w http.ResponseWriter, r *http.Request) {
+	if !authorized(r) {
+		http.Error(w, "Wrong or missing password", 403)
+		return
+	}
+	var m moveRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&m); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), 400)
+		return
+	}
+	res, err := moveRows(m, time.Now())
+	if err != nil {
+		writeWriteError(w, err)
+		return
+	}
+	metricAppWrites.inc(labels("op", "move_many"))
+	logActivity("info", "App", fmt.Sprintf("%d rows moved to binder %q (%d merged)", res.Moved, res.BinderName, res.Merged))
+	writeJSON(w, res)
+}
+
+func moveRows(m moveRequest, now time.Time) (moveResult, error) {
+	var res moveResult
+	name := strings.TrimSpace(m.BinderName)
+	if len(name) > 100 {
+		return res, badItem(-1, "binderName too long")
+	}
+	if len(m.IDs) == 0 {
+		return res, badItem(-1, "no rows given")
+	}
+	if len(m.IDs) > maxMoveRows {
+		return res, badItem(-1, "at most %d rows at once", maxMoveRows)
+	}
+	given, err := normBinderType(m.BinderType)
+	if err != nil {
+		return res, badItem(-1, "%v", err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return res, err
+	}
+	defer tx.Rollback()
+	btype, err := binderTypeTx(tx, name, given)
+	if err != nil {
+		return res, err
+	}
+	ts := now.UTC().Format(time.RFC3339)
+	seen := map[int64]bool{}
+	for _, id := range m.IDs {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		cur, err := rowTx(tx, id)
+		if errors.Is(err, sql.ErrNoRows) {
+			res.Missing++
+			continue
+		}
+		if err != nil {
+			return res, err
+		}
+		if cur.BinderName == name {
+			res.Unchanged++
+			continue
+		}
+		if cur.Origin == "csv" {
+			res.Volatile = true
+		}
+		var target int64
+		err = tx.QueryRow(`SELECT id FROM collection WHERE binder_name = ? AND set_code = ? AND collector_number = ?
+			AND foil = ? AND language = ? AND condition = ? AND origin = ?`,
+			name, strings.ToLower(cur.SetCode), cur.CollectorNumber, cur.Foil, cur.Language, cur.Condition, cur.Origin).Scan(&target)
+		switch {
+		case err == nil:
+			if _, err := tx.Exec(`UPDATE collection SET quantity = quantity + ?, updated_at = ? WHERE id = ?`, cur.Quantity, ts, target); err != nil {
+				return res, err
+			}
+			if _, err := tx.Exec(`DELETE FROM collection WHERE id = ?`, id); err != nil {
+				return res, err
+			}
+			res.Merged++
+		case errors.Is(err, sql.ErrNoRows):
+			if _, err := tx.Exec(`UPDATE collection SET binder_name = ?, binder_type = ?, updated_at = ? WHERE id = ?`, name, btype, ts, id); err != nil {
+				return res, err
+			}
+		default:
+			return res, err
+		}
+		res.Moved++
+	}
+	if res.Moved > 0 {
+		if err := bumpCollectionRev(tx); err != nil {
+			return res, err
+		}
+	}
+	res.BinderName, res.BinderType = name, btype
+	return res, tx.Commit()
 }
 
 // ---- DELETE /api/collection/cards/{id} ----

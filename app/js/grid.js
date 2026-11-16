@@ -120,6 +120,14 @@ function populateSetFilter() {
   updateSetLabel();
 }
 
+const STYLE_LABEL = {
+  fullart: () => 'Full Art',
+  borderless: () => t('Randlos', 'Borderless'),
+  showcase: () => 'Showcase',
+  extendedart: () => 'Extended Art',
+  artseries: () => t('Art-Karten', 'Art cards'),
+};
+
 function populateFilters() {
   const raritySel = document.getElementById('filter-rarity');
   const colorSel = document.getElementById('filter-color');
@@ -138,6 +146,10 @@ function populateFilters() {
 
   const binderSel = document.getElementById('filter-binder');
   if (binderSel) (facets.binders || []).forEach((b) => addOpt(binderSel, b, b));
+
+  // Card variants (scryfall_cards.styles), only those the collection has.
+  const styleSel = document.getElementById('filter-style');
+  if (styleSel) (facets.styles || []).forEach((s) => addOpt(styleSel, s, STYLE_LABEL[s] ? STYLE_LABEL[s]() : s));
 
   const typeSel = document.getElementById('filter-type');
   if (typeSel) (facets.types || []).forEach((tp) => addOpt(typeSel, tp, tp));
@@ -181,6 +193,7 @@ function currentParams() {
   pick('filter-rarity', 'rarity');
   pick('filter-color', 'color');
   pick('filter-foil', 'foil');
+  pick('filter-style', 'style');
   pick('filter-binder', 'binder');
   pick('filter-type', 'type');
   pick('filter-subtype', 'subtype');
@@ -378,7 +391,7 @@ async function init() {
   // Typing triggers a query - debounced, so not every keystroke becomes a
   // request.
   document.getElementById('search').addEventListener('input', debounce(() => runQuery(), 250));
-  ['filter-rarity', 'filter-color', 'filter-foil', 'filter-binder', 'filter-subtype', 'sort-by'].forEach((id) => {
+  ['filter-rarity', 'filter-color', 'filter-foil', 'filter-style', 'filter-binder', 'filter-subtype', 'sort-by'].forEach((id) => {
     document.getElementById(id).addEventListener('change', () => runQuery());
   });
   document.getElementById('filter-type').addEventListener('change', (e) => {

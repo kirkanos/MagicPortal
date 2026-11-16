@@ -40,6 +40,7 @@ type catalogEntry struct {
 	Rarity          string
 	ReleasedAt      string
 	Finishes        string // "nonfoil,foil", empty until the bulk sync filled it
+	Styles          string // see cardStyles
 }
 
 type catalogData struct {
@@ -118,7 +119,7 @@ func catalog() (*catalogData, error) {
 
 	rows, err := db.Query(`SELECT set_code, collector_number, name, COALESCE(scryfall_id, ''),
 		COALESCE(image_normal, '') <> '', COALESCE(image_back_normal, '') <> '', COALESCE(rarity, ''),
-		COALESCE(finishes, '')
+		COALESCE(finishes, ''), COALESCE(styles, '')
 		FROM scryfall_cards`)
 	if err != nil {
 		return nil, err
@@ -126,7 +127,7 @@ func catalog() (*catalogData, error) {
 	var printings []catalogEntry
 	for rows.Next() {
 		var p catalogEntry
-		if err := rows.Scan(&p.SetCode, &p.CollectorNumber, &p.Name, &p.ScryfallID, &p.HasImage, &p.HasBack, &p.Rarity, &p.Finishes); err != nil {
+		if err := rows.Scan(&p.SetCode, &p.CollectorNumber, &p.Name, &p.ScryfallID, &p.HasImage, &p.HasBack, &p.Rarity, &p.Finishes, &p.Styles); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -192,6 +193,10 @@ func catalog() (*catalogData, error) {
 			flags |= 2
 		}
 		flags |= finishFlags(p.Finishes)
+		// 32: an Art Series card, not a playable one.
+		if strings.Contains(p.Styles, "artseries") {
+			flags |= 32
+		}
 		out.Cards = append(out.Cards, []interface{}{p.SetCode, p.CollectorNumber, p.Name, p.ScryfallID, flags})
 	}
 	var buf bytes.Buffer
