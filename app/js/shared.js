@@ -71,6 +71,69 @@ function uploadHeaders(extra) {
   return headers;
 }
 
+/* A write to the collection API with the upload password. Resolves to the
+   JSON answer (or null for 204); rejects with the server's reason. */
+async function writeAPI(method, path, body) {
+  const res = await fetch(API + path, {
+    method,
+    headers: uploadHeaders(body != null ? { 'Content-Type': 'application/json' } : {}),
+    body: body != null ? JSON.stringify(body) : undefined,
+    cache: 'no-store',
+  });
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* 204 or plain text */ }
+  if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+  return data;
+}
+
+/* A short message at the bottom of the page, gone after a few seconds. */
+function showNotice(text, isError) {
+  let el = document.getElementById('notice');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'notice';
+    el.className = 'notice';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.classList.toggle('error', !!isError);
+  el.classList.add('show');
+  clearTimeout(showNotice.timer);
+  showNotice.timer = setTimeout(() => el.classList.remove('show'), 6000);
+}
+
+/* The binders for the binder pickers (name + type), loaded once per page. */
+let bindersCache = null;
+async function loadBinderList(force) {
+  if (bindersCache && !force) return bindersCache;
+  try {
+    const res = await fetch(API + '/binders', { cache: 'no-store' });
+    bindersCache = res.ok ? await res.json() : [];
+  } catch (e) {
+    bindersCache = [];
+  }
+  return bindersCache;
+}
+
+/* A binder field: type a new name or pick one from the list. One datalist
+   per page (#binder-options) serves every field. */
+function binderInputHTML(id, value) {
+  return `<input type="text" class="binder-input" id="${id}" list="binder-options" value="${escapeHTML(value || '')}"
+    placeholder="${t('Ordner (leer = ohne Ordner)', 'Folder (empty = none)')}" autocomplete="off">`;
+}
+
+async function ensureBinderDatalist() {
+  const binders = await loadBinderList();
+  let dl = document.getElementById('binder-options');
+  if (!dl) {
+    dl = document.createElement('datalist');
+    dl.id = 'binder-options';
+    document.body.appendChild(dl);
+  }
+  dl.innerHTML = binders.map((b) => `<option value="${escapeHTML(b.name)}">${escapeHTML(b.type || '')}</option>`).join('');
+}
+
 /* Mouseover explanations for the different card-count definitions used across
    the Cards grid and the statistics page. */
 function countHint(kind) {
@@ -507,6 +570,9 @@ function cardGroupModalHTML(group) {
     .slice()
     .sort((a, b) => (a.language || '').localeCompare(b.language || '') || a.foil.localeCompare(b.foil));
 
+  // The grid's groups carry row ids; with write access each row can be
+  // changed right here (grid.js handles the buttons).
+  const editable = !!group.editable && isUnlocked;
   const rows = variants
     .map((v) => {
       const mp = variantMarketPrice(v);
@@ -520,6 +586,11 @@ function cardGroupModalHTML(group) {
           <td class="num">${price}</td>
           <td class="num">${v.quantity}</td>
           <td>${escapeHTML((v.added || '').slice(0, 10)) || '–'}</td>
+          ${editable ? `<td class="row-actions">
+            <button type="button" data-act="minus" data-id="${v.id}" title="${t('Ein Exemplar weniger', 'One copy less')}">−1</button>
+            <button type="button" data-act="plus" data-id="${v.id}" title="${t('Ein Exemplar mehr', 'One copy more')}">+1</button>
+            <button type="button" data-act="move" data-id="${v.id}">${t('Ordner…', 'Folder…')}</button>
+          </td>` : ''}
         </tr>`;
     })
     .join('');
@@ -545,9 +616,10 @@ function cardGroupModalHTML(group) {
         <div class="wish-line">${wishButtonHTML(group.name)}<span class="wish-line-label">${t('Wunschliste', 'Wishlist')}</span></div>
         <h3 class="lang-table-title">${t('Sprachen in deiner Sammlung', 'Languages in your collection')}</h3>
         <table class="lang-table">
-          <thead><tr><th>${t('Sprache', 'Language')}</th><th>${t('Zustand', 'Condition')}</th><th>${t('Ordner', 'Folder')}</th><th class="num" title="${priceHint()}">${t('Preis (Cardmarket-Trend)', 'Price (Cardmarket trend)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th></tr></thead>
+          <thead><tr><th>${t('Sprache', 'Language')}</th><th>${t('Zustand', 'Condition')}</th><th>${t('Ordner', 'Folder')}</th><th class="num" title="${priceHint()}">${t('Preis (Cardmarket-Trend)', 'Price (Cardmarket trend)')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th>${t('Hinzugefügt', 'Added')}</th>${editable ? '<th></th>' : ''}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
+        ${editable ? '<div class="row-edit" id="row-edit"></div>' : ''}
         <h3 class="lang-table-title">${t('Weitere Editionen dieser Karte', 'Other printings of this card')}</h3>
         <div class="modal-variants" id="modal-variants">${t('Lade Varianten…', 'Loading printings…')}</div>
       </div>

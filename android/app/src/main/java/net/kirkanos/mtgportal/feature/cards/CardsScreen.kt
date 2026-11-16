@@ -100,8 +100,6 @@ private val SORTS = listOf(
     "set" to R.string.cards_sort_set,
     "value-desc" to R.string.cards_sort_value_desc,
     "value-asc" to R.string.cards_sort_value_asc,
-    "price-desc" to R.string.cards_sort_price_desc,
-    "price-asc" to R.string.cards_sort_price_asc,
     "rarity" to R.string.cards_sort_rarity,
     "released-desc" to R.string.cards_sort_released_desc,
     "released-asc" to R.string.cards_sort_released_asc,

@@ -10,6 +10,14 @@ let pageHasMore = false;
 let loadingPage = false;
 let queryToken = 0;       // discards responses of superseded queries
 
+// Editing (with write access): the tiles on the page by group key, the
+// multi selection, and the group whose detail dialog is open.
+const tilesByKey = new Map();
+const groupsByKey = new Map();
+let selecting = false;
+const selectedGroups = new Map(); // key -> group
+let modalGroup = null;
+
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic', special: 'Special' };
 const COLOR_LABEL = {
   W: t('Weiß', 'White'), U: t('Blau', 'Blue'), B: t('Schwarz', 'Black'), R: t('Rot', 'Red'), G: t('Grün', 'Green'),
@@ -238,6 +246,8 @@ async function runQuery(append = false) {
   if (!append) {
     stopIncremental(grid);
     grid.innerHTML = '';
+    tilesByKey.clear();
+    groupsByKey.clear();
   }
   const frag = document.createDocumentFragment();
   groups.forEach((g) => frag.appendChild(buildCardTile(g)));
@@ -286,8 +296,13 @@ function buildCardTile(g) {
     ? `<span class="set-sym${rarityCls}" style="-webkit-mask-image:url('${escapeHTML(icon)}');mask-image:url('${escapeHTML(icon)}')"></span>`
     : '';
 
+  // Grid groups carry row ids: the detail dialog may edit them.
+  g.editable = true;
   const tile = document.createElement('div');
-  tile.className = 'card-tile';
+  tile.className = 'card-tile' + (selectedGroups.has(g.key) ? ' selected' : '');
+  tile.dataset.key = g.key;
+  tilesByKey.set(g.key, tile);
+  groupsByKey.set(g.key, g);
   tile.innerHTML = `
     <div class="thumb">
       ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(g.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
@@ -305,11 +320,224 @@ function buildCardTile(g) {
     </div>
   `;
   tile.addEventListener('click', () => {
-    openCardModal(cardGroupModalHTML(g));
-    loadCardVariants(g);
+    if (selecting) {
+      toggleSelected(g, tile);
+      return;
+    }
+    openGroup(g);
   });
   return tile;
 }
+
+function openGroup(g) {
+  modalGroup = g;
+  openCardModal(cardGroupModalHTML(g));
+  loadCardVariants(g);
+}
+
+/* ---- multi selection: move many cards into one binder ---- */
+
+function toggleSelected(g, tile) {
+  if (selectedGroups.has(g.key)) selectedGroups.delete(g.key);
+  else selectedGroups.set(g.key, g);
+  tile.classList.toggle('selected', selectedGroups.has(g.key));
+  renderSelectBar();
+}
+
+function setSelecting(on) {
+  selecting = on;
+  if (!on) {
+    selectedGroups.clear();
+    tilesByKey.forEach((tile) => tile.classList.remove('selected'));
+  }
+  document.body.classList.toggle('selecting', on);
+  const btn = document.getElementById('select-mode');
+  if (btn) btn.textContent = on ? t('Auswahl beenden', 'Stop selecting') : t('Auswählen', 'Select');
+  renderSelectBar();
+}
+
+/* The collection rows behind the selection: in a binder view only the rows
+   in that binder (the tiles show only those), else all of them. */
+function selectedRowIds() {
+  const binder = document.getElementById('filter-binder').value;
+  const ids = [];
+  let copies = 0;
+  selectedGroups.forEach((g) => g.variants.forEach((v) => {
+    if (v.id && (!binder || v.binderName === binder)) {
+      ids.push(v.id);
+      copies += v.quantity;
+    }
+  }));
+  return { ids, copies };
+}
+
+async function renderSelectBar() {
+  let bar = document.getElementById('select-bar');
+  if (!selecting) {
+    if (bar) bar.remove();
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'select-bar';
+    bar.className = 'select-bar';
+    bar.innerHTML = `
+      <span class="select-count" id="select-count"></span>
+      <button type="button" id="select-all">${t('Alle auf der Seite', 'All on the page')}</button>
+      <button type="button" id="select-none">${t('Keine', 'None')}</button>
+      ${binderInputHTML('select-binder', '')}
+      <select id="select-binder-type" title="${t('Typ, falls der Ordner neu ist', 'Type, if the folder is new')}">
+        <option value="binder">${t('Ordner', 'Binder')}</option>
+        <option value="list">${t('Liste', 'List')}</option>
+        <option value="deck">Deck</option>
+      </select>
+      <button type="button" class="primary" id="select-move">${t('Verschieben', 'Move')}</button>`;
+    document.body.appendChild(bar);
+    bar.querySelector('#select-all').addEventListener('click', () => {
+      // Only what is loaded: the server pages the grid.
+      document.querySelectorAll('#card-grid .card-tile').forEach((tile) => tile.classList.add('selected'));
+      groupsByKey.forEach((g, key) => selectedGroups.set(key, g));
+      renderSelectBar();
+    });
+    bar.querySelector('#select-none').addEventListener('click', () => {
+      selectedGroups.clear();
+      tilesByKey.forEach((tile) => tile.classList.remove('selected'));
+      renderSelectBar();
+    });
+    bar.querySelector('#select-move').addEventListener('click', moveSelection);
+    ensureBinderDatalist();
+  }
+  const { copies } = selectedRowIds();
+  bar.querySelector('#select-count').textContent =
+    t(`${selectedGroups.size} ausgewählt (${copies} Karten)`, `${selectedGroups.size} selected (${copies} cards)`);
+  bar.querySelector('#select-move').disabled = copies === 0;
+}
+
+async function moveSelection() {
+  const { ids } = selectedRowIds();
+  if (!ids.length) return;
+  const name = document.getElementById('select-binder').value.trim();
+  const type = document.getElementById('select-binder-type').value;
+  const btn = document.getElementById('select-move');
+  btn.disabled = true;
+  try {
+    const r = await writeAPI('POST', '/collection/move', { ids, binderName: name, binderType: type });
+    let msg = t(`${r.moved} Zeilen nach „${r.binderName || 'ohne Ordner'}“ verschoben.`,
+      `${r.moved} rows moved to “${r.binderName || 'no folder'}”.`);
+    if (r.merged) msg += ' ' + t(`${r.merged} davon zusammengeführt.`, `${r.merged} of them merged.`);
+    if (r.volatile) msg += ' ' + t('Karten aus ManaBox kommen beim nächsten Import wieder in ihren alten Ordner.', 'Cards from ManaBox return to their old folder with the next import.');
+    showNotice(msg);
+    bindersCache = null;
+    setSelecting(false);
+    await refreshAfterWrite();
+  } catch (e) {
+    showNotice(t('Verschieben fehlgeschlagen: ', 'Moving failed: ') + e.message, true);
+    btn.disabled = false;
+  }
+}
+
+/* After a write: facets (binders, counts) and the grid anew. */
+async function refreshAfterWrite() {
+  try {
+    const res = await fetch(API + '/cards/facets', { cache: 'no-cache' });
+    if (res.ok) {
+      facets = await res.json();
+      renderStats();
+      const binderSel = document.getElementById('filter-binder');
+      const keep = binderSel.value;
+      binderSel.querySelectorAll('option:not([value=""])').forEach((o) => o.remove());
+      (facets.binders || []).forEach((b) => {
+        const o = document.createElement('option');
+        o.value = b;
+        o.textContent = b;
+        binderSel.appendChild(o);
+      });
+      binderSel.value = keep;
+    }
+  } catch (e) { /* the grid still reloads */ }
+  await runQuery();
+}
+
+/* ---- editing single rows in the detail dialog ---- */
+
+/* Puts a row as the server now has it into the group, like applyWrite in the
+   app: removed rows go, the row replaces the one with its id or is added
+   (taking over the price of a row with the same finish). */
+function applyRow(g, row, removed) {
+  g.variants = g.variants.filter((v) => !(removed || []).includes(v.id));
+  if (row) {
+    const fields = {
+      id: row.id, origin: row.origin, language: row.language, foil: row.foil, condition: row.condition,
+      quantity: row.quantity, binderName: row.binderName, binderType: row.binderType,
+    };
+    const existing = g.variants.find((v) => v.id === row.id);
+    if (existing) Object.assign(existing, fields);
+    else {
+      const twin = g.variants.find((v) => v.foil === row.foil) || g.variants[0] || {};
+      g.variants.push({ ...twin, added: row.added, ...fields });
+    }
+  }
+  g.totalQty = g.variants.reduce((a, v) => a + v.quantity, 0);
+  g.langs = [...new Set(g.variants.map((v) => v.language))];
+  g.anyFoil = g.variants.some((v) => v.foil && v.foil !== 'normal');
+  // The tile follows; a card with no copies left leaves the grid.
+  const tile = tilesByKey.get(g.key);
+  if (tile) {
+    if (g.variants.length) tile.replaceWith(buildCardTile(g));
+    else { tile.remove(); tilesByKey.delete(g.key); }
+  }
+  if (g.variants.length) openGroup(g);
+  else document.getElementById('card-modal').classList.remove('open');
+}
+
+async function editRow(act, id) {
+  const g = modalGroup;
+  const v = g && g.variants.find((x) => x.id === id);
+  if (!v) return;
+  try {
+    if (act === 'minus') {
+      const r = await writeAPI('PATCH', `/collection/cards/${id}`, { quantityDelta: -1 });
+      applyRow(g, r.row, r.deleted ? [id] : []);
+      if (v.origin === 'csv') showNotice(t('Geändert – aber das ist eine ManaBox-Zeile: der nächste Import setzt sie zurück.', 'Changed – but this is a ManaBox row: the next import resets it.'));
+    } else if (act === 'plus') {
+      const r = await writeAPI('POST', '/collection/cards', { items: [{
+        setCode: g.setCode.toLowerCase(), collectorNumber: g.collectorNumber, quantity: 1,
+        foil: v.foil || 'normal', language: v.language || 'en', condition: v.condition || 'near_mint',
+        binderName: v.binderName || '', binderType: v.binderName ? (v.binderType || 'binder') : '',
+      }] });
+      applyRow(g, r.items[0], []);
+    } else if (act === 'move') {
+      const box = document.getElementById('row-edit');
+      await ensureBinderDatalist();
+      box.innerHTML = `
+        <span>${t('Verschieben nach', 'Move to')}:</span>
+        ${binderInputHTML('row-binder', v.binderName)}
+        <select id="row-binder-type"><option value="binder">${t('Ordner', 'Binder')}</option><option value="list">${t('Liste', 'List')}</option><option value="deck">Deck</option></select>
+        <button type="button" class="primary" data-act="move-ok" data-id="${id}">OK</button>`;
+      document.getElementById('row-binder').select();
+    } else if (act === 'move-ok') {
+      const name = document.getElementById('row-binder').value.trim();
+      if (name === (v.binderName || '')) return;
+      const r = await writeAPI('PATCH', `/collection/cards/${id}`, { binderName: name, binderType: document.getElementById('row-binder-type').value });
+      bindersCache = null;
+      applyRow(g, r.row, r.mergedInto ? [id] : []);
+      if (v.origin === 'csv') showNotice(t('Verschoben – Karten aus ManaBox kommen beim nächsten Import wieder in ihren alten Ordner.', 'Moved – cards from ManaBox return to their old folder with the next import.'));
+    }
+  } catch (e) {
+    showNotice(t('Ändern fehlgeschlagen: ', 'Change failed: ') + e.message, true);
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('#card-modal [data-act]');
+  if (btn) editRow(btn.dataset.act, Number(btn.dataset.id));
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.id === 'row-binder') {
+    const ok = document.querySelector('#row-edit [data-act="move-ok"]');
+    if (ok) ok.click();
+  }
+});
 
 function renderGrid(groups) {
   renderIncremental(document.getElementById('card-grid'), groups, buildCardTile);
@@ -394,6 +622,11 @@ async function init() {
   ['filter-rarity', 'filter-color', 'filter-foil', 'filter-style', 'filter-binder', 'filter-subtype', 'sort-by'].forEach((id) => {
     document.getElementById(id).addEventListener('change', () => runQuery());
   });
+  document.getElementById('select-mode').addEventListener('click', () => setSelecting(!selecting));
+  // Locked again: no more editing.
+  document.addEventListener('auth-change', (e) => { if (!e.detail.unlocked && selecting) setSelecting(false); });
+  // The binder view decides which rows the selection means.
+  document.getElementById('filter-binder').addEventListener('change', () => renderSelectBar());
   document.getElementById('filter-type').addEventListener('change', (e) => {
     populateSubtypes(e.target.value);
     runQuery();

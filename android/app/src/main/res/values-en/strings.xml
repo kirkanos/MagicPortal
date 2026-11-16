@@ -79,8 +79,6 @@
     <string name="cards_sort_set">Sort: Set</string>
     <string name="cards_sort_value_desc">Sort: Single-card value (high → low)</string>
     <string name="cards_sort_value_asc">Sort: Single-card value (low → high)</string>
-    <string name="cards_sort_price_desc">Sort: Purchase price (high → low)</string>
-    <string name="cards_sort_price_asc">Sort: Purchase price (low → high)</string>
     <string name="cards_sort_rarity">Sort: Rarity</string>
     <string name="cards_sort_released_desc">Sort: Release (newest first)</string>
     <string name="cards_sort_released_asc">Sort: Release (oldest first)</string>

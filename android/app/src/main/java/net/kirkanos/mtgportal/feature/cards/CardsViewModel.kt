@@ -69,7 +69,8 @@ class CardsViewModel(
             filters = CardFilters(
                 binder = initialBinder.orEmpty(),
                 set = initialSet?.let(SetCode::display).orEmpty(),
-                sort = c.settings.sortFor("cards") ?: "name",
+                // The purchase price sorts are gone; a saved one falls back to name.
+                sort = c.settings.sortFor("cards")?.takeUnless { it.startsWith("price-") } ?: "name",
             ),
         ),
     )

@@ -88,8 +88,6 @@
     <string name="cards_sort_set">Sortieren: Set</string>
     <string name="cards_sort_value_desc">Sortieren: Einzelkartenwert (hoch → niedrig)</string>
     <string name="cards_sort_value_asc">Sortieren: Einzelkartenwert (niedrig → hoch)</string>
-    <string name="cards_sort_price_desc">Sortieren: Kaufpreis (hoch → niedrig)</string>
-    <string name="cards_sort_price_asc">Sortieren: Kaufpreis (niedrig → hoch)</string>
     <string name="cards_sort_rarity">Sortieren: Rarität</string>
     <string name="cards_sort_released_desc">Sortieren: Erscheinung (neueste zuerst)</string>
     <string name="cards_sort_released_asc">Sortieren: Erscheinung (älteste zuerst)</string>

@@ -489,10 +489,6 @@ func sortGroups(groups []*groupOut, mode string) {
 			}
 			return cmpName(a, b) < 0
 		}
-	case "price-desc":
-		less = func(i, j int) bool { return groups[i].PurchasePrice > groups[j].PurchasePrice }
-	case "price-asc":
-		less = func(i, j int) bool { return groups[i].PurchasePrice < groups[j].PurchasePrice }
 	case "value-desc":
 		less = func(i, j int) bool {
 			a, b := groups[i], groups[j]
