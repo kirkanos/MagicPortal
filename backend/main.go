@@ -56,6 +56,7 @@ func main() {
 	mux.HandleFunc("GET /api/prints", handlePrints)
 	mux.HandleFunc("GET /api/binders", handleBinders)
 	mux.HandleFunc("PATCH /api/binders/{name}", handleBinderPatch)
+	mux.HandleFunc("POST /api/binders/{name}/cover", handleDeckCover)
 	mux.HandleFunc("GET /api/subtypes", handleSubtypes)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/summary", handleSummary)
@@ -396,6 +397,9 @@ type binderOut struct {
 	Cards       int     `json:"cards"`
 	Total       int     `json:"total"`
 	MarketValue float64 `json:"marketValue"`
+	// Decks only: the cover art and the colours of their cards.
+	Cover  *deckCover `json:"cover,omitempty"`
+	Colors []string   `json:"colors,omitempty"`
 }
 
 // handleBinders returns per-binder aggregates (folders and lists) for the
@@ -422,6 +426,22 @@ func handleBinders(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		out = append(out, b)
+	}
+	rows.Close()
+	// Covers and colours after the rows: the one connection is free again.
+	covers := loadDeckCovers()
+	var colors map[string][]string
+	for i := range out {
+		if out[i].Type != "deck" {
+			continue
+		}
+		if colors == nil {
+			colors = binderColors()
+		}
+		if c, ok := covers[out[i].Name]; ok {
+			out[i].Cover = &c
+		}
+		out[i].Colors = colors[out[i].Name]
 	}
 	writeJSON(w, out)
 }

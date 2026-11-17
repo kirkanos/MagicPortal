@@ -14,7 +14,8 @@ package net.kirkanos.mtgportal.core.model
  */
 class ImageUrls(portalBaseUrl: String, private val mirror: Boolean) {
 
-    enum class Size(val path: String) { SMALL("small"), NORMAL("normal") }
+    /** ART_CROP: only the artwork, without frame and text (deck covers). */
+    enum class Size(val path: String) { SMALL("small"), NORMAL("normal"), ART_CROP("art_crop") }
 
     enum class Face(val path: String) { FRONT("front"), BACK("back") }
 

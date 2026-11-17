@@ -155,10 +155,6 @@
     <string name="cardmarket">Cardmarket ↗</string>
 
     <!-- Decks (decks.html) -->
-    <string name="decks_title">Decks – in Vorbereitung</string>
-    <string name="decks_text">Hier kannst du künftig Decks importieren und exportieren. Da der genaue Import-Ablauf noch nicht feststeht, sind die Schaltflächen unten noch ohne Funktion.</string>
-    <string name="decks_import">⬇ Deck importieren</string>
-    <string name="decks_export">⬆ Deck exportieren</string>
     <!-- Wishlist (wishlist.html / wishlist.js) -->
     <string name="wl_entries">Einträge</string>
     <string name="wl_total_cost">Kosten gesamt</string>
@@ -368,6 +364,46 @@
     <string name="act_src_log">Protokoll</string>
 
     <!-- Admin (buildAdminOverlay / initCollectionUpload in shared.js) -->
+    <plurals name="decks_count">
+        <item quantity="one">%d Deck</item>
+        <item quantity="other">%d Decks</item>
+    </plurals>
+    <string name="decks_empty">Noch keine Decks. Lege mit „+“ eines an, oder stelle einen Ordner unter „Ordner“ (Umbenennen) auf den Typ „Deck“ um.</string>
+    <string name="decks_new">Neues Deck</string>
+    <string name="decks_new_hint">Danach fügst du Karten hinzu – das Deck entsteht mit der ersten Karte.</string>
+    <string name="decks_new_ok">Anlegen</string>
+    <string name="decks_new_taken">„%1$s“ gibt es schon als Ordner oder Liste.</string>
+    <string name="deck_cards">%1$s Karten</string>
+    <string name="deck_view_list">Liste</string>
+    <string name="deck_view_grid">Raster</string>
+    <string name="deck_cover">Titelbild</string>
+    <string name="deck_cover_title">Titelbild wählen</string>
+    <string name="deck_cover_hint">Das Artwork der gewählten Karte kommt auf die Deckbox.</string>
+    <string name="deck_cover_remove">Titelbild entfernen</string>
+    <string name="deck_cover_use">Als Titelbild verwenden</string>
+    <string name="deck_cover_set">Titelbild: %1$s</string>
+    <string name="deck_add">Hinzufügen</string>
+    <string name="deck_scan">Scannen</string>
+    <string name="deck_add_title">Karten hinzufügen</string>
+    <string name="deck_add_hint">Suche in deiner Sammlung. „+1“ nimmt ein Exemplar aus seinem Ordner und legt es ins Deck.</string>
+    <string name="deck_add_search">Name, Text …</string>
+    <string name="deck_add_none">Nichts gefunden (Karten, die schon im Deck sind, stehen hier nicht).</string>
+    <string name="deck_added">%1$s aus „%2$s“ ins Deck gelegt.</string>
+    <string name="deck_empty">Das Deck ist leer. Füge über „Hinzufügen“ Karten aus deiner Sammlung hinzu oder scanne neue.</string>
+    <string name="deck_take_out">Herausnehmen</string>
+    <string name="deck_take_out_qty">Wie viele herausnehmen?</string>
+    <string name="deck_taken_out">%1$d× %2$s nach „%3$s“ verschoben.</string>
+    <string name="deck_volatile">Karten aus ManaBox kommen beim nächsten Import wieder in ihren alten Ordner.</string>
+    <string name="deck_type_creature">Kreaturen</string>
+    <string name="deck_type_planeswalker">Planeswalker</string>
+    <string name="deck_type_battle">Schlachten</string>
+    <string name="deck_type_instant">Spontanzauber</string>
+    <string name="deck_type_sorcery">Hexereien</string>
+    <string name="deck_type_artifact">Artefakte</string>
+    <string name="deck_type_enchantment">Verzauberungen</string>
+    <string name="deck_type_land">Länder</string>
+    <string name="deck_type_other">Sonstige</string>
+    <string name="binder_filter">Ordner suchen …</string>
     <string name="admin_open">Verwaltung</string>
     <string name="admin_random">Zufallskarten</string>
     <string name="admin_random_enabled">Zufällige Karten auf der Karten-Seite anzeigen</string>

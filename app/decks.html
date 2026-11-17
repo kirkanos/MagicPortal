@@ -38,20 +38,40 @@
 </nav>
 
 <main>
-  <h1 class="page-title" data-en="Decks">Decks</h1>
-  <div class="coming-soon">
-    <p class="coming-soon-icon">🧩</p>
-    <h2 data-en="Decks – coming soon">Decks – in Vorbereitung</h2>
-    <p data-en="Here you'll be able to import and export decks. Since the exact import format is still being worked out, the buttons below are not active yet.">
-      Hier kannst du künftig Decks importieren und exportieren. Da der genaue Import-Ablauf noch nicht feststeht,
-      sind die Schaltflächen unten noch ohne Funktion.
-    </p>
-    <div class="coming-soon-actions">
-      <button type="button" class="upload-btn" disabled data-en="⬇ Import deck">⬇ Deck importieren</button>
-      <button type="button" class="reset-btn" disabled data-en="⬆ Export deck">⬆ Deck exportieren</button>
+  <section id="deck-list-view">
+    <div class="deck-head">
+      <div>
+        <h1 class="page-title" data-en="Decks">Decks</h1>
+        <p class="section-hint" id="deck-count"></p>
+      </div>
+      <button type="button" class="upload-btn unlock-only" id="deck-new" data-en="+ New deck">+ Neues Deck</button>
     </div>
-  </div>
+    <div class="deckbox-grid" id="deck-list"></div>
+  </section>
+
+  <section id="deck-view" hidden>
+    <a href="decks.html" class="deck-back" data-en="← All decks">← Alle Decks</a>
+    <div class="deck-banner" id="deck-banner"></div>
+    <div class="deck-toolbar">
+      <div class="view-switch" role="tablist">
+        <button type="button" data-view="grid" data-en="Grid">Raster</button>
+        <button type="button" data-view="list" data-en="List">Liste</button>
+        <button type="button" data-view="stack" data-en="Stacks">Stapel</button>
+      </div>
+      <span class="deck-toolbar-spacer"></span>
+      <button type="button" class="reset-btn unlock-only" id="deck-cover-btn" data-en="🖼 Cover image">🖼 Titelbild</button>
+      <button type="button" class="upload-btn unlock-only" id="deck-add-btn" data-en="+ Add cards">+ Karten hinzufügen</button>
+    </div>
+    <div id="deck-cards"></div>
+  </section>
 </main>
+
+<div class="modal-overlay" id="deck-dialog">
+  <div class="modal-body deck-dialog-panel">
+    <span class="modal-close" id="deck-dialog-close">&times;</span>
+    <div id="deck-dialog-body"></div>
+  </div>
+</div>
 
 <footer class="site-footer">
   <span>&copy; 2026 <a href="https://www.kirkanos.net" target="_blank" rel="noopener">kirkanos</a></span>
@@ -62,5 +82,6 @@
 
 <script src="js/i18n.js"></script>
 <script src="js/shared.js"></script>
+<script src="js/decks.js"></script>
 </body>
 </html>

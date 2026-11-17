@@ -11,6 +11,7 @@ import net.kirkanos.mtgportal.core.network.dto.RowPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
+import net.kirkanos.mtgportal.core.network.dto.DeckCoverInputDto
 import net.kirkanos.mtgportal.core.network.dto.ImportConfigDto
 import net.kirkanos.mtgportal.core.network.dto.ConfirmExportDto
 import net.kirkanos.mtgportal.core.network.dto.ImportResultDto
@@ -142,6 +143,9 @@ interface PortalApi {
     suspend fun confirmExport(@Path("id") id: Long): ConfirmExportDto
 
     /** The name is one path segment; Retrofit encodes "/" in it. */
+    @POST("binders/{name}/cover")
+    suspend fun setDeckCover(@Path("name") name: String, @Body body: DeckCoverInputDto): Response<Unit>
+
     @PATCH("binders/{name}")
     suspend fun patchBinder(@Path("name") name: String, @Body body: BinderPatchDto): BinderPatchResultDto
 

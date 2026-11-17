@@ -145,7 +145,23 @@ data class BinderDto(
     val total: Int = 0,
     /** Server value; not foil-aware (main.go handleBinders), shown as is. */
     val marketValue: Double = 0.0,
+    /** Decks only: the card whose art is on the deck box. */
+    val cover: DeckCoverDto? = null,
+    /** Decks only: the colours of the cards, WUBRG order. */
+    val colors: List<String> = emptyList(),
 )
+
+@Serializable
+data class DeckCoverDto(
+    val setCode: String = "",
+    val collectorNumber: String = "",
+    val name: String = "",
+    val imageId: String = "",
+)
+
+/** POST /api/binders/{name}/cover; an empty setCode removes the cover. */
+@Serializable
+data class DeckCoverInputDto(val setCode: String, val collectorNumber: String = "")
 
 @Serializable
 data class EditionDto(
@@ -503,7 +519,13 @@ data class BinderPatchDto(val name: String? = null, val type: String? = null)
 
 /** POST /api/collection/move: many rows into one binder. */
 @Serializable
-data class MoveRowsDto(val ids: List<Long>, val binderName: String, val binderType: String)
+data class MoveRowsDto(
+    val ids: List<Long>,
+    val binderName: String,
+    val binderType: String,
+    /** Only this many copies of a single row; 0 (not sent) moves whole rows. */
+    val quantity: Int = 0,
+)
 
 @Serializable
 data class MoveRowsResultDto(

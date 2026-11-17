@@ -142,10 +142,6 @@
     <string name="reserved_empty_filter">No cards for this filter.</string>
     <string name="cardmarket">Cardmarket ↗</string>
 
-    <string name="decks_title">Decks – coming soon</string>
-    <string name="decks_text">Here you\'ll be able to import and export decks. Since the exact import format is still being worked out, the buttons below are not active yet.</string>
-    <string name="decks_import">⬇ Import deck</string>
-    <string name="decks_export">⬆ Export deck</string>
     <string name="wl_entries">Entries</string>
     <string name="wl_total_cost">Total cost</string>
     <string name="wl_unpriced" tools:ignore="PluralsCandidate">+%1$d unpriced</string>
@@ -348,6 +344,46 @@
     <string name="act_src_restore">Restore</string>
     <string name="act_src_reset">Reset</string>
     <string name="act_src_log">Log</string>
+    <plurals name="decks_count">
+        <item quantity="one">%d deck</item>
+        <item quantity="other">%d decks</item>
+    </plurals>
+    <string name="decks_empty">No decks yet. Create one with “+”, or switch a folder to the type “Deck” under “Folders” (Rename).</string>
+    <string name="decks_new">New deck</string>
+    <string name="decks_new_hint">Then add cards – the deck comes into being with the first card.</string>
+    <string name="decks_new_ok">Create</string>
+    <string name="decks_new_taken">“%1$s” already exists as a folder or list.</string>
+    <string name="deck_cards">%1$s cards</string>
+    <string name="deck_view_list">List</string>
+    <string name="deck_view_grid">Grid</string>
+    <string name="deck_cover">Cover</string>
+    <string name="deck_cover_title">Choose a cover image</string>
+    <string name="deck_cover_hint">The artwork of the chosen card goes on the deck box.</string>
+    <string name="deck_cover_remove">Remove cover image</string>
+    <string name="deck_cover_use">Use as cover image</string>
+    <string name="deck_cover_set">Cover image: %1$s</string>
+    <string name="deck_add">Add</string>
+    <string name="deck_scan">Scan</string>
+    <string name="deck_add_title">Add cards</string>
+    <string name="deck_add_hint">Search your collection. “+1” takes one copy out of its folder and puts it into the deck.</string>
+    <string name="deck_add_search">Name, text …</string>
+    <string name="deck_add_none">Nothing found (cards already in the deck are not listed).</string>
+    <string name="deck_added">%1$s moved from “%2$s” into the deck.</string>
+    <string name="deck_empty">The deck is empty. Add cards from your collection with “Add” or scan new ones.</string>
+    <string name="deck_take_out">Take out</string>
+    <string name="deck_take_out_qty">How many to take out?</string>
+    <string name="deck_taken_out">%1$d× %2$s moved to “%3$s”.</string>
+    <string name="deck_volatile">Cards from ManaBox return to their old folder with the next import.</string>
+    <string name="deck_type_creature">Creatures</string>
+    <string name="deck_type_planeswalker">Planeswalkers</string>
+    <string name="deck_type_battle">Battles</string>
+    <string name="deck_type_instant">Instants</string>
+    <string name="deck_type_sorcery">Sorceries</string>
+    <string name="deck_type_artifact">Artifacts</string>
+    <string name="deck_type_enchantment">Enchantments</string>
+    <string name="deck_type_land">Lands</string>
+    <string name="deck_type_other">Other</string>
+    <string name="binder_filter">Search folders …</string>
     <string name="admin_open">Administration</string>
     <string name="admin_random">Random cards</string>
     <string name="admin_random_enabled">Show random cards on the Cards page</string>

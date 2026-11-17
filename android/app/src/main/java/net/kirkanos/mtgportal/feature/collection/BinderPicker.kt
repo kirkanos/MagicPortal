@@ -30,6 +30,8 @@ import net.kirkanos.mtgportal.core.network.dto.BinderDto
 @Composable
 fun BinderPickerDialog(binders: List<BinderDto>, current: BinderTarget, onPick: (BinderTarget) -> Unit, onDismiss: () -> Unit) {
     var newName by remember { mutableStateOf("") }
+    // With many binders: a filter over the names.
+    var filter by remember { mutableStateOf("") }
     var newType by remember { mutableStateOf("binder") }
     // A name that exists is that binder, with its type.
     val existing = binders.firstOrNull { it.name.equals(newName.trim(), ignoreCase = true) }
@@ -38,7 +40,16 @@ fun BinderPickerDialog(binders: List<BinderDto>, current: BinderTarget, onPick: 
         title = { Text(stringResource(R.string.scan_add_target)) },
         text = {
             LazyColumn {
-                item {
+                if (binders.size > 8) {
+                    item {
+                        OutlinedTextField(
+                            value = filter, onValueChange = { filter = it }, singleLine = true,
+                            placeholder = { Text(stringResource(R.string.binder_filter)) },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                        )
+                    }
+                }
+                if (filter.isBlank()) item {
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.scan_add_no_binder)) },
                         modifier = Modifier.clickable { onPick(BinderTarget("")) },
@@ -46,7 +57,7 @@ fun BinderPickerDialog(binders: List<BinderDto>, current: BinderTarget, onPick: 
                     )
                 }
                 for ((type, label) in listOf("binder" to R.string.nav_binders, "list" to R.string.nav_lists, "deck" to R.string.nav_decks)) {
-                    val group = binders.filter { it.type == type && it.name.isNotEmpty() }
+                    val group = binders.filter { it.type == type && it.name.isNotEmpty() && it.name.contains(filter.trim(), ignoreCase = true) }
                     if (group.isEmpty()) continue
                     item { Text(stringResource(label), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp)) }
                     items(group, key = { "$type|${it.name}" }) { b ->

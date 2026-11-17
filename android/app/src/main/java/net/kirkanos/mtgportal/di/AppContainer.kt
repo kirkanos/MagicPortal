@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.BuildConfig
 import net.kirkanos.mtgportal.core.data.AuthRepository
+import net.kirkanos.mtgportal.core.data.BinderTarget
 import net.kirkanos.mtgportal.core.data.CollectionWriteRepository
 import net.kirkanos.mtgportal.core.data.ConfigRepository
 import net.kirkanos.mtgportal.core.data.SecretStore
@@ -102,6 +103,9 @@ class AppContainer(context: Context) {
 
     /** The last finished scan session, until it is taken into the collection. */
     var lastScan: ScanSessionResult? = null
+
+    /** Set by a deck before it opens the scanner: the scanned cards go there. */
+    var scanTarget: BinderTarget? = null
 
     /** Coil with SVG support (set and mana symbols) on the image-only client. */
     val imageLoader: ImageLoader = ImageLoader.Builder(context)

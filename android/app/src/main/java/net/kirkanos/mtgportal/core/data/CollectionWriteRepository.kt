@@ -15,6 +15,7 @@ import net.kirkanos.mtgportal.core.network.dto.AddCardsRequest
 import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
+import net.kirkanos.mtgportal.core.network.dto.DeckCoverInputDto
 import net.kirkanos.mtgportal.core.network.dto.CollectionRowDto
 import net.kirkanos.mtgportal.core.network.dto.ConfirmExportDto
 import net.kirkanos.mtgportal.core.network.dto.VariantDto
@@ -93,8 +94,12 @@ class CollectionWriteRepository(private val api: PortalApi) {
     suspend fun confirmExport(id: Long): ApiResult<ConfirmExportDto> = safeCall { api.confirmExport(id) }.withReadableError().noted()
 
     /** Moves many rows into one binder at once (the grid's multi selection). */
-    suspend fun moveRows(ids: List<Long>, target: BinderTarget): ApiResult<MoveRowsResultDto> =
-        safeCall { api.moveRows(MoveRowsDto(ids, target.name, target.type)) }.withReadableError().noted()
+    suspend fun moveRows(ids: List<Long>, target: BinderTarget, quantity: Int = 0): ApiResult<MoveRowsResultDto> =
+        safeCall { api.moveRows(MoveRowsDto(ids, target.name, target.type, quantity)) }.withReadableError().noted()
+
+    /** The art of this printing on the deck box; an empty set code removes it. */
+    suspend fun setDeckCover(deck: String, setCode: String, collectorNumber: String): ApiResult<Unit> =
+        safeStatus { api.setDeckCover(deck, DeckCoverInputDto(setCode.lowercase(), collectorNumber)) }.withReadableError().noted()
 
     suspend fun renameBinder(name: String, patch: BinderPatchDto): ApiResult<BinderPatchResultDto> = safeCall { api.patchBinder(name, patch) }.withReadableError().noted()
 

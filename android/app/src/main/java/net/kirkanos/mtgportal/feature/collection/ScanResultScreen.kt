@@ -77,7 +77,8 @@ data class AddUiState(
 )
 
 class AddToCollectionViewModel(private val c: AppContainer) : ViewModel() {
-    private val _state = MutableStateFlow(AddUiState(target = decodeTarget(c.settings.lastBinder.value) ?: BinderTarget("")))
+    // A deck that opened the scanner wins over the last binder used.
+    private val _state = MutableStateFlow(AddUiState(target = c.scanTarget ?: decodeTarget(c.settings.lastBinder.value) ?: BinderTarget("")))
     val state: StateFlow<AddUiState> = _state.asStateFlow()
 
     /** One key per session: a retry of the same session can never add twice. */

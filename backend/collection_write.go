@@ -575,6 +575,9 @@ type moveRequest struct {
 	IDs        []int64 `json:"ids"`
 	BinderName string  `json:"binderName"`
 	BinderType string  `json:"binderType"`
+	// Quantity moves only that many copies of a single row (a deck takes one
+	// card out of a binder); 0 moves whole rows.
+	Quantity int `json:"quantity"`
 }
 
 type moveResult struct {
@@ -625,6 +628,9 @@ func moveRows(m moveRequest, now time.Time) (moveResult, error) {
 	if len(m.IDs) > maxMoveRows {
 		return res, badItem(-1, "at most %d rows at once", maxMoveRows)
 	}
+	if m.Quantity < 0 || (m.Quantity > 0 && len(m.IDs) != 1) {
+		return res, badItem(-1, "quantity needs exactly one row")
+	}
 	given, err := normBinderType(m.BinderType)
 	if err != nil {
 		return res, badItem(-1, "%v", err)
@@ -660,19 +666,38 @@ func moveRows(m moveRequest, now time.Time) (moveResult, error) {
 		if cur.Origin == "csv" {
 			res.Volatile = true
 		}
+		// Part of the row: the rest stays where it is.
+		split := m.Quantity > 0 && m.Quantity < cur.Quantity
 		var target int64
 		err = tx.QueryRow(`SELECT id FROM collection WHERE binder_name = ? AND set_code = ? AND collector_number = ?
 			AND foil = ? AND language = ? AND condition = ? AND origin = ?`,
 			name, strings.ToLower(cur.SetCode), cur.CollectorNumber, cur.Foil, cur.Language, cur.Condition, cur.Origin).Scan(&target)
+		qty := cur.Quantity
+		if split {
+			qty = m.Quantity
+			if _, err := tx.Exec(`UPDATE collection SET quantity = quantity - ?, updated_at = ? WHERE id = ?`, qty, ts, id); err != nil {
+				return res, err
+			}
+		}
 		switch {
 		case err == nil:
-			if _, err := tx.Exec(`UPDATE collection SET quantity = quantity + ?, updated_at = ? WHERE id = ?`, cur.Quantity, ts, target); err != nil {
+			if _, err := tx.Exec(`UPDATE collection SET quantity = quantity + ?, updated_at = ? WHERE id = ?`, qty, ts, target); err != nil {
 				return res, err
 			}
-			if _, err := tx.Exec(`DELETE FROM collection WHERE id = ?`, id); err != nil {
-				return res, err
+			if !split {
+				if _, err := tx.Exec(`DELETE FROM collection WHERE id = ?`, id); err != nil {
+					return res, err
+				}
 			}
 			res.Merged++
+		case errors.Is(err, sql.ErrNoRows) && split:
+			if _, err := tx.Exec(`INSERT INTO collection (binder_name, binder_type, scryfall_id, set_code, set_name, collector_number,
+					name, foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at, origin)
+				SELECT ?, ?, scryfall_id, set_code, set_name, collector_number,
+					name, foil, rarity, language, ?, purchase_price, currency, condition, added, ?, origin
+				FROM collection WHERE id = ?`, name, btype, qty, ts, id); err != nil {
+				return res, err
+			}
 		case errors.Is(err, sql.ErrNoRows):
 			if _, err := tx.Exec(`UPDATE collection SET binder_name = ?, binder_type = ?, updated_at = ? WHERE id = ?`, name, btype, ts, id); err != nil {
 				return res, err
@@ -763,6 +788,7 @@ func handleBinderPatch(w http.ResponseWriter, r *http.Request) {
 		writeWriteError(w, err)
 		return
 	}
+	renameDeckCover(from, res.Name)
 	metricAppWrites.inc(labels("op", "binder"))
 	logActivity("info", "App", fmt.Sprintf("Binder %q → %q (%s): %d rows, %d merged", from, res.Name, res.Type, res.Rows, res.Merged))
 	writeJSON(w, res)

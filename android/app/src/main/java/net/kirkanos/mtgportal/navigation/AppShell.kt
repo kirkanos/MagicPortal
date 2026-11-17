@@ -46,7 +46,9 @@ import net.kirkanos.mtgportal.feature.binders.BindersScreen
 import net.kirkanos.mtgportal.feature.cards.CardsScreen
 import net.kirkanos.mtgportal.feature.dashboard.DashboardScreen
 import net.kirkanos.mtgportal.feature.deckchecker.DeckCheckerScreen
+import net.kirkanos.mtgportal.feature.decks.DeckScreen
 import net.kirkanos.mtgportal.feature.decks.DecksScreen
+import net.kirkanos.mtgportal.core.data.BinderTarget
 import net.kirkanos.mtgportal.feature.editions.EditionsScreen
 import net.kirkanos.mtgportal.feature.editions.SetCardsScreen
 import net.kirkanos.mtgportal.feature.reserved.ReservedScreen
@@ -105,7 +107,11 @@ fun AppShell() {
                 primary.take(2).forEach { Section(it) }
                 NavigationBarItem(
                     selected = false,
-                    onClick = { nav.navigate(ScannerRoute) { launchSingleTop = true } },
+                    onClick = {
+                        // The scanner of the bottom bar adds to the last binder, not a deck.
+                        container.scanTarget = null
+                        nav.navigate(ScannerRoute) { launchSingleTop = true }
+                    },
                     icon = {
                         val label = stringResource(R.string.nav_scanner)
                         Box(
@@ -150,7 +156,14 @@ fun AppShell() {
                     // Like index.html?binder=: the grid, filtered to that folder.
                     BindersScreen(entry.toRoute<BindersRoute>().type, onOpen = { nav.navigate(CardsRoute(binder = it)) })
                 }
-                composable<DecksRoute> { DecksScreen() }
+                composable<DecksRoute> { DecksScreen(onOpen = { nav.navigate(DeckRoute(it)) }) }
+                composable<DeckRoute> { entry ->
+                    val name = entry.toRoute<DeckRoute>().name
+                    DeckScreen(name, onScan = {
+                        container.scanTarget = BinderTarget(name, "deck")
+                        nav.navigate(ScannerRoute) { launchSingleTop = true }
+                    })
+                }
                 composable<DashboardRoute> { DashboardScreen() }
                 composable<DeckCheckerRoute> { DeckCheckerScreen() }
                 composable<ActivityRoute> { ActivityScreen() }
@@ -170,7 +183,16 @@ fun AppShell() {
                     ScanResultScreen(
                         container.lastScan,
                         onScanAgain = { nav.navigate(ScannerRoute) { popUpTo<ScanResultRoute> { inclusive = true } } },
-                        onOpenBinder = { nav.navigate(CardsRoute(binder = it)) { popUpTo<ScanResultRoute> { inclusive = true } } },
+                        onOpenBinder = { name ->
+                            // Scanned for a deck: back to that deck.
+                            val deck = container.scanTarget?.takeIf { it.name == name && it.type == "deck" }
+                            container.scanTarget = null
+                            if (deck != null) {
+                                nav.navigate(DeckRoute(name)) { popUpTo<DeckRoute> { inclusive = true } }
+                            } else {
+                                nav.navigate(CardsRoute(binder = name)) { popUpTo<ScanResultRoute> { inclusive = true } }
+                            }
+                        },
                     )
                 }
             }

@@ -15,6 +15,7 @@ import net.kirkanos.mtgportal.core.ui.icons.Icons
 @Serializable data object WishlistRoute
 @Serializable data class BindersRoute(val type: String)
 @Serializable data object DecksRoute
+@Serializable data class DeckRoute(val name: String)
 @Serializable data object DashboardRoute
 @Serializable data object DeckCheckerRoute
 @Serializable data object ActivityRoute
