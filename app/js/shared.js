@@ -935,7 +935,9 @@ function buildAdminOverlay() {
           <div id="cfg-nav-list" class="admin-navlist"></div>
         </section>
         <section class="admin-section">
-          <h3>${t('Wartung', 'Maintenance')}</h3>
+          <h3>${t('Wartung', 'Maintenance')} ${helpHTML('Das Backup enthält deine Sammlung, die Wunschliste, den Wert- und Preisverlauf und die Einstellungen und wird als Datei in Nextcloud bzw. Google Drive abgelegt. Der Scryfall-Katalog (Karten, Sets, aktuelle Preise) ist nicht enthalten – er wird nach einer Wiederherstellung automatisch neu geladen.',
+            'The backup holds your collection, the wishlist, the value and price history and the settings, stored as a file in Nextcloud or Google Drive. The Scryfall catalog (cards, sets, current prices) is not included – it is downloaded again automatically after a restore.')}</h3>
+          <p class="admin-status" id="cfg-backup-status"></p>
           <div class="admin-actions">
             <button type="button" id="csv-reset" class="reset-btn" title="Gesamte Sammlung leeren" data-en-title="Clear the entire collection">${t('Sammlung leeren', 'Clear collection')}</button>
             <button type="button" id="csv-backup" class="reset-btn" title="Jetzt sichern (Sammlung + Wert-Historie)" data-en-title="Back up now">💾 ${t('Backup', 'Backup')}</button>
@@ -992,6 +994,7 @@ async function renderImportSettings() {
     ? t('Kartendaten werden gerade aktualisiert …', 'Card data is being updated …')
     : t(`Kartendaten: ${relTime(st.cardsSyncedAt)} · Sammlung: ${st.collectionCount} Einträge`,
       `Card data: ${relTime(st.cardsSyncedAt)} · Collection: ${st.collectionCount} entries`);
+  renderBackupStatus(st.backup || {});
   const ri = st.remoteImport || {};
   importStatus = ri;
   if (!ri.enabled) {
@@ -1022,6 +1025,22 @@ async function renderImportSettings() {
   box.querySelectorAll('input[name="cfg-import-mode"]').forEach((r) => r.addEventListener('change', syncInterval));
   syncInterval();
   document.getElementById('cfg-import-run').addEventListener('click', runImportNow);
+}
+
+/* When the last backup ran (and the last restore, or an error). */
+function renderBackupStatus(b) {
+  const el = document.getElementById('cfg-backup-status');
+  if (!el) return;
+  if (!b.enabled) {
+    el.textContent = t('Kein Backup-Ziel eingerichtet (Nextcloud/Google Drive in der .env).', 'No backup target set up (Nextcloud/Google Drive in the .env).');
+    return;
+  }
+  let html = escapeHTML(b.lastAt
+    ? t(`Letztes Backup: ${relTime(b.lastAt)}`, `Last backup: ${relTime(b.lastAt)}`) + ` (${new Date(b.lastAt).toLocaleString(LANG === 'en' ? 'en-GB' : 'de-DE')})`
+    : t('Noch kein Backup.', 'No backup yet.'));
+  if (b.lastRestoreAt) html += '<br>' + escapeHTML(t(`Zuletzt wiederhergestellt: ${relTime(b.lastRestoreAt)}`, `Last restored: ${relTime(b.lastRestoreAt)}`));
+  if (b.lastError) html += `<br><span class="sync-err">⚠ ${escapeHTML(b.lastError)}</span>`;
+  el.innerHTML = html;
 }
 
 /* Looks for a new CSV now and follows the status until the round is over. */
@@ -1207,6 +1226,7 @@ function initCollectionUpload() {
           alert(t('Backup fehlgeschlagen.', 'Backup failed.'));
         } else {
           alert(t('Backup wurde gestartet.', 'Backup started.'));
+          setTimeout(renderImportSettings, 5000); // show the new "last backup" time
         }
       } catch (e) {
         alert(t('Backup fehlgeschlagen: ', 'Backup failed: ') + e.message);

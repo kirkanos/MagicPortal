@@ -134,7 +134,11 @@ class AdminViewModel(private val c: AppContainer) : ViewModel() {
     }
 
     fun imagesSync(ok: String) = run { safeStatus { c.api.imagesSync() }.toMessage(ok) }
-    fun backup(ok: String) = run { safeStatus { c.api.backup() }.toMessage(ok) }
+    fun backup(ok: String) = run {
+        val msg = safeStatus { c.api.backup() }.toMessage(ok)
+        viewModelScope.launch { delay(5000); refreshStatus() } // the new "last backup" time
+        msg
+    }
     fun restoreLatest(ok: String) = run { safeStatus { c.api.restoreLatest() }.toMessage(ok) }
     fun reset(ok: String) = run { safeStatus { c.api.reset() }.toMessage(ok) }
 
@@ -160,6 +164,18 @@ class AdminViewModel(private val c: AppContainer) : ViewModel() {
         is ApiResult.NetworkError -> cause.message ?: cause.javaClass.simpleName
     }
 }
+
+/** Date and time in the device's locale and zone. */
+private fun absTime(iso: String): String = runCatching {
+    java.time.format.DateTimeFormatter.ofLocalizedDateTime(java.time.format.FormatStyle.MEDIUM, java.time.format.FormatStyle.SHORT)
+        .format(OffsetDateTime.parse(iso).atZoneSameInstant(java.time.ZoneId.systemDefault()))
+}.getOrDefault(iso)
+
+/** "3 hours ago (17 Nov 2026, 14:02)"; older than a week Android already prints the date, so only that. */
+private fun whenText(iso: String): String = runCatching {
+    val age = java.time.Duration.between(OffsetDateTime.parse(iso).toInstant(), java.time.Instant.now())
+    if (age.toDays() >= 7) absTime(iso) else "${relTime(iso)} (${absTime(iso)})"
+}.getOrDefault(iso)
 
 /** relTime() of the web: "vor 5 Minuten", localised by Android. */
 private fun relTime(iso: String): String = runCatching {
@@ -266,7 +282,23 @@ fun AdminScreen() {
         }) { Text(stringResource(R.string.admin_save)) }
 
         HorizontalDivider()
-        Text(stringResource(R.string.admin_maintenance), style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.admin_maintenance), style = MaterialTheme.typography.titleMedium)
+            HelpButton(stringResource(R.string.admin_backup_hint))
+        }
+        st.status?.backup?.let { b ->
+            if (!b.enabled) {
+                Text(stringResource(R.string.admin_backup_none), fontSize = 12.sp, color = PortalColors.TextDim)
+            } else {
+                Text(
+                    if (b.lastAt.isNotEmpty()) stringResource(R.string.admin_backup_last, whenText(b.lastAt))
+                    else stringResource(R.string.admin_backup_never),
+                    fontSize = 13.sp,
+                )
+                if (b.lastRestoreAt.isNotEmpty()) Text(stringResource(R.string.admin_backup_restored, relTime(b.lastRestoreAt)), fontSize = 12.sp, color = PortalColors.TextDim)
+                if (b.lastError.isNotEmpty()) Text(stringResource(R.string.admin_import_error, b.lastError), fontSize = 12.sp, color = PortalColors.Red)
+            }
+        }
         OutlinedButton(enabled = !st.busy, onClick = { vm.backup(started) }) { Text(stringResource(R.string.admin_backup)) }
         OutlinedButton(enabled = !st.busy, onClick = { confirm = restoreConfirm to { vm.restoreLatest(done) } }) { Text(stringResource(R.string.admin_restore)) }
         OutlinedButton(enabled = !st.busy, onClick = { confirm = resetConfirm to { vm.reset(done) } }) {

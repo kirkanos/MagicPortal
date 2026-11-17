@@ -387,6 +387,11 @@
     <string name="admin_import_done">New CSV imported.</string>
     <string name="admin_import_nothing">No new CSV found.</string>
     <string name="admin_import_bad_interval">The interval must be between 1 and 10080 minutes.</string>
+    <string name="admin_backup_hint">The backup holds your collection, the wishlist, the value and price history and the settings, stored as a file in Nextcloud or Google Drive. The Scryfall catalog (cards, sets, current prices) is not included – it is downloaded again automatically after a restore.</string>
+    <string name="admin_backup_none">No backup target set up (Nextcloud/Google Drive in the .env).</string>
+    <string name="admin_backup_last">Last backup: %1$s</string>
+    <string name="admin_backup_never">No backup yet.</string>
+    <string name="admin_backup_restored">Last restored: %1$s</string>
     <string name="admin_maintenance">Maintenance</string>
     <string name="admin_reset">Clear collection</string>
     <string name="admin_reset_confirm">Clear the entire collection? You can upload a new CSV afterwards.</string>
