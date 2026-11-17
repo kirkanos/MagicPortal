@@ -12,6 +12,7 @@ import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.DeckCoverInputDto
+import net.kirkanos.mtgportal.core.network.dto.DeckSettingsInputDto
 import net.kirkanos.mtgportal.core.network.dto.ImportConfigDto
 import net.kirkanos.mtgportal.core.network.dto.ConfirmExportDto
 import net.kirkanos.mtgportal.core.network.dto.ImportResultDto
@@ -40,6 +41,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PATCH
+import retrofit2.http.PUT
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -145,6 +147,9 @@ interface PortalApi {
     /** The name is one path segment; Retrofit encodes "/" in it. */
     @POST("binders/{name}/cover")
     suspend fun setDeckCover(@Path("name") name: String, @Body body: DeckCoverInputDto): Response<Unit>
+
+    @PUT("binders/{name}/deck")
+    suspend fun setDeckSettings(@Path("name") name: String, @Body body: DeckSettingsInputDto): Response<Unit>
 
     @PATCH("binders/{name}")
     suspend fun patchBinder(@Path("name") name: String, @Body body: BinderPatchDto): BinderPatchResultDto

@@ -1008,6 +1008,19 @@ body.is-unlocked .unlock-only { display: inline-flex; }
 }
 .deckbox:hover .deckbox-lid { transform: translateY(-5px); }
 .deckbox-pips { display: inline-flex; gap: 2px; }
+.deckbox-format, .deck-format-badge {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; background: rgba(0,0,0,0.35); color: #e8e4d8; border: 1px solid rgba(255,255,255,0.18);
+}
+.deckbox-format { margin-right: auto; }
+.deck-format-sec { margin-top: 22px; }
+.deck-format-sec + .deck-format-sec { margin-top: 30px; }
+.deck-format-sec .deckbox-grid { margin-top: 0; }
+.deck-format-title { font-size: 1.1rem; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.deck-format-title span { color: var(--text-dim); font-weight: 400; font-size: 0.9rem; }
+.deck-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.deck-commander-field { display: flex; flex-direction: column; gap: 6px; }
+.deck-commander-field[hidden] { display: none; }
 .deckbox-pips .mana-symbol { width: 16px; height: 16px; }
 .deckbox-front {
   margin: 12px 12px 0; aspect-ratio: 4 / 3; border-radius: 6px;

@@ -32,6 +32,30 @@ function colorPipsHTML(colors) {
   return colors.map((c) => manaSymbolImg(c)).join('');
 }
 
+/* ---- formats ---- */
+
+const DECK_FORMATS = [
+  { key: '', de: 'Ohne Format', en: 'No format' },
+  { key: 'standard', de: 'Standard', en: 'Standard' },
+  { key: 'pioneer', de: 'Pioneer', en: 'Pioneer' },
+  { key: 'modern', de: 'Modern', en: 'Modern' },
+  { key: 'legacy', de: 'Legacy', en: 'Legacy' },
+  { key: 'vintage', de: 'Vintage', en: 'Vintage' },
+  { key: 'pauper', de: 'Pauper', en: 'Pauper' },
+  { key: 'commander', de: 'Commander', en: 'Commander' },
+  { key: 'brawl', de: 'Brawl', en: 'Brawl' },
+  { key: 'oathbreaker', de: 'Oathbreaker', en: 'Oathbreaker' },
+];
+// Formats with a commander; its art is the cover unless another one is picked.
+const COMMANDER_FORMATS = new Set(['commander', 'brawl', 'oathbreaker']);
+
+function formatLabel(key) {
+  const f = DECK_FORMATS.find((x) => x.key === (key || ''));
+  return f && f.key ? t(f.de, f.en) : '';
+}
+
+const hasCommander = (d) => COMMANDER_FORMATS.has(d.format || '');
+
 /* ---- card types: the groups of the list and stack views ---- */
 
 const DECK_TYPES = [
@@ -61,6 +85,15 @@ function groupByType(groups) {
   for (const g of groups) by.get(deckTypeOf(g.typeLine)).push(g);
   for (const list of by.values()) list.sort((a, b) => a.name.localeCompare(b.name));
   return DECK_TYPES.map((d) => ({ ...d, cards: by.get(d.key) })).filter((d) => d.cards.length);
+}
+
+/* The sections of list and stacks: the commander first, then the card types. */
+function deckSections(items) {
+  const cmd = currentDeck().commander;
+  if (!cmd) return groupByType(items);
+  const top = items.filter((g) => g.name === cmd.name);
+  const rest = items.filter((g) => g.name !== cmd.name);
+  return [{ key: 'commander', de: 'Commander', en: 'Commander', icon: '👑', cards: top }, ...groupByType(rest)].filter((d) => d.cards.length);
 }
 
 /* List and stacks count a card once, whatever printings it comes in. */
@@ -103,7 +136,7 @@ function deckBoxHTML(d) {
   const lid = tints.length ? `--tint:${tints[0]};--tint2:${tints[tints.length - 1]}` : '';
   return `
     <a class="deckbox" style="${lid}" href="decks.html?deck=${encodeURIComponent(d.name)}" title="${escapeHTML(d.name)}">
-      <div class="deckbox-lid"><span class="deckbox-pips">${colorPipsHTML(d.colors)}</span></div>
+      <div class="deckbox-lid">${d.format ? `<span class="deckbox-format">${escapeHTML(formatLabel(d.format))}</span>` : ''}<span class="deckbox-pips">${colorPipsHTML(d.colors)}</span></div>
       <div class="deckbox-front" ${art ? `style="background-image:url('${escapeHTML(art)}')"` : ''}>
         ${art ? '' : '<span class="deckbox-empty">🃏</span>'}
       </div>
@@ -125,7 +158,18 @@ async function renderDeckList() {
       'No decks yet. Create one with “+ New deck”, or switch a folder to the type “Deck” on the Folders page (✎).')}</p>`;
     return;
   }
-  el.innerHTML = list.map(deckBoxHTML).join('');
+  // One section per format, in the order of DECK_FORMATS, decks without a
+  // format last; a format without decks is left out.
+  const order = [...DECK_FORMATS.slice(1), DECK_FORMATS[0]];
+  el.innerHTML = order.map((f) => {
+    const decks = list.filter((d) => (d.format || '') === f.key);
+    if (!decks.length) return '';
+    return `
+      <section class="deck-format-sec">
+        <h2 class="deck-format-title">${t(f.de, f.en)} <span>(${decks.length})</span></h2>
+        <div class="deckbox-grid">${decks.map(deckBoxHTML).join('')}</div>
+      </section>`;
+  }).join('');
 }
 
 function newDeckDialog() {
@@ -176,7 +220,9 @@ function renderDeckBanner() {
         <span class="deckbox-pips">${colorPipsHTML(d.colors)}</span>
         <span>${qty} ${t('Karten', 'cards')}</span>
         <span class="money">${formatCurrency(sumValue(deckGroups), 'EUR')}</span>
-        ${d.cover ? `<span class="deck-banner-cover">🖼 ${escapeHTML(d.cover.name)}</span>` : ''}
+        ${d.format ? `<span class="deck-format-badge">${escapeHTML(formatLabel(d.format))}</span>` : ''}
+        ${d.commander ? `<span class="deck-banner-cover">👑 ${escapeHTML(d.commander.name)}</span>` : ''}
+        ${d.cover && d.coverPicked ? `<span class="deck-banner-cover">🖼 ${escapeHTML(d.cover.name)}</span>` : ''}
       </div>
     </div>`;
   document.title = `MagicPortal – ${deckName}`;
@@ -216,7 +262,7 @@ function gridViewHTML() {
 function listViewHTML() {
   viewItems = mergeByName(deckGroups);
   const idx = new Map(viewItems.map((g, i) => [g, i]));
-  return '<div class="deck-list-cols">' + groupByType(viewItems).map((sec) => `
+  return '<div class="deck-list-cols">' + deckSections(viewItems).map((sec) => `
     <section class="deck-list-sec">
       <h3>${sec.icon} ${t(sec.de, sec.en)} <span>(${sumQty(sec.cards)})</span></h3>
       ${sec.cards.map((g) => `
@@ -231,7 +277,7 @@ function listViewHTML() {
 function stackViewHTML() {
   viewItems = mergeByName(deckGroups);
   const idx = new Map(viewItems.map((g, i) => [g, i]));
-  return '<div class="deck-stacks">' + groupByType(viewItems).map((sec) => `
+  return '<div class="deck-stacks">' + deckSections(viewItems).map((sec) => `
     <section class="deck-stack">
       <h3><span>${sec.icon} ${t(sec.de, sec.en)}</span><span class="deck-stack-meta">${t('Anz.', 'Qty')} ${sumQty(sec.cards)} · ${formatCurrency(sumValue(sec.cards), 'EUR')}</span></h3>
       <div class="deck-stack-cards">
@@ -277,13 +323,86 @@ function openDeckCard(g) {
         <p class="section-hint">${escapeHTML(g.typeLine || '')}</p>
         <table class="lang-table deck-rows"><tbody>${rows}</tbody></table>
         <div id="deck-out"></div>
-        ${isUnlocked && g.imageId ? `<button type="button" class="reset-btn" data-act="cover">🖼 ${t('Als Titelbild verwenden', 'Use as cover image')}</button>` : ''}
+        <div class="deck-card-actions">
+          ${isUnlocked && g.imageId ? `<button type="button" class="reset-btn" data-act="cover">🖼 ${t('Als Titelbild verwenden', 'Use as cover image')}</button>` : ''}
+          ${isUnlocked && hasCommander(currentDeck()) ? (isCommander(g)
+            ? `<button type="button" class="reset-btn" data-act="no-commander">👑 ${t('Nicht mehr Commander', 'No longer commander')}</button>`
+            : `<button type="button" class="reset-btn" data-act="commander">👑 ${t('Als Commander festlegen', 'Make commander')}</button>`) : ''}
+        </div>
       </div>
     </div>`);
   const body = document.getElementById('deck-dialog-body');
   body.querySelectorAll('[data-act="out"]').forEach((b) => b.addEventListener('click', () => takeOutForm(g, Number(b.dataset.id))));
   const cover = body.querySelector('[data-act="cover"]');
   if (cover) cover.addEventListener('click', () => setCover(g));
+  const cmd = body.querySelector('[data-act="commander"]');
+  if (cmd) cmd.addEventListener('click', () => saveDeckSettings(currentDeck().format, g));
+  const noCmd = body.querySelector('[data-act="no-commander"]');
+  if (noCmd) noCmd.addEventListener('click', () => saveDeckSettings(currentDeck().format, null));
+}
+
+const isCommander = (g) => !!currentDeck().commander && currentDeck().commander.name === g.name;
+
+/* A printing of the card that lies in the deck (the merged card of list and
+   stacks may stand for several). */
+function deckPrinting(g) {
+  const v = (g.variants || [])[0];
+  if (v && v.printing) {
+    const [set, num] = v.printing.split(' #');
+    return { setCode: set.toLowerCase(), collectorNumber: num };
+  }
+  return { setCode: g.setCode.toLowerCase(), collectorNumber: g.collectorNumber };
+}
+
+async function saveDeckSettings(format, commanderCard) {
+  const body = { format: format || '' };
+  if (commanderCard && COMMANDER_FORMATS.has(body.format)) body.commander = deckPrinting(commanderCard);
+  try {
+    await writeAPI('PUT', `/binders/${encodeURIComponent(deckName)}/deck`, body);
+    showNotice(commanderCard && body.commander
+      ? t(`Commander: ${commanderCard.name}`, `Commander: ${commanderCard.name}`)
+      : t('Deck gespeichert.', 'Deck saved.'));
+    closeDeckDialog();
+    await loadDeckBinders();
+    renderDeckBanner();
+    renderDeckCards();
+  } catch (e) {
+    showNotice(t('Speichern fehlgeschlagen: ', 'Saving failed: ') + e.message, true);
+  }
+}
+
+/* Format and commander of the deck. */
+function formatDialog() {
+  const d = currentDeck();
+  const cards = mergeByName(deckGroups);
+  const legendary = cards.filter((g) => /legendary/i.test(g.typeLine || ''));
+  const choices = (legendary.length ? legendary : cards).sort((a, b) => a.name.localeCompare(b.name));
+  openDeckDialog(`
+    <h2>${t('Format', 'Format')}</h2>
+    <form class="deck-form" id="deck-format-form">
+      <select name="format" class="binder-input">
+        ${DECK_FORMATS.map((f) => `<option value="${f.key}"${f.key === (d.format || '') ? ' selected' : ''}>${t(f.de, f.en)}</option>`).join('')}
+      </select>
+      <label class="deck-commander-field">
+        <span>👑 Commander</span>
+        <select name="commander" class="binder-input">
+          <option value="">${t('– keiner –', '– none –')}</option>
+          ${choices.map((g) => `<option value="${escapeHTML(g.name)}"${d.commander && d.commander.name === g.name ? ' selected' : ''}>${escapeHTML(g.name)}</option>`).join('')}
+        </select>
+        <span class="section-hint">${t('Das Artwork des Commanders ist das Titelbild, solange du kein anderes wählst.', 'The commander’s artwork is the cover image unless you pick another one.')}</span>
+      </label>
+      <div class="deck-form-actions"><button type="submit" class="upload-btn">${t('Speichern', 'Save')}</button></div>
+    </form>`);
+  const form = document.getElementById('deck-format-form');
+  const field = form.querySelector('.deck-commander-field');
+  const sync = () => { field.hidden = !COMMANDER_FORMATS.has(form.elements.format.value); };
+  sync();
+  form.elements.format.addEventListener('change', sync);
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = form.elements.commander.value;
+    saveDeckSettings(form.elements.format.value, name ? cards.find((g) => g.name === name) : null);
+  });
 }
 
 function takeOutForm(g, id) {
@@ -342,7 +461,8 @@ async function setCover(g) {
 function coverPicker() {
   const seen = new Set();
   const choices = deckGroups.filter((g) => g.imageId && !seen.has(g.imageId) && seen.add(g.imageId));
-  const cur = currentDeck().cover;
+  const deck = currentDeck();
+  const cur = deck.cover;
   openDeckDialog(`
     <h2>${t('Titelbild wählen', 'Choose a cover image')}</h2>
     <p class="section-hint">${t('Das Artwork der gewählten Karte kommt auf die Deckbox.', 'The artwork of the chosen card goes on the deck box.')}</p>
@@ -353,7 +473,9 @@ function coverPicker() {
           <span>${escapeHTML(g.name)}</span>
         </button>`).join('')}
     </div>
-    ${cur ? `<div class="deck-form-actions"><button type="button" class="reset-btn" id="cover-remove">${t('Titelbild entfernen', 'Remove cover image')}</button></div>` : ''}`);
+    ${cur && deck.coverPicked ? `<div class="deck-form-actions"><button type="button" class="reset-btn" id="cover-remove">${deck.commander
+      ? t('Artwork des Commanders verwenden', 'Use the commander’s artwork')
+      : t('Titelbild entfernen', 'Remove cover image')}</button></div>` : ''}`);
   const body = document.getElementById('deck-dialog-body');
   body.querySelectorAll('.cover-choice').forEach((b) => b.addEventListener('click', () => setCover(deckGroups[Number(b.dataset.idx)])));
   const rm = document.getElementById('cover-remove');
@@ -491,6 +613,7 @@ async function initDeckPage() {
   });
   initListPreview(cardsEl);
   document.getElementById('deck-cover-btn').addEventListener('click', coverPicker);
+  document.getElementById('deck-format-btn').addEventListener('click', formatDialog);
   document.getElementById('deck-add-btn').addEventListener('click', addCardsDialog);
 
   showLoading(t('Lade Deck...', 'Loading deck...'));

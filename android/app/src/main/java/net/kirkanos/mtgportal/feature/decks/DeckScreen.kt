@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -148,6 +150,7 @@ fun DeckScreen(name: String, onScan: () -> Unit) {
     var open by remember { mutableStateOf<DeckLogic.Entry?>(null) }
     var adding by remember { mutableStateOf(false) }
     var coverPicking by remember { mutableStateOf(false) }
+    var formatEditing by remember { mutableStateOf(false) }
 
     val groups = (st.cards as? ApiResult.Success)?.data.orEmpty()
     when (val r = st.cards) {
@@ -155,7 +158,7 @@ fun DeckScreen(name: String, onScan: () -> Unit) {
         is ApiResult.HttpError -> ErrorRetry(r, onRetry = { vm.load() })
         is ApiResult.NetworkError -> ErrorRetry(r, onRetry = { vm.load() })
         is ApiResult.Success -> {
-            val sections = DeckLogic.sections(groups)
+            val sections = DeckLogic.sections(groups, st.deck?.commander?.name)
             val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(100.dp),
@@ -178,6 +181,11 @@ fun DeckScreen(name: String, onScan: () -> Unit) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedButton(onClick = { adding = true }, modifier = Modifier.weight(1f)) { Text("＋ " + stringResource(R.string.deck_add), maxLines = 1) }
                                 OutlinedButton(onClick = onScan, modifier = Modifier.weight(1f)) { Text("📷 " + stringResource(R.string.deck_scan), maxLines = 1) }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { formatEditing = true }, enabled = groups.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                                    Text("⚙ " + stringResource(R.string.deck_format), maxLines = 1)
+                                }
                                 OutlinedButton(onClick = { coverPicking = true }, enabled = groups.isNotEmpty(), modifier = Modifier.weight(1f)) {
                                     Text("🖼 " + stringResource(R.string.deck_cover), maxLines = 1)
                                 }
@@ -222,11 +230,12 @@ fun DeckScreen(name: String, onScan: () -> Unit) {
         if (fresh.isEmpty()) {
             open = null
         } else {
-            DeckCardSheet(name, DeckLogic.Entry(e.name, fresh), images, st.binders, onDismiss = { open = null })
+            DeckCardSheet(name, st.deck, DeckLogic.Entry(e.name, fresh), images, st.binders, onDismiss = { open = null })
         }
     }
     if (adding) AddCardsSheet(name, images, onDismiss = { adding = false })
     if (coverPicking) CoverDialog(name, st.deck, groups, images, onDismiss = { coverPicking = false })
+    if (formatEditing) FormatDialog(name, st.deck, groups, onDismiss = { formatEditing = false })
 }
 
 @Composable
@@ -238,6 +247,13 @@ private fun DeckHeader(name: String, deck: BinderDto?, groups: List<CardGroupDto
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, PortalColors.Bg.copy(alpha = 0.6f), PortalColors.Bg))))
         Column(Modifier.align(Alignment.BottomStart).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            val format = DeckFormat.of(deck?.format.orEmpty())
+            if (format != DeckFormat.NONE || deck?.commander != null) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (format != DeckFormat.NONE) FormatBadge(stringResource(format.label))
+                    deck?.commander?.let { Text("👑 ${it.name}", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ManaCostRow(DeckLogic.pips(deck?.colors.orEmpty()), images, size = 16.dp)
                 Text(stringResource(R.string.deck_cards, Format.count(groups.sumOf { it.totalQty })), color = PortalColors.TextDim, fontSize = 13.sp)
@@ -270,7 +286,7 @@ private fun DeckLine(e: DeckLogic.Entry, images: ImageUrls, onClick: () -> Unit)
 /** A card of the deck: its rows, take copies out into a binder, use it as the cover. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DeckCardSheet(deck: String, e: DeckLogic.Entry, images: ImageUrls, binders: List<BinderDto>, onDismiss: () -> Unit) {
+private fun DeckCardSheet(deck: String, d: BinderDto?, e: DeckLogic.Entry, images: ImageUrls, binders: List<BinderDto>, onDismiss: () -> Unit) {
     val c = appContainer()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -317,6 +333,24 @@ private fun DeckCardSheet(deck: String, e: DeckLogic.Entry, images: ImageUrls, b
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                     }
                 }) { Text("🖼 " + stringResource(R.string.deck_cover_use)) }
+            }
+            val format = DeckFormat.of(d?.format.orEmpty())
+            if (unlocked && format.hasCommander) {
+                val isCommander = d?.commander?.name == e.name
+                // A printing of the card that lies in the deck.
+                val printing = e.groups.first()
+                OutlinedButton(onClick = {
+                    scope.launch {
+                        val r = if (isCommander) c.collectionWrite.setDeckSettings(deck, format.key)
+                        else c.collectionWrite.setDeckSettings(deck, format.key, printing.setCode, printing.collectorNumber)
+                        val msg = when {
+                            r !is ApiResult.Success -> (r as? ApiResult.HttpError)?.message ?: "–"
+                            isCommander -> res.getString(R.string.deck_saved)
+                            else -> res.getString(R.string.deck_commander_set, e.name)
+                        }
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
+                }) { Text("👑 " + stringResource(if (isCommander) R.string.deck_commander_unset else R.string.deck_commander_make)) }
             }
         }
     }
@@ -465,7 +499,68 @@ private fun CoverDialog(deck: String, d: BinderDto?, groups: List<CardGroupDto>,
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
         dismissButton = {
-            if (d?.cover != null) TextButton(onClick = { pick("", "") }) { Text(stringResource(R.string.deck_cover_remove), color = PortalColors.Red) }
+            if (d?.cover != null && d.coverPicked) {
+                TextButton(onClick = { pick("", "") }) {
+                    if (d.commander != null) Text(stringResource(R.string.deck_cover_commander))
+                    else Text(stringResource(R.string.deck_cover_remove), color = PortalColors.Red)
+                }
+            }
         },
+    )
+}
+
+@Composable
+internal fun FormatBadge(label: String) {
+    Text(
+        label.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = Color(0xFFE8E4D8),
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.35f))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(50)).padding(horizontal = 7.dp, vertical = 1.dp),
+    )
+}
+
+/** Format of the deck and, for formats with one, its commander. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FormatDialog(deck: String, d: BinderDto?, groups: List<CardGroupDto>, onDismiss: () -> Unit) {
+    val c = appContainer()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var format by remember { mutableStateOf(DeckFormat.of(d?.format.orEmpty())) }
+    var commander by remember { mutableStateOf(d?.commander?.name) }
+    var busy by remember { mutableStateOf(false) }
+    val entries = DeckLogic.sections(groups).flatMap { it.second }
+    // Legendary cards can lead a deck; without any, every card is offered.
+    val choices = entries.filter { it.first.typeLine.contains("Legendary", ignoreCase = true) }.ifEmpty { entries }.sortedBy { it.name.lowercase() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.deck_format)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    DeckFormat.entries.forEach { f -> FilterChip(format == f, { format = f }, label = { Text(stringResource(f.label)) }) }
+                }
+                if (format.hasCommander) {
+                    Text("👑 " + stringResource(R.string.deck_commander), fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                    Text(stringResource(R.string.deck_commander_hint), fontSize = 12.sp, color = PortalColors.TextDim)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(commander == null, { commander = null }, label = { Text(stringResource(R.string.deck_commander_none)) })
+                        choices.forEach { e -> FilterChip(commander == e.name, { commander = e.name }, label = { Text(e.name) }) }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = !busy, onClick = {
+                busy = true
+                scope.launch {
+                    val cmd = entries.firstOrNull { it.name == commander }?.first?.takeIf { format.hasCommander }
+                    val r = c.collectionWrite.setDeckSettings(deck, format.key, cmd?.setCode.orEmpty(), cmd?.collectorNumber.orEmpty())
+                    busy = false
+                    if (r is ApiResult.Success) onDismiss()
+                    else Toast.makeText(context, (r as? ApiResult.HttpError)?.message ?: "–", Toast.LENGTH_LONG).show()
+                }
+            }) { Text(stringResource(R.string.deck_save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }

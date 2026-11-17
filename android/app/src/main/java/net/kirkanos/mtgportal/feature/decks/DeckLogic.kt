@@ -6,6 +6,7 @@ import net.kirkanos.mtgportal.core.network.dto.CardGroupDto
 
 /** The groups of the deck list, in this order (decks.js DECK_TYPES). */
 enum class DeckType(@StringRes val label: Int) {
+    COMMANDER(R.string.deck_type_commander),
     CREATURE(R.string.deck_type_creature),
     PLANESWALKER(R.string.deck_type_planeswalker),
     BATTLE(R.string.deck_type_battle),
@@ -15,6 +16,25 @@ enum class DeckType(@StringRes val label: Int) {
     ENCHANTMENT(R.string.deck_type_enchantment),
     LAND(R.string.deck_type_land),
     OTHER(R.string.deck_type_other),
+}
+
+/** Deck formats (decks.js DECK_FORMATS); "" is a deck without a format. */
+enum class DeckFormat(val key: String, @StringRes val label: Int, val hasCommander: Boolean = false) {
+    NONE("", R.string.deck_format_none),
+    STANDARD("standard", R.string.deck_format_standard),
+    PIONEER("pioneer", R.string.deck_format_pioneer),
+    MODERN("modern", R.string.deck_format_modern),
+    LEGACY("legacy", R.string.deck_format_legacy),
+    VINTAGE("vintage", R.string.deck_format_vintage),
+    PAUPER("pauper", R.string.deck_format_pauper),
+    COMMANDER("commander", R.string.deck_format_commander, true),
+    BRAWL("brawl", R.string.deck_format_brawl, true),
+    OATHBREAKER("oathbreaker", R.string.deck_format_oathbreaker, true),
+    ;
+
+    companion object {
+        fun of(key: String): DeckFormat = entries.firstOrNull { it.key == key.lowercase() } ?: NONE
+    }
 }
 
 object DeckLogic {
@@ -39,9 +59,10 @@ object DeckLogic {
         val imageGroup get() = groups.firstOrNull { it.imageId.isNotEmpty() } ?: first
     }
 
-    fun sections(groups: List<CardGroupDto>): List<Pair<DeckType, List<Entry>>> {
+    /** The sections of the list: the commander first, then the card types. */
+    fun sections(groups: List<CardGroupDto>, commander: String? = null): List<Pair<DeckType, List<Entry>>> {
         val entries = groups.groupBy { it.name }.map { (name, gs) -> Entry(name, gs) }
-        return entries.groupBy { typeOf(it.first.typeLine) }
+        return entries.groupBy { if (it.name == commander) DeckType.COMMANDER else typeOf(it.first.typeLine) }
             .toSortedMap(compareBy { it.ordinal })
             .map { (type, list) -> type to list.sortedBy { it.name.lowercase() } }
     }

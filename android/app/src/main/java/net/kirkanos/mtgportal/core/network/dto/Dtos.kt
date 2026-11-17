@@ -149,6 +149,12 @@ data class BinderDto(
     val cover: DeckCoverDto? = null,
     /** Decks only: the colours of the cards, WUBRG order. */
     val colors: List<String> = emptyList(),
+    /** Decks only: the cover was picked; otherwise it is the commander's art. */
+    val coverPicked: Boolean = false,
+    /** Decks only: "standard", "commander", ...; "" without a format. */
+    val format: String = "",
+    /** Decks only: the commander, for formats that have one. */
+    val commander: DeckCoverDto? = null,
 )
 
 @Serializable
@@ -162,6 +168,10 @@ data class DeckCoverDto(
 /** POST /api/binders/{name}/cover; an empty setCode removes the cover. */
 @Serializable
 data class DeckCoverInputDto(val setCode: String, val collectorNumber: String = "")
+
+/** PUT /api/binders/{name}/deck: format and commander (a card of the deck). */
+@Serializable
+data class DeckSettingsInputDto(val format: String = "", val commander: DeckCoverInputDto? = null)
 
 @Serializable
 data class EditionDto(

@@ -85,3 +85,67 @@ func TestDeckCoverFollowsRename(t *testing.T) {
 		t.Errorf("cover not removed: %+v", bs[0].Cover)
 	}
 }
+
+func TestDeckCommanderIsTheDefaultCover(t *testing.T) {
+	newTestDB(t)
+	seedWriteCatalog(t)
+	decode[addResult](t, call(t, "POST", "/api/collection/cards", `{"items":[
+		{"setCode":"snc","collectorNumber":"47","binderName":"EDH","binderType":"deck"},
+		{"setCode":"ice","collectorNumber":"61","binderName":"EDH"}]}`))
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/binders/{name}/cover", handleDeckCover)
+	mux.HandleFunc("PUT /api/binders/{name}/deck", handleDeckSettings)
+	mux.HandleFunc("PATCH /api/binders/{name}", handleBinderPatch)
+	mux.HandleFunc("GET /api/binders", handleBinders)
+	do := func(method, path, body string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(method, path, strings.NewReader(body)))
+		return rec
+	}
+	deck := func() binderOut {
+		for _, b := range decode[[]binderOut](t, do("GET", "/api/binders", "")) {
+			if b.Type == "deck" {
+				return b
+			}
+		}
+		t.Fatal("no deck")
+		return binderOut{}
+	}
+	if rec := do("PUT", "/api/binders/EDH/deck", `{"format":"pioneer","commander":{"setCode":"snc","collectorNumber":"47"}}`); rec.Code != 400 {
+		t.Errorf("commander in pioneer: %d", rec.Code)
+	}
+	if rec := do("PUT", "/api/binders/EDH/deck", `{"format":"cube"}`); rec.Code != 400 {
+		t.Errorf("unknown format: %d", rec.Code)
+	}
+	if rec := do("PUT", "/api/binders/EDH/deck", `{"format":"commander","commander":{"setCode":"snc","collectorNumber":"99"}}`); rec.Code != 404 {
+		t.Errorf("unknown card: %d", rec.Code)
+	}
+	if rec := do("PUT", "/api/binders/EDH/deck", `{"format":"commander","commander":{"setCode":"SNC","collectorNumber":"47"}}`); rec.Code != 200 {
+		t.Fatalf("commander: %d %s", rec.Code, rec.Body)
+	}
+	d := deck()
+	if d.Format != "commander" || d.Commander == nil || d.Commander.Name != "Ledger Shredder" || d.Cover == nil || d.Cover.ImageID != "id-ledger" || d.CoverPicked {
+		t.Fatalf("commander as cover: %+v", d)
+	}
+	// A picked cover wins, removing it brings the commander back.
+	do("POST", "/api/binders/EDH/cover", `{"setCode":"ice","collectorNumber":"61"}`)
+	if d = deck(); d.Cover.Name != "Brainstorm" || !d.CoverPicked || d.Commander.Name != "Ledger Shredder" {
+		t.Fatalf("picked cover: %+v", d)
+	}
+	do("POST", "/api/binders/EDH/cover", `{"setCode":""}`)
+	if d = deck(); d.Cover == nil || d.Cover.Name != "Ledger Shredder" || d.CoverPicked {
+		t.Fatalf("cover back to commander: %+v", d)
+	}
+	// Settings follow a rename.
+	do("PATCH", "/api/binders/EDH", `{"name":"EDH 2"}`)
+	if d = deck(); d.Name != "EDH 2" || d.Format != "commander" || d.Commander == nil {
+		t.Fatalf("rename: %+v", d)
+	}
+	// A commander that leaves the deck is no longer shown.
+	var id int64
+	db.QueryRow(`SELECT id FROM collection WHERE set_code = 'snc'`).Scan(&id)
+	call(t, "POST", "/api/collection/move", `{"ids":[`+itoa64(id)+`],"binderName":"Box","binderType":"binder"}`)
+	if d = deck(); d.Commander != nil || d.Cover != nil || d.Format != "commander" {
+		t.Fatalf("commander left: %+v", d)
+	}
+}

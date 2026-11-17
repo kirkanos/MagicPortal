@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -123,7 +124,18 @@ fun DecksScreen(onOpen: (String) -> Unit) {
                     if (decks.isEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.decks_empty), color = PortalColors.TextDim) }
                     }
-                    items(decks, key = { it.name }) { d -> DeckBox(d, images) { onOpen(d.name) } }
+                    // One section per format, decks without a format last; empty formats are left out.
+                    (DeckFormat.entries.drop(1) + DeckFormat.NONE).forEach { f ->
+                        val group = decks.filter { DeckFormat.of(it.format) == f }
+                        if (group.isEmpty()) return@forEach
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "f-${f.key}") {
+                            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
+                                Text(stringResource(f.label), fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                                Text("  (${group.size})", color = PortalColors.TextDim, fontSize = 14.sp)
+                            }
+                        }
+                        items(group, key = { it.name }) { d -> DeckBox(d, images) { onOpen(d.name) } }
+                    }
                 }
                 if (creating) {
                     NewDeckDialog(r.data, onDismiss = { creating = false }, onCreate = { creating = false; onOpen(it) })
@@ -163,8 +175,12 @@ internal fun DeckBox(d: BinderDto, images: ImageUrls, onClick: () -> Unit) {
                     .border(1.dp, edge, RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp, bottomStart = 3.dp, bottomEnd = 3.dp))
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End,
-            ) { ManaCostRow(DeckLogic.pips(d.colors), images, size = 15.dp) }
+            ) {
+                val format = DeckFormat.of(d.format)
+                if (format != DeckFormat.NONE) FormatBadge(stringResource(format.label))
+                Spacer(Modifier.weight(1f))
+                ManaCostRow(DeckLogic.pips(d.colors), images, size = 15.dp)
+            }
             Box(
                 Modifier.padding(10.dp).fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(6.dp))
                     .background(Color(0xFF0D0E14)).border(1.dp, edge, RoundedCornerShape(6.dp)),

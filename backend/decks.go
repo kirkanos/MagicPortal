@@ -40,8 +40,8 @@ func saveDeckCovers(covers map[string]deckCover) {
 	metaSet(db, "deck_covers", string(b))
 }
 
-// renameDeckCover keeps the cover with a renamed binder. Into an existing
-// binder with a cover of its own, that one stays.
+// renameDeckCover keeps the cover, format and commander with a renamed
+// binder. Into an existing binder with settings of its own, those stay.
 func renameDeckCover(from, to string) {
 	if from == to {
 		return
@@ -49,28 +49,172 @@ func renameDeckCover(from, to string) {
 	deckCoversMu.Lock()
 	defer deckCoversMu.Unlock()
 	covers := loadDeckCovers()
-	c, ok := covers[from]
-	if !ok {
-		return
+	if c, ok := covers[from]; ok {
+		delete(covers, from)
+		if _, taken := covers[to]; !taken {
+			covers[to] = c
+		}
+		saveDeckCovers(covers)
 	}
-	delete(covers, from)
-	if _, taken := covers[to]; !taken {
-		covers[to] = c
+	settings := loadDeckSettings()
+	if d, ok := settings[from]; ok {
+		delete(settings, from)
+		if _, taken := settings[to]; !taken {
+			settings[to] = d
+		}
+		saveDeckSettings(settings)
 	}
-	saveDeckCovers(covers)
 }
 
-// binderColors: the colours of the cards in each binder, in WUBRG order.
-func binderColors() map[string][]string {
+// Deck formats; "" is a casual deck without a format.
+var deckFormats = map[string]bool{
+	"": true, "standard": true, "pioneer": true, "modern": true, "legacy": true,
+	"vintage": true, "pauper": true, "commander": true, "brawl": true, "oathbreaker": true,
+}
+
+// commanderFormats have a commander; its art is the cover unless one is picked.
+var commanderFormats = map[string]bool{"commander": true, "brawl": true, "oathbreaker": true}
+
+// deckSettings: format and commander of a deck (meta deck_settings, binder
+// name -> settings).
+type deckSettings struct {
+	Format    string     `json:"format,omitempty"`
+	Commander *deckCover `json:"commander,omitempty"`
+}
+
+func loadDeckSettings() map[string]deckSettings {
+	out := map[string]deckSettings{}
+	if raw := metaGet(db, "deck_settings"); raw != "" {
+		_ = json.Unmarshal([]byte(raw), &out)
+	}
+	return out
+}
+
+func saveDeckSettings(s map[string]deckSettings) {
+	b, _ := json.Marshal(s)
+	metaSet(db, "deck_settings", string(b))
+}
+
+// catalogCard looks a printing up for a cover or commander.
+func catalogCard(setCode, number string) (deckCover, error) {
+	c := deckCover{SetCode: strings.ToLower(strings.TrimSpace(setCode)), CollectorNumber: strings.TrimSpace(number)}
+	err := db.QueryRow(`SELECT name, COALESCE(scryfall_id, ''), COALESCE(scryfall_id, '')
+		FROM scryfall_cards WHERE set_code = ? AND collector_number = ?`, c.SetCode, c.CollectorNumber).Scan(&c.Name, &c.ScryfallID, &c.ImageID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return c, &writeError{http.StatusNotFound, -1, fmt.Sprintf("card %s #%s is not in the catalog", c.SetCode, c.CollectorNumber)}
+	}
+	return c, err
+}
+
+func binderExists(w http.ResponseWriter, name string) bool {
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM collection WHERE binder_name = ?`, name).Scan(&n); err != nil {
+		http.Error(w, err.Error(), 500)
+		return false
+	}
+	if n == 0 {
+		writeWriteError(w, &writeError{http.StatusNotFound, -1, "no such binder"})
+		return false
+	}
+	return true
+}
+
+// PUT /api/binders/{name}/deck {format, commander: {setCode, collectorNumber} | null}.
+// The commander must be a card of the deck and the format one with a commander.
+func handleDeckSettings(w http.ResponseWriter, r *http.Request) {
+	if !authorized(r) {
+		http.Error(w, "Wrong or missing password", 403)
+		return
+	}
+	name := r.PathValue("name")
+	var in struct {
+		Format    string `json:"format"`
+		Commander *struct {
+			SetCode         string `json:"setCode"`
+			CollectorNumber string `json:"collectorNumber"`
+		} `json:"commander"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&in); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), 400)
+		return
+	}
+	in.Format = strings.ToLower(strings.TrimSpace(in.Format))
+	if !deckFormats[in.Format] {
+		http.Error(w, "unknown format "+in.Format, 400)
+		return
+	}
+	if !binderExists(w, name) {
+		return
+	}
+	out := deckSettings{Format: in.Format}
+	if in.Commander != nil && strings.TrimSpace(in.Commander.SetCode) != "" {
+		if !commanderFormats[in.Format] {
+			http.Error(w, "format "+in.Format+" has no commander", 400)
+			return
+		}
+		c, err := catalogCard(in.Commander.SetCode, in.Commander.CollectorNumber)
+		if err != nil {
+			writeLookupError(w, err)
+			return
+		}
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM collection WHERE binder_name = ? AND set_code = ? AND collector_number = ?`,
+			name, c.SetCode, c.CollectorNumber).Scan(&n); err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		if n == 0 {
+			writeWriteError(w, &writeError{http.StatusNotFound, -1, c.Name + " is not in this deck"})
+			return
+		}
+		out.Commander = &c
+	}
+
+	deckCoversMu.Lock()
+	defer deckCoversMu.Unlock()
+	settings := loadDeckSettings()
+	if out.Format == "" && out.Commander == nil {
+		delete(settings, name)
+	} else {
+		settings[name] = out
+	}
+	saveDeckSettings(settings)
+	msg := fmt.Sprintf("Deck %q: format %q", name, out.Format)
+	if out.Commander != nil {
+		msg += ", commander " + out.Commander.Name
+	}
+	logActivity("info", "App", msg)
+	writeJSON(w, out)
+}
+
+func writeLookupError(w http.ResponseWriter, err error) {
+	var we *writeError
+	if errors.As(err, &we) {
+		writeWriteError(w, we)
+		return
+	}
+	http.Error(w, err.Error(), 500)
+}
+
+// binderColors: the colours of the cards in each deck, in WUBRG order, and
+// the printings ("set|number") each deck holds.
+func binderColors() (map[string][]string, map[string]map[string]bool) {
 	sets := map[string]map[string]bool{}
+	held := map[string]map[string]bool{}
 	rows, _, err := cardRows()
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	for _, c := range rows {
 		if c.BinderType != "deck" {
 			continue
 		}
+		h := held[c.BinderName]
+		if h == nil {
+			h = map[string]bool{}
+			held[c.BinderName] = h
+		}
+		h[strings.ToLower(c.SetCode)+"|"+c.CollectorNumber] = true
 		s := sets[c.BinderName]
 		if s == nil {
 			s = map[string]bool{}
@@ -92,7 +236,7 @@ func binderColors() map[string][]string {
 		sort.Slice(cols, func(i, j int) bool { return order[cols[i]] < order[cols[j]] })
 		out[name] = cols
 	}
-	return out
+	return out, held
 }
 
 // POST /api/binders/{name}/cover {setCode, collectorNumber}; an empty setCode
@@ -111,13 +255,7 @@ func handleDeckCover(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid JSON: "+err.Error(), 400)
 		return
 	}
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM collection WHERE binder_name = ?`, name).Scan(&n); err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	if n == 0 {
-		writeWriteError(w, &writeError{http.StatusNotFound, -1, "no such binder"})
+	if !binderExists(w, name) {
 		return
 	}
 
@@ -130,15 +268,9 @@ func handleDeckCover(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	c := deckCover{SetCode: strings.ToLower(strings.TrimSpace(in.SetCode)), CollectorNumber: strings.TrimSpace(in.CollectorNumber)}
-	err := db.QueryRow(`SELECT name, COALESCE(scryfall_id, ''), COALESCE(scryfall_id, '')
-		FROM scryfall_cards WHERE set_code = ? AND collector_number = ?`, c.SetCode, c.CollectorNumber).Scan(&c.Name, &c.ScryfallID, &c.ImageID)
-	if errors.Is(err, sql.ErrNoRows) {
-		writeWriteError(w, &writeError{http.StatusNotFound, -1, fmt.Sprintf("card %s #%s is not in the catalog", c.SetCode, c.CollectorNumber)})
-		return
-	}
+	c, err := catalogCard(in.SetCode, in.CollectorNumber)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		writeLookupError(w, err)
 		return
 	}
 	covers[name] = c

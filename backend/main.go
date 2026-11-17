@@ -57,6 +57,7 @@ func main() {
 	mux.HandleFunc("GET /api/binders", handleBinders)
 	mux.HandleFunc("PATCH /api/binders/{name}", handleBinderPatch)
 	mux.HandleFunc("POST /api/binders/{name}/cover", handleDeckCover)
+	mux.HandleFunc("PUT /api/binders/{name}/deck", handleDeckSettings)
 	mux.HandleFunc("GET /api/subtypes", handleSubtypes)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/summary", handleSummary)
@@ -397,9 +398,13 @@ type binderOut struct {
 	Cards       int     `json:"cards"`
 	Total       int     `json:"total"`
 	MarketValue float64 `json:"marketValue"`
-	// Decks only: the cover art and the colours of their cards.
-	Cover  *deckCover `json:"cover,omitempty"`
-	Colors []string   `json:"colors,omitempty"`
+	// Decks only: the cover art and the colours of their cards. The cover is
+	// the picked one (coverPicked) or else the commander's art.
+	Cover       *deckCover `json:"cover,omitempty"`
+	CoverPicked bool       `json:"coverPicked,omitempty"`
+	Colors      []string   `json:"colors,omitempty"`
+	Format      string     `json:"format,omitempty"`
+	Commander   *deckCover `json:"commander,omitempty"`
 }
 
 // handleBinders returns per-binder aggregates (folders and lists) for the
@@ -430,16 +435,26 @@ func handleBinders(w http.ResponseWriter, r *http.Request) {
 	rows.Close()
 	// Covers and colours after the rows: the one connection is free again.
 	covers := loadDeckCovers()
+	settings := loadDeckSettings()
 	var colors map[string][]string
+	var held map[string]map[string]bool
 	for i := range out {
 		if out[i].Type != "deck" {
 			continue
 		}
 		if colors == nil {
-			colors = binderColors()
+			colors, held = binderColors()
+		}
+		s := settings[out[i].Name]
+		out[i].Format = s.Format
+		// A commander that left the deck is no longer one.
+		if cmd := s.Commander; cmd != nil && commanderFormats[s.Format] && held[out[i].Name][cmd.SetCode+"|"+cmd.CollectorNumber] {
+			out[i].Commander = cmd
+			out[i].Cover = cmd
 		}
 		if c, ok := covers[out[i].Name]; ok {
 			out[i].Cover = &c
+			out[i].CoverPicked = true
 		}
 		out[i].Colors = colors[out[i].Name]
 	}

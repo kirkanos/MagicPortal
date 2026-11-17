@@ -31,6 +31,20 @@ class DeckLogicTest {
     }
 
     @Test
+    fun theCommanderComesFirst() {
+        val gs = listOf(
+            CardGroupDto(key = "a", name = "Sol Ring", typeLine = "Artifact", totalQty = 1),
+            CardGroupDto(key = "b", name = "Atraxa", typeLine = "Legendary Creature — Phyrexian Angel", totalQty = 1),
+            CardGroupDto(key = "c", name = "Llanowar Elves", typeLine = "Creature — Elf Druid", totalQty = 1),
+        )
+        val s = DeckLogic.sections(gs, commander = "Atraxa")
+        assertEquals(listOf(DeckType.COMMANDER, DeckType.CREATURE, DeckType.ARTIFACT), s.map { it.first })
+        assertEquals("Atraxa", s.first().second.single().name)
+        assertEquals(DeckFormat.BRAWL, DeckFormat.of("Brawl"))
+        assertEquals(DeckFormat.NONE, DeckFormat.of("cube"))
+    }
+
+    @Test
     fun pips() {
         assertEquals("{C}", DeckLogic.pips(emptyList()))
         assertEquals("{W}{B}", DeckLogic.pips(listOf("W", "B")))

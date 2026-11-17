@@ -16,6 +16,7 @@ import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.DeckCoverInputDto
+import net.kirkanos.mtgportal.core.network.dto.DeckSettingsInputDto
 import net.kirkanos.mtgportal.core.network.dto.CollectionRowDto
 import net.kirkanos.mtgportal.core.network.dto.ConfirmExportDto
 import net.kirkanos.mtgportal.core.network.dto.VariantDto
@@ -100,6 +101,12 @@ class CollectionWriteRepository(private val api: PortalApi) {
     /** The art of this printing on the deck box; an empty set code removes it. */
     suspend fun setDeckCover(deck: String, setCode: String, collectorNumber: String): ApiResult<Unit> =
         safeStatus { api.setDeckCover(deck, DeckCoverInputDto(setCode.lowercase(), collectorNumber)) }.withReadableError().noted()
+
+    /** Format and commander of a deck; the commander is a printing in the deck. */
+    suspend fun setDeckSettings(deck: String, format: String, commanderSet: String = "", commanderNumber: String = ""): ApiResult<Unit> {
+        val cmd = if (commanderSet.isNotEmpty()) DeckCoverInputDto(commanderSet.lowercase(), commanderNumber) else null
+        return safeStatus { api.setDeckSettings(deck, DeckSettingsInputDto(format, cmd)) }.withReadableError().noted()
+    }
 
     suspend fun renameBinder(name: String, patch: BinderPatchDto): ApiResult<BinderPatchResultDto> = safeCall { api.patchBinder(name, patch) }.withReadableError().noted()
 
