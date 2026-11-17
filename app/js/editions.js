@@ -578,7 +578,8 @@ async function editSetRow(act, id) {
     if (act === 'add') {
       const lang = document.getElementById('add-lang').value;
       try { localStorage.setItem(ADD_LANG_KEY, lang); } catch (e) { /* ignore */ }
-      const binder = document.getElementById('add-binder').value.trim();
+      const binder = binderValue('add-binder');
+      if (binder === null) return showNotice(t('Bitte einen Namen für den neuen Ordner eingeben.', 'Please enter a name for the new folder.'), true);
       await writeAPI('POST', '/collection/cards', { items: [{
         setCode: overlayEdition.code.toLowerCase(), collectorNumber: card.collectorNumber, quantity: 1,
         foil: document.getElementById('add-foil').value, language: lang, condition: 'near_mint',
@@ -606,10 +607,11 @@ async function editSetRow(act, id) {
         ${binderInputHTML('row-binder', row.binderName)}
         ${binderTypeSelectHTML('row-binder-type')}
         <button type="button" class="primary" data-act="move-ok" data-id="${id}">OK</button>`;
-      document.getElementById('row-binder').select();
+      document.getElementById('row-binder').focus();
       return;
     } else if (act === 'move-ok') {
-      const name = document.getElementById('row-binder').value.trim();
+      const name = binderValue('row-binder');
+      if (name === null) return showNotice(t('Bitte einen Namen für den neuen Ordner eingeben.', 'Please enter a name for the new folder.'), true);
       if (name === (row.binderName || '')) return;
       await writeAPI('PATCH', `/collection/cards/${id}`, { binderName: name, binderType: document.getElementById('row-binder-type').value });
       bindersCache = null;
@@ -724,7 +726,8 @@ function renderEoSelectBar() {
 async function moveEoSelection() {
   const { ids } = eoSelectedRows();
   if (!ids.length) return;
-  const name = document.getElementById('select-binder').value.trim();
+  const name = binderValue('select-binder');
+  if (name === null) return showNotice(t('Bitte einen Namen für den neuen Ordner eingeben.', 'Please enter a name for the new folder.'), true);
   const type = document.getElementById('select-binder-type').value;
   const btn = document.getElementById('select-move');
   btn.disabled = true;
@@ -794,7 +797,7 @@ async function init() {
     if (btn) editSetRow(btn.dataset.act, Number(btn.dataset.id || 0));
   });
   document.getElementById('eo-card-overlay').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.target.id === 'row-binder') {
+    if (e.key === 'Enter' && (e.target.id === 'row-binder' || e.target.id === 'row-binder-new')) {
       const ok = document.querySelector('#row-edit [data-act="move-ok"]');
       if (ok) ok.click();
     }

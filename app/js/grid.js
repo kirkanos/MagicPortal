@@ -416,7 +416,8 @@ async function renderSelectBar() {
 async function moveSelection() {
   const { ids } = selectedRowIds();
   if (!ids.length) return;
-  const name = document.getElementById('select-binder').value.trim();
+  const name = binderValue('select-binder');
+  if (name === null) return showNotice(t('Bitte einen Namen für den neuen Ordner eingeben.', 'Please enter a name for the new folder.'), true);
   const type = document.getElementById('select-binder-type').value;
   const btn = document.getElementById('select-move');
   btn.disabled = true;
@@ -514,9 +515,10 @@ async function editRow(act, id) {
         ${binderInputHTML('row-binder', v.binderName)}
         <select id="row-binder-type"><option value="binder">${t('Ordner', 'Binder')}</option><option value="list">${t('Liste', 'List')}</option><option value="deck">Deck</option></select>
         <button type="button" class="primary" data-act="move-ok" data-id="${id}">OK</button>`;
-      document.getElementById('row-binder').select();
+      document.getElementById('row-binder').focus();
     } else if (act === 'move-ok') {
-      const name = document.getElementById('row-binder').value.trim();
+      const name = binderValue('row-binder');
+      if (name === null) return showNotice(t('Bitte einen Namen für den neuen Ordner eingeben.', 'Please enter a name for the new folder.'), true);
       if (name === (v.binderName || '')) return;
       const r = await writeAPI('PATCH', `/collection/cards/${id}`, { binderName: name, binderType: document.getElementById('row-binder-type').value });
       bindersCache = null;
@@ -533,7 +535,7 @@ document.addEventListener('click', (e) => {
   if (btn) editRow(btn.dataset.act, Number(btn.dataset.id));
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.target.id === 'row-binder') {
+  if (e.key === 'Enter' && (e.target.id === 'row-binder' || e.target.id === 'row-binder-new')) {
     const ok = document.querySelector('#row-edit [data-act="move-ok"]');
     if (ok) ok.click();
   }

@@ -116,22 +116,65 @@ async function loadBinderList(force) {
   return bindersCache;
 }
 
-/* A binder field: type a new name or pick one from the list. One datalist
-   per page (#binder-options) serves every field. */
-function binderInputHTML(id, value) {
-  return `<input type="text" class="binder-input" id="${id}" list="binder-options" value="${escapeHTML(value || '')}"
-    placeholder="${t('Ordner (leer = ohne Ordner)', 'Folder (empty = none)')}" autocomplete="off">`;
+/* A binder field: a list of every binder (grouped by type), "no folder" and
+   "new folder", which shows a name field. The type select a caller puts right
+   after the field only shows for a new folder (CSS): an existing binder keeps
+   its type on the server anyway. Read it with binderValue(id). */
+const BINDER_NEW = '__new__';
+
+function binderTypeOf(b) {
+  const type = (b.type || '').toLowerCase();
+  return type === 'list' || type === 'deck' ? type : 'binder';
 }
 
-async function ensureBinderDatalist() {
-  const binders = await loadBinderList();
-  let dl = document.getElementById('binder-options');
-  if (!dl) {
-    dl = document.createElement('datalist');
-    dl.id = 'binder-options';
-    document.body.appendChild(dl);
+function binderOptionsHTML(value) {
+  const v = value || '';
+  const list = (bindersCache || []).filter((b) => b.name);
+  let html = `<option value=""${v === '' ? ' selected' : ''}>${t('– ohne Ordner –', '– no folder –')}</option>`;
+  let known = v === '';
+  for (const [type, label] of [['binder', t('Ordner', 'Binders')], ['list', t('Listen', 'Lists')], ['deck', 'Decks']]) {
+    const group = list.filter((b) => binderTypeOf(b) === type).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    if (!group.length) continue;
+    html += `<optgroup label="${escapeHTML(label)}">` + group.map((b) => {
+      if (b.name === v) known = true;
+      return `<option value="${escapeHTML(b.name)}"${b.name === v ? ' selected' : ''}>${escapeHTML(b.name)}</option>`;
+    }).join('') + '</optgroup>';
   }
-  dl.innerHTML = binders.map((b) => `<option value="${escapeHTML(b.name)}">${escapeHTML(b.type || '')}</option>`).join('');
+  // Not (yet) in the list - keep it selectable rather than losing it.
+  if (!known) html += `<option value="${escapeHTML(v)}" selected>${escapeHTML(v)}</option>`;
+  html += `<option value="${BINDER_NEW}">${t('+ Neuer Ordner …', '+ New folder …')}</option>`;
+  return html;
+}
+
+function binderInputHTML(id, value) {
+  // Not loaded yet: fill the field once the list is there (after this HTML is in the page).
+  if (!bindersCache) ensureBinderDatalist();
+  return `<span class="binder-field"><select class="binder-select" id="${id}">${binderOptionsHTML(value)}</select><input
+    type="text" class="binder-input" id="${id}-new" placeholder="${t('Name des neuen Ordners', 'Name of the new folder')}" autocomplete="off"></span>`;
+}
+
+/* The chosen binder name ('' = no folder), or null for a new folder without a name. */
+function binderValue(id) {
+  const sel = document.getElementById(id);
+  if (!sel) return null;
+  if (sel.value !== BINDER_NEW) return sel.value;
+  const name = document.getElementById(id + '-new').value.trim();
+  return name || null;
+}
+
+document.addEventListener('change', (e) => {
+  if (!e.target.classList || !e.target.classList.contains('binder-select')) return;
+  const isNew = e.target.value === BINDER_NEW;
+  e.target.parentElement.classList.toggle('is-new', isNew);
+  if (isNew) e.target.parentElement.querySelector('.binder-input').focus();
+});
+
+/* Loads the binders and fills every binder field on the page with them. */
+async function ensureBinderDatalist() {
+  await loadBinderList();
+  document.querySelectorAll('select.binder-select').forEach((sel) => {
+    if (sel.value !== BINDER_NEW) sel.innerHTML = binderOptionsHTML(sel.value);
+  });
 }
 
 /* Mouseover explanations for the different card-count definitions used across
