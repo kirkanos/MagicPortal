@@ -267,6 +267,10 @@
     <string name="eo_in_collection">In deiner Sammlung (%1$d×)</string>
     <string name="eo_folder">Ordner: %1$s</string>
     <string name="eo_missing_card">Diese Karte fehlt dir noch.</string>
+    <string name="eo_add_title">Zur Sammlung hinzufügen</string>
+    <string name="eo_add_button">+1 hinzufügen</string>
+    <string name="eo_add_binder">Ordner: %1$s</string>
+    <string name="eo_added">%1$s hinzugefügt.</string>
     <string name="set_type_core">Core</string>
     <string name="set_type_expansion">Erweiterung</string>
     <string name="set_type_draft_innovation">Draft-Innovation</string>

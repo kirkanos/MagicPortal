@@ -120,6 +120,8 @@ data class SetCardOwnedDto(
     val copies: Int = 0,
     val byLang: Map<String, Int> = emptyMap(),
     val byBinder: Map<String, Int> = emptyMap(),
+    /** The collection rows behind the copies, for editing (empty from an older backend). */
+    val rows: List<VariantDto> = emptyList(),
 )
 
 @Serializable

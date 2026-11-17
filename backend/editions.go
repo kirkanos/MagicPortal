@@ -37,11 +37,27 @@ type editionOut struct {
 }
 
 // setCardOwned is what the set overlay shows for one owned card: how many
-// copies, split by language and by binder.
+// copies, split by language and by binder, and the collection rows behind
+// them, so a client can edit them right there (by id, like the card grid).
 type setCardOwned struct {
 	Copies   int            `json:"copies"`
 	ByLang   map[string]int `json:"byLang"`
 	ByBinder map[string]int `json:"byBinder"`
+	Rows     []ownedRowOut  `json:"rows"`
+}
+
+// ownedRowOut is one collection row of an owned set card.
+type ownedRowOut struct {
+	ID              int    `json:"id"`
+	Origin          string `json:"origin"`
+	CollectorNumber string `json:"collectorNumber"`
+	Language        string `json:"language"`
+	Foil            string `json:"foil"`
+	Condition       string `json:"condition"`
+	Quantity        int    `json:"quantity"`
+	BinderName      string `json:"binderName"`
+	BinderType      string `json:"binderType"`
+	Added           string `json:"added"`
 }
 
 // normNumber mirrors normNumber() in editions.js: the collector number without
@@ -90,6 +106,11 @@ func ownedBySet(rows []*cardRow) map[string]map[string]*setCardOwned {
 		if c.BinderName != "" {
 			d.ByBinder[c.BinderName] += c.Quantity
 		}
+		d.Rows = append(d.Rows, ownedRowOut{
+			ID: c.ID, Origin: c.Origin, CollectorNumber: c.CollectorNumber,
+			Language: c.Language, Foil: c.Foil, Condition: c.Condition, Quantity: c.Quantity,
+			BinderName: c.BinderName, BinderType: c.BinderType, Added: c.Added,
+		})
 	}
 	return out
 }

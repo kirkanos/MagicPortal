@@ -252,6 +252,10 @@
     <string name="eo_in_collection">In your collection (%1$d×)</string>
     <string name="eo_folder">Folder: %1$s</string>
     <string name="eo_missing_card">You don\'t own this card yet.</string>
+    <string name="eo_add_title">Add to collection</string>
+    <string name="eo_add_button">+1 add</string>
+    <string name="eo_add_binder">Binder: %1$s</string>
+    <string name="eo_added">%1$s added.</string>
     <string name="set_type_core">Core</string>
     <string name="set_type_expansion">Expansion</string>
     <string name="set_type_draft_innovation">Draft innovation</string>

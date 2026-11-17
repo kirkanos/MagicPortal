@@ -70,6 +70,7 @@ import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.model.Language
 import net.kirkanos.mtgportal.core.model.SetCode
 import net.kirkanos.mtgportal.core.network.dto.CardGroupDto
+import net.kirkanos.mtgportal.core.network.dto.MoveRowsResultDto
 import net.kirkanos.mtgportal.core.network.dto.SetDto
 import net.kirkanos.mtgportal.core.ui.Format
 import net.kirkanos.mtgportal.core.ui.appContainer
@@ -225,18 +226,8 @@ fun CardsScreen(binder: String?, set: String?) {
             scope.launch {
                 val r = c.collectionWrite.moveRows(ids, target)
                 moving = false
-                val text = when (r) {
-                    is ApiResult.Success -> {
-                        selected = emptySet()
-                        val d = r.data
-                        val name = d.binderName.ifEmpty { res.getString(R.string.cards_move_no_binder) }
-                        res.getString(R.string.cards_moved, d.moved, name) +
-                            (if (d.merged > 0) " " + res.getString(R.string.cards_moved_merged, d.merged) else "") +
-                            (if (d.volatile) "\n" + res.getString(R.string.cards_moved_volatile) else "")
-                    }
-                    is ApiResult.HttpError -> r.message
-                    is ApiResult.NetworkError -> res.getString(R.string.cards_move_failed)
-                }
+                if (r is ApiResult.Success) selected = emptySet()
+                val text = moveMessage(res, r)
                 Toast.makeText(context, text, Toast.LENGTH_LONG).show()
             }
         })
@@ -316,6 +307,19 @@ private fun Controls(st: CardsUiState, onQuery: (String) -> Unit, onSort: (Strin
     }
 }
 
+/** The toast after moving many rows: how many, where, merged, ManaBox warning. */
+internal fun moveMessage(res: android.content.res.Resources, r: ApiResult<MoveRowsResultDto>): String = when (r) {
+    is ApiResult.Success -> {
+        val d = r.data
+        val name = d.binderName.ifEmpty { res.getString(R.string.cards_move_no_binder) }
+        res.getString(R.string.cards_moved, d.moved, name) +
+            (if (d.merged > 0) " " + res.getString(R.string.cards_moved_merged, d.merged) else "") +
+            (if (d.volatile) "\n" + res.getString(R.string.cards_moved_volatile) else "")
+    }
+    is ApiResult.HttpError -> r.message
+    is ApiResult.NetworkError -> res.getString(R.string.cards_move_failed)
+}
+
 /**
  * The collection rows behind selected tiles, with their copies: in a binder
  * view only the rows in that binder (the tile shows only those), else all.
@@ -325,7 +329,7 @@ internal fun selectedRows(groups: List<CardGroupDto>, binder: String): List<Pair
         .map { it.id to it.quantity }
 
 @Composable
-private fun SelectionBar(count: Int, copies: Int, busy: Boolean, onAll: () -> Unit, onMove: () -> Unit, onClear: () -> Unit, modifier: Modifier) {
+internal fun SelectionBar(count: Int, copies: Int, busy: Boolean, onAll: () -> Unit, onMove: () -> Unit, onClear: () -> Unit, modifier: Modifier) {
     Surface(color = PortalColors.BgCard, shadowElevation = 8.dp, shape = RoundedCornerShape(16.dp), modifier = modifier.padding(10.dp).fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClear) { AppIconView(Icons.Close, PortalColors.Text) }

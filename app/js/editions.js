@@ -1,24 +1,10 @@
-let allCards = [];
-let setIndex = {};
+/* The table comes from /api/editions and the overlay from /api/sets/{code}/cards
+   (ownership and collection rows included): the page never loads the whole
+   collection, and after an edit both are fetched again cheaply. */
 let editions = [];
 let editionByCode = {};
 // Set-type filter state. mode: 'collectable' | 'all' | 'custom'; types = chosen set-types.
 let typeState = { mode: 'collectable', types: new Set() };
-
-function priceEur(c) {
-  // Foil-aware (shared helper): foil/etched copies use the foil price when known.
-  return variantMarketPrice(c) || 0;
-}
-
-/* Collector number is language- and finish-independent, so the same card in
-   DE + EN (or normal + foil) collapses to one "distinct card". */
-function normNumber(n) {
-  return String(n || '').trim().toLowerCase().replace(/^0+(?=\d)/, '');
-}
-
-function distinctKey(c) {
-  return c.collectorNumber ? 'n:' + normNumber(c.collectorNumber) : 'name:' + c.name.toLowerCase();
-}
 
 // Set types considered "collectable" editions – the default view. Other types
 // (promo, token, …) are available via the set-type filter.
@@ -57,69 +43,18 @@ function setTypeLabel(type) {
   return SET_TYPE_LABEL[type] || type || '–';
 }
 
-function buildEditions(cards) {
-  // Group owned rows by set code (lowercased, to match the Scryfall index).
-  const owned = {};
-  cards.forEach((c) => {
-    const lc = c.setCode.toLowerCase();
-    if (!owned[lc]) owned[lc] = { code: c.setCode, name: c.setName, rows: [] };
-    owned[lc].rows.push(c);
-  });
-
-  // Union: every owned set + all non-digital sets from the index. The set-type
-  // filter (default: collectable types) decides what is actually shown.
-  const codes = new Set(Object.keys(owned));
-  Object.keys(setIndex).forEach((lc) => {
-    const info = setIndex[lc];
-    if (owned[lc] || !info.digital) codes.add(lc);
-  });
-
-  const result = [];
-  codes.forEach((lc) => {
-    const info = setIndex[lc] || null;
-    const o = owned[lc];
-    const rows = o ? o.rows : [];
-
-    // Collapse language/finish variants into distinct cards.
-    const distinctMap = {};
-    const ownedByNumber = {};
-    rows.forEach((c) => {
-      const id = distinctKey(c);
-      if (!distinctMap[id]) {
-        distinctMap[id] = { id, name: c.name, collectorNumber: c.collectorNumber, copies: 0, byLang: {}, byBinder: {}, rep: c };
-      }
-      const d = distinctMap[id];
-      d.copies += c.quantity;
-      const lang = (c.language || '?').toLowerCase();
-      d.byLang[lang] = (d.byLang[lang] || 0) + c.quantity;
-      if (c.binderName) d.byBinder[c.binderName] = (d.byBinder[c.binderName] || 0) + c.quantity;
-      if (c.collectorNumber) ownedByNumber[normNumber(c.collectorNumber)] = d;
-    });
-    const distinct = Object.values(distinctMap);
-
-    const ownedCount = distinct.length;
-    const total = info ? info.cardCount : null;
-    const missing = total != null ? Math.max(0, total - ownedCount) : null;
-    const dupes = distinct.filter((d) => d.copies > 1);
-
-    result.push({
-      code: o ? o.code : lc.toUpperCase(),
-      name: (info && info.name) || (o && o.name) || lc.toUpperCase(),
-      icon: setSymbolURL(info && info.iconSvgUri),
-      setType: (info && info.setType) || '',
-      released: (info && info.releasedAt) || '',
-      owned: ownedCount,
-      total,
-      missing,
-      dupeCount: dupes.length,
-      dupeExtra: dupes.reduce((a, d) => a + (d.copies - 1), 0),
-      totalCopies: rows.reduce((a, c) => a + c.quantity, 0),
-      marketValue: rows.reduce((a, c) => a + priceEur(c) * c.quantity, 0),
-      ownedByNumber,
-      inCollection: ownedCount > 0,
-    });
-  });
-  return result;
+async function loadEditions() {
+  await uiConfigReady;
+  const res = await fetch(API + '/editions', { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const list = await res.json();
+  editions = list.map((e) => ({
+    ...e,
+    icon: setSymbolURL(e.iconSvgUri),
+    released: e.releasedAt || '',
+  }));
+  editionByCode = {};
+  editions.forEach((e) => (editionByCode[e.code] = e));
 }
 
 function renderStats() {
@@ -383,7 +318,7 @@ function overlayStats(rarity) {
   overlayCards.forEach((c) => {
     if (rarity && (c.rarity || '').toLowerCase() !== rarity) return;
     total++;
-    if (overlayEdition.ownedByNumber[normNumber(c.collectorNumber)]) owned++;
+    if (c.owned) owned++;
     else missingValue += cardMarketPrice(c);
   });
   return { owned, total, missing: total - owned, missingValue };
@@ -414,7 +349,7 @@ function updateOverlaySub() {
 
 function buildEoTile({ card: c, idx, ownedInfo, isOwned }) {
   const tile = document.createElement('div');
-  tile.className = 'eo-card ' + (isOwned ? 'owned' : 'missing');
+  tile.className = 'eo-card ' + (isOwned ? 'owned' : 'missing') + (eoSelected.has(c.collectorNumber) ? ' selected' : '');
   tile.dataset.idx = idx;
   const img = setCardImage(c, 'small');
   tile.innerHTML = `
@@ -437,7 +372,7 @@ function renderOverlayGrid() {
   const items = [];
   overlayCards.forEach((c, idx) => {
     if (rarity && (c.rarity || '').toLowerCase() !== rarity) return;
-    const ownedInfo = overlayEdition.ownedByNumber[normNumber(c.collectorNumber)];
+    const ownedInfo = c.owned;
     const isOwned = !!ownedInfo;
     if (filter === 'owned' && !isOwned) return;
     if (filter === 'missing' && isOwned) return;
@@ -497,6 +432,7 @@ async function openEditionOverlay(edition) {
 }
 
 function closeEditionOverlay() {
+  setEoSelecting(false);
   document.getElementById('edition-overlay').classList.remove('open');
   document.body.style.overflow = '';
   overlayEdition = null;
@@ -511,7 +447,9 @@ function editionCardDetailHTML(card, ownedInfo) {
   const foilPrice = card.priceEurFoil ? formatCurrency(parseFloat(card.priceEurFoil), 'EUR') : null;
 
   let ownership;
-  if (ownedInfo) {
+  if (isUnlocked) {
+    ownership = ownershipEditHTML(card);
+  } else if (ownedInfo) {
     const rows = Object.entries(ownedInfo.byLang)
       .sort((a, b) => b[1] - a[1])
       .map(([l, n]) => `<tr><td>${languageFlag(l) || escapeHTML(l.toUpperCase())} ${escapeHTML(l.toUpperCase())}</td><td class="num">${n}</td></tr>`)
@@ -558,6 +496,7 @@ function editionCardDetailHTML(card, ownedInfo) {
 }
 
 function openEditionCardOverlay(card, ownedInfo) {
+  detailCard = card;
   const overlay = document.getElementById('eo-card-overlay');
   const body = overlay.querySelector('.modal-body');
   body.innerHTML = editionCardDetailHTML(card, ownedInfo);
@@ -567,14 +506,249 @@ function openEditionCardOverlay(card, ownedInfo) {
 
 function closeEditionCardOverlay() {
   document.getElementById('eo-card-overlay').classList.remove('open');
+  detailCard = null;
+}
+
+/* ---- Editing (with write access): rows of a card, adding, moving many ---- */
+
+let detailCard = null;      // the card whose detail dialog is open
+let eoSelecting = false;
+const eoSelected = new Map(); // collectorNumber -> card (owned ones only)
+
+const ADD_LANG_KEY = 'mtg_add_lang';
+const ADD_LANGS = ['en', 'de', 'fr', 'it', 'es', 'pt', 'ja', 'ko', 'ru', 'zhs', 'zht'];
+
+function binderTypeSelectHTML(id) {
+  return `<select id="${id}" title="${t('Typ, falls der Ordner neu ist', 'Type, if the folder is new')}">
+    <option value="binder">${t('Ordner', 'Binder')}</option><option value="list">${t('Liste', 'List')}</option><option value="deck">Deck</option></select>`;
+}
+
+/* The rows of a card with −1 / +1 / folder, and a line to add copies - also
+   for cards that are still missing. */
+function ownershipEditHTML(card) {
+  const o = card.owned;
+  const rows = (o ? o.rows || [] : [])
+    .slice()
+    .sort((a, b) => (a.language || '').localeCompare(b.language || '') || (a.foil || '').localeCompare(b.foil || ''))
+    .map((r) => {
+      const foilTag = r.foil && r.foil !== 'normal' ? ` <span class="lang-foil">${escapeHTML(r.foil)}</span>` : '';
+      return `
+        <tr>
+          <td>${languageFlag(r.language)} ${escapeHTML((r.language || '?').toUpperCase())}${foilTag}</td>
+          <td>${escapeHTML(conditionLabel(r.condition))}</td>
+          <td>${escapeHTML(r.binderName || '–')}</td>
+          <td class="num">${r.quantity}</td>
+          <td class="row-actions">
+            <button type="button" data-act="minus" data-id="${r.id}" title="${t('Ein Exemplar weniger', 'One copy less')}">−1</button>
+            <button type="button" data-act="plus" data-id="${r.id}" title="${t('Ein Exemplar mehr', 'One copy more')}">+1</button>
+            <button type="button" data-act="move" data-id="${r.id}">${t('Ordner…', 'Folder…')}</button>
+          </td>
+        </tr>`;
+    })
+    .join('');
+  let lang = 'en';
+  try { lang = localStorage.getItem(ADD_LANG_KEY) || 'en'; } catch (e) { /* ignore */ }
+  const langOpts = ADD_LANGS.map((l) => `<option value="${l}"${l === lang ? ' selected' : ''}>${languageFlag(l)} ${l.toUpperCase()}</option>`).join('');
+  return `
+    ${o
+      ? `<h3 class="lang-table-title">${t('In deiner Sammlung', 'In your collection')} (${o.copies}×)</h3>
+         <table class="lang-table">
+           <thead><tr><th>${t('Sprache', 'Language')}</th><th>${t('Zustand', 'Condition')}</th><th>${t('Ordner', 'Folder')}</th><th class="num">${t('Anzahl', 'Quantity')}</th><th></th></tr></thead>
+           <tbody>${rows}</tbody>
+         </table>
+         <div class="row-edit" id="row-edit"></div>`
+      : `<p class="eo-detail-missing">${t('Diese Karte fehlt dir noch.', 'You don’t own this card yet.')}</p>`}
+    <h3 class="lang-table-title">${t('Zur Sammlung hinzufügen', 'Add to collection')}</h3>
+    <div class="row-edit">
+      <select id="add-lang">${langOpts}</select>
+      <select id="add-foil"><option value="normal">${t('Normal', 'Normal')}</option><option value="foil">Foil</option><option value="etched">Etched</option></select>
+      ${binderInputHTML('add-binder', '')}
+      ${binderTypeSelectHTML('add-binder-type')}
+      <button type="button" class="primary" data-act="add">+1 ${t('hinzufügen', 'add')}</button>
+    </div>`;
+}
+
+const VOLATILE_HINT = () => t('Karten aus ManaBox kommen beim nächsten Import wieder in ihren alten Zustand.', 'Cards from ManaBox return to their old state with the next import.');
+
+async function editSetRow(act, id) {
+  const card = detailCard;
+  if (!card || !overlayEdition) return;
+  const row = card.owned && (card.owned.rows || []).find((r) => r.id === id);
+  try {
+    if (act === 'add') {
+      const lang = document.getElementById('add-lang').value;
+      try { localStorage.setItem(ADD_LANG_KEY, lang); } catch (e) { /* ignore */ }
+      const binder = document.getElementById('add-binder').value.trim();
+      await writeAPI('POST', '/collection/cards', { items: [{
+        setCode: overlayEdition.code.toLowerCase(), collectorNumber: card.collectorNumber, quantity: 1,
+        foil: document.getElementById('add-foil').value, language: lang, condition: 'near_mint',
+        binderName: binder, binderType: binder ? document.getElementById('add-binder-type').value : '',
+      }] });
+      bindersCache = null;
+      showNotice(t(`${card.name} hinzugefügt.`, `${card.name} added.`));
+    } else if (!row) {
+      return;
+    } else if (act === 'minus') {
+      await writeAPI('PATCH', `/collection/cards/${id}`, { quantityDelta: -1 });
+      if (row.origin === 'csv') showNotice(t('Geändert – aber das ist eine ManaBox-Zeile: der nächste Import setzt sie zurück.', 'Changed – but this is a ManaBox row: the next import resets it.'));
+    } else if (act === 'plus') {
+      await writeAPI('POST', '/collection/cards', { items: [{
+        // The catalog's number: the row's may carry leading zeros.
+        setCode: overlayEdition.code.toLowerCase(), collectorNumber: card.collectorNumber, quantity: 1,
+        foil: row.foil || 'normal', language: row.language || 'en', condition: row.condition || 'near_mint',
+        binderName: row.binderName || '', binderType: row.binderName ? (row.binderType || 'binder') : '',
+      }] });
+    } else if (act === 'move') {
+      await ensureBinderDatalist();
+      const box = document.getElementById('row-edit');
+      box.innerHTML = `
+        <span>${t('Verschieben nach', 'Move to')}:</span>
+        ${binderInputHTML('row-binder', row.binderName)}
+        ${binderTypeSelectHTML('row-binder-type')}
+        <button type="button" class="primary" data-act="move-ok" data-id="${id}">OK</button>`;
+      document.getElementById('row-binder').select();
+      return;
+    } else if (act === 'move-ok') {
+      const name = document.getElementById('row-binder').value.trim();
+      if (name === (row.binderName || '')) return;
+      await writeAPI('PATCH', `/collection/cards/${id}`, { binderName: name, binderType: document.getElementById('row-binder-type').value });
+      bindersCache = null;
+      if (row.origin === 'csv') showNotice(t('Verschoben – ', 'Moved – ') + VOLATILE_HINT());
+    } else {
+      return;
+    }
+    await refreshAfterEdit();
+  } catch (e) {
+    showNotice(t('Ändern fehlgeschlagen: ', 'Change failed: ') + e.message, true);
+  }
+}
+
+/* After a write: the set's cards (ownership, rows) and the table anew; the
+   open detail follows its card. */
+async function refreshAfterEdit() {
+  const edition = overlayEdition;
+  if (!edition) return;
+  delete setCardsCache[edition.code.toLowerCase()];
+  try {
+    overlayCards = await fetchSetCards(edition.code);
+  } catch (e) { /* keep the old list */ }
+  if (overlayEdition !== edition) return;
+  updateOverlaySub();
+  renderOverlayGrid();
+  if (detailCard) {
+    const fresh = overlayCards.find((c) => c.collectorNumber === detailCard.collectorNumber);
+    if (fresh) openEditionCardOverlay(fresh, fresh.owned);
+  }
+  try {
+    await loadEditions();
+    overlayEdition = editionByCode[edition.code] || edition;
+    renderStats();
+    renderTable();
+  } catch (e) { /* the table stays as it was */ }
+}
+
+function setEoSelecting(on) {
+  eoSelecting = on;
+  if (!on) {
+    eoSelected.clear();
+    document.querySelectorAll('#eo-grid .eo-card.selected').forEach((t) => t.classList.remove('selected'));
+  }
+  document.body.classList.toggle('selecting', on);
+  const btn = document.getElementById('eo-select-mode');
+  if (btn) btn.textContent = on ? t('Auswahl beenden', 'Stop selecting') : t('Auswählen', 'Select');
+  renderEoSelectBar();
+}
+
+function toggleEoSelected(card, tile) {
+  // Missing cards have no rows to move.
+  if (!card.owned) return;
+  if (eoSelected.has(card.collectorNumber)) eoSelected.delete(card.collectorNumber);
+  else eoSelected.set(card.collectorNumber, card);
+  tile.classList.toggle('selected', eoSelected.has(card.collectorNumber));
+  renderEoSelectBar();
+}
+
+function eoSelectedRows() {
+  const ids = [];
+  let copies = 0;
+  eoSelected.forEach((c) => ((c.owned && c.owned.rows) || []).forEach((r) => {
+    ids.push(r.id);
+    copies += r.quantity;
+  }));
+  return { ids, copies };
+}
+
+function renderEoSelectBar() {
+  let bar = document.getElementById('select-bar');
+  if (!eoSelecting) {
+    if (bar) bar.remove();
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'select-bar';
+    bar.className = 'select-bar';
+    bar.innerHTML = `
+      <span class="select-count" id="select-count"></span>
+      <button type="button" id="select-all">${t('Alle besessenen', 'All owned')}</button>
+      <button type="button" id="select-none">${t('Keine', 'None')}</button>
+      ${binderInputHTML('select-binder', '')}
+      ${binderTypeSelectHTML('select-binder-type')}
+      <button type="button" class="primary" id="select-move">${t('Verschieben', 'Move')}</button>`;
+    document.body.appendChild(bar);
+    bar.querySelector('#select-all').addEventListener('click', () => {
+      // What the grid shows right now (filter and rarity apply).
+      document.querySelectorAll('#eo-grid .eo-card.owned').forEach((tile) => {
+        const c = overlayCards[tile.dataset.idx];
+        if (c && c.owned) {
+          eoSelected.set(c.collectorNumber, c);
+          tile.classList.add('selected');
+        }
+      });
+      renderEoSelectBar();
+    });
+    bar.querySelector('#select-none').addEventListener('click', () => {
+      eoSelected.clear();
+      document.querySelectorAll('#eo-grid .eo-card.selected').forEach((t) => t.classList.remove('selected'));
+      renderEoSelectBar();
+    });
+    bar.querySelector('#select-move').addEventListener('click', moveEoSelection);
+    ensureBinderDatalist();
+  }
+  const { copies } = eoSelectedRows();
+  bar.querySelector('#select-count').textContent =
+    t(`${eoSelected.size} ausgewählt (${copies} Karten)`, `${eoSelected.size} selected (${copies} cards)`);
+  bar.querySelector('#select-move').disabled = copies === 0;
+}
+
+async function moveEoSelection() {
+  const { ids } = eoSelectedRows();
+  if (!ids.length) return;
+  const name = document.getElementById('select-binder').value.trim();
+  const type = document.getElementById('select-binder-type').value;
+  const btn = document.getElementById('select-move');
+  btn.disabled = true;
+  try {
+    const r = await writeAPI('POST', '/collection/move', { ids, binderName: name, binderType: type });
+    let msg = t(`${r.moved} Zeilen nach „${r.binderName || 'ohne Ordner'}“ verschoben.`,
+      `${r.moved} rows moved to “${r.binderName || 'no folder'}”.`);
+    if (r.merged) msg += ' ' + t(`${r.merged} davon zusammengeführt.`, `${r.merged} of them merged.`);
+    if (r.volatile) msg += ' ' + VOLATILE_HINT();
+    showNotice(msg);
+    bindersCache = null;
+    setEoSelecting(false);
+    await refreshAfterEdit();
+  } catch (e) {
+    showNotice(t('Verschieben fehlgeschlagen: ', 'Moving failed: ') + e.message, true);
+    btn.disabled = false;
+  }
 }
 
 async function init() {
   rememberSelect('sort-by', 'mtg_sort_editions');
-  showLoading(t('Lade Sammlung...', 'Loading collection...'));
+  showLoading(t('Lade Editionen...', 'Loading editions...'));
   try {
-    allCards = await loadCollection(updateLoadingProgress);
-    setIndex = await loadSetIndex();
+    await loadEditions();
     await loadWishlistNames();
   } catch (e) {
     hideLoading();
@@ -582,10 +756,6 @@ async function init() {
     return;
   }
   hideLoading();
-
-  editions = buildEditions(allCards);
-  editionByCode = {};
-  editions.forEach((e) => (editionByCode[e.code] = e));
 
   populateTypeFilter();
   renderStats();
@@ -609,9 +779,30 @@ async function init() {
   initWishButtons(document.getElementById('eo-card-overlay'));
   document.getElementById('eo-grid').addEventListener('click', (e) => {
     const tile = e.target.closest('.eo-card');
-    if (!tile) return;
+    if (!tile || e.target.closest('.wish-btn')) return;
     const card = overlayCards[tile.dataset.idx];
-    if (card) openEditionCardOverlay(card, overlayEdition.ownedByNumber[normNumber(card.collectorNumber)]);
+    if (!card) return;
+    if (eoSelecting) {
+      toggleEoSelected(card, tile);
+      return;
+    }
+    openEditionCardOverlay(card, card.owned);
+  });
+  document.getElementById('eo-select-mode').addEventListener('click', () => setEoSelecting(!eoSelecting));
+  document.getElementById('eo-card-overlay').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-act]');
+    if (btn) editSetRow(btn.dataset.act, Number(btn.dataset.id || 0));
+  });
+  document.getElementById('eo-card-overlay').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'row-binder') {
+      const ok = document.querySelector('#row-edit [data-act="move-ok"]');
+      if (ok) ok.click();
+    }
+  });
+  // Logged in or out: the detail shows or hides its edit controls.
+  document.addEventListener('auth-change', (e) => {
+    if (!e.detail.unlocked) setEoSelecting(false);
+    if (detailCard) openEditionCardOverlay(detailCard, detailCard.owned);
   });
 
   const cardOverlay = document.getElementById('eo-card-overlay');
@@ -622,6 +813,7 @@ async function init() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (cardOverlay.classList.contains('open')) closeEditionCardOverlay();
+    else if (eoSelecting) setEoSelecting(false);
     else closeEditionOverlay();
   });
   document.querySelectorAll('input[name="eo-filter"]').forEach((r) => r.addEventListener('change', renderOverlayGrid));

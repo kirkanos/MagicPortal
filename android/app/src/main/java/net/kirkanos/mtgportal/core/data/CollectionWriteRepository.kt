@@ -63,8 +63,15 @@ class CollectionWriteRepository(private val api: PortalApi) {
     }
 
     /** One more copy of an owned variant, as an app row: unlike +1 on a csv row it survives the next import. */
-    suspend fun addOne(setCode: String, collectorNumber: String, v: VariantDto): ApiResult<CollectionRowDto> = safeCall {
-        val item = AddCardItemDto(setCode.lowercase(), collectorNumber, 1, v.foil.ifEmpty { "normal" }, v.language.ifEmpty { "en" }, v.condition.ifEmpty { "near_mint" }, v.binderName, v.binderType)
+    suspend fun addOne(setCode: String, collectorNumber: String, v: VariantDto): ApiResult<CollectionRowDto> =
+        addCopy(setCode, collectorNumber, v.foil, v.language, v.condition, BinderTarget(v.binderName, v.binderType))
+
+    /** One copy of a printing - owned or not yet - into a binder. */
+    suspend fun addCopy(setCode: String, collectorNumber: String, foil: String, language: String, condition: String, target: BinderTarget): ApiResult<CollectionRowDto> = safeCall {
+        val item = AddCardItemDto(
+            setCode.lowercase(), collectorNumber, 1, foil.ifEmpty { "normal" }, language.ifEmpty { "en" }, condition.ifEmpty { "near_mint" },
+            target.name, if (target.name.isEmpty()) "" else target.type.ifEmpty { "binder" },
+        )
         api.addCards(AddCardsRequest(listOf(item)), UUID.randomUUID().toString()).items.first()
     }.withReadableError().noted()
 
