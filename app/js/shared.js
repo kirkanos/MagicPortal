@@ -913,6 +913,19 @@ function buildAdminOverlay() {
       </div>
       <div class="admin-body">
         <section class="admin-section">
+          <h3>${t('Import & Daten', 'Import & data')}</h3>
+          <p class="admin-status" id="cfg-data-status"></p>
+          <div class="admin-actions">
+            <button type="button" id="csv-sync" class="reset-btn">🔄 ${t('Kartendaten aktualisieren', 'Update card data')}</button>
+            <label class="reset-btn upload-label" id="csv-upload-label">⬆ ${t('CSV hochladen', 'Upload CSV')}
+              <input type="file" id="csv-upload" accept=".csv,text/csv" hidden>
+            </label>
+            ${helpHTML('„Kartendaten aktualisieren“ holt Karten und Preise sofort von Scryfall (läuft sonst automatisch). „CSV hochladen“ übernimmt einen ManaBox-Export und ersetzt alle bisher importierten Karten – gedacht für die Ersteinrichtung; in der App hinzugefügte Karten bleiben.',
+              '“Update card data” fetches cards and prices from Scryfall now (otherwise this runs automatically). “Upload CSV” takes a ManaBox export and replaces all cards imported so far – meant for the initial setup; cards added in the app stay.')}
+          </div>
+          <div id="cfg-import" class="admin-import"></div>
+        </section>
+        <section class="admin-section">
           <h3>${t('Zufallskarten', 'Random cards')}</h3>
           <label class="admin-check"><input type="checkbox" id="cfg-random-enabled"> ${t('Zufällige Karten auf der Karten-Seite anzeigen', 'Show random cards on the Cards page')}</label>
           <label class="admin-num">${t('Anzahl', 'Count')} <input type="number" id="cfg-random-count" min="1" max="30"></label>
@@ -958,6 +971,87 @@ async function openAdminOverlay() {
       }> ${escapeHTML(n.label())}</label>`
   ).join('');
   ov.classList.add('open');
+  renderImportSettings();
+}
+
+/* The remote import part of the settings: automatic every n minutes or only
+   on demand. Sources and credentials stay in the server's environment. */
+let importStatus = null;
+async function renderImportSettings() {
+  const box = document.getElementById('cfg-import');
+  const dataEl = document.getElementById('cfg-data-status');
+  if (!box) return;
+  let st;
+  try {
+    st = await fetchSyncStatus();
+  } catch (e) {
+    box.innerHTML = '';
+    return;
+  }
+  dataEl.textContent = st.running
+    ? t('Kartendaten werden gerade aktualisiert …', 'Card data is being updated …')
+    : t(`Kartendaten: ${relTime(st.cardsSyncedAt)} · Sammlung: ${st.collectionCount} Einträge`,
+      `Card data: ${relTime(st.cardsSyncedAt)} · Collection: ${st.collectionCount} entries`);
+  const ri = st.remoteImport || {};
+  importStatus = ri;
+  if (!ri.enabled) {
+    box.innerHTML = `<p class="section-hint">${t(
+      'Automatischer Import aus Nextcloud/Google Drive: nicht eingerichtet (Zugangsdaten in der .env).',
+      'Automatic import from Nextcloud/Google Drive: not set up (credentials in the .env).')}</p>`;
+    return;
+  }
+  const mode = ri.mode || 'auto';
+  const last = ri.lastAt
+    ? t(`Letzter Import: ${relTime(ri.lastAt)} aus ${ri.lastSource || '?'}`, `Last import: ${relTime(ri.lastAt)} from ${ri.lastSource || '?'}`)
+    : t('Noch kein automatischer Import.', 'No automatic import yet.');
+  const checked = ri.lastCheckAt ? ' · ' + t('zuletzt geprüft ', 'last checked ') + relTime(ri.lastCheckAt) : '';
+  box.innerHTML = `
+    <h4>${t('Import aus', 'Import from')} ${escapeHTML((ri.sources || []).join(' + '))}
+      ${helpHTML('Automatisch: der Server schaut im eingestellten Abstand nach einer neuen ManaBox-CSV und importiert sie. Manuell: nur über „Jetzt importieren“. Die Werte aus der .env gelten, solange hier nichts gespeichert wurde.',
+        'Automatic: the server looks for a new ManaBox CSV at the set interval and imports it. Manual: only via “Import now”. The .env values apply as long as nothing was saved here.')}</h4>
+    <label class="admin-check"><input type="radio" name="cfg-import-mode" value="auto" ${mode === 'auto' ? 'checked' : ''}> ${t('Automatisch', 'Automatic')}</label>
+    <label class="admin-num" id="cfg-import-interval-row">${t('alle', 'every')} <input type="number" id="cfg-import-interval" min="1" max="10080" value="${ri.intervalMinutes || 15}"> ${t('Minuten', 'minutes')}</label>
+    <label class="admin-check"><input type="radio" name="cfg-import-mode" value="manual" ${mode === 'manual' ? 'checked' : ''}> ${t('Manuell', 'Manual')}</label>
+    <p class="admin-status">${escapeHTML(last + checked)}</p>
+    ${ri.lastError ? `<p class="admin-status sync-err">⚠ ${escapeHTML(ri.lastError)}</p>` : ''}
+    <div class="admin-actions"><button type="button" id="cfg-import-run" class="reset-btn" ${ri.running ? 'disabled' : ''}>📥 ${ri.running ? t('Import läuft …', 'Import running …') : t('Jetzt importieren', 'Import now')}</button></div>`;
+  const syncInterval = () => {
+    const auto = box.querySelector('input[name="cfg-import-mode"]:checked').value === 'auto';
+    document.getElementById('cfg-import-interval').disabled = !auto;
+  };
+  box.querySelectorAll('input[name="cfg-import-mode"]').forEach((r) => r.addEventListener('change', syncInterval));
+  syncInterval();
+  document.getElementById('cfg-import-run').addEventListener('click', runImportNow);
+}
+
+/* Looks for a new CSV now and follows the status until the round is over. */
+async function runImportNow() {
+  const btn = document.getElementById('cfg-import-run');
+  btn.disabled = true;
+  const before = importStatus ? importStatus.lastAt : '';
+  try {
+    await writeAPI('POST', '/import/run');
+  } catch (e) {
+    btn.disabled = false;
+    return showNotice(t('Import fehlgeschlagen: ', 'Import failed: ') + e.message, true);
+  }
+  btn.textContent = '📥 ' + t('Import läuft …', 'Import running …');
+  for (let i = 0; i < 150; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    let ri;
+    try { ri = (await fetchSyncStatus()).remoteImport || {}; } catch (e) { continue; }
+    if (ri.running) continue;
+    if (ri.lastAt && ri.lastAt !== before) {
+      showNotice(t('Neue CSV importiert.', 'New CSV imported.'));
+      setTimeout(() => location.reload(), 1200);
+    } else if (ri.lastError) {
+      showNotice(t('Import fehlgeschlagen: ', 'Import failed: ') + ri.lastError, true);
+    } else {
+      showNotice(t('Keine neue CSV gefunden.', 'No new CSV found.'));
+    }
+    break;
+  }
+  renderImportSettings();
 }
 
 function closeAdminOverlay() {
@@ -975,6 +1069,15 @@ async function saveAdminConfig() {
     hiddenNav,
   };
   try {
+    const modeEl = document.querySelector('input[name="cfg-import-mode"]:checked');
+    if (modeEl) {
+      const minutes = parseInt(document.getElementById('cfg-import-interval').value, 10);
+      if (!(minutes >= 1 && minutes <= 10080)) {
+        alert(t('Das Intervall muss zwischen 1 und 10080 Minuten liegen.', 'The interval must be between 1 and 10080 minutes.'));
+        return;
+      }
+      await writeAPI('POST', '/import/config', { mode: modeEl.value, intervalMinutes: minutes });
+    }
     const res = await fetch(API + '/config', {
       method: 'POST',
       headers: uploadHeaders({ 'Content-Type': 'application/json' }),
@@ -1020,8 +1123,6 @@ function initCollectionUpload() {
     isUnlocked = unlocked;
     document.body.classList.toggle('is-unlocked', unlocked);
     document.dispatchEvent(new CustomEvent('auth-change', { detail: { unlocked } }));
-    uploadLabel.style.display = unlocked ? '' : 'none';
-    if (syncBtn) syncBtn.style.display = unlocked ? '' : 'none';
     // Admin settings + activity log are only offered once logged in.
     if (adminGear) adminGear.style.display = unlocked ? '' : 'none';
     if (activityLink) activityLink.style.display = unlocked ? '' : 'none';
@@ -1033,6 +1134,8 @@ function initCollectionUpload() {
   if (syncBtn) {
     syncBtn.addEventListener('click', async () => {
       syncBtn.disabled = true;
+      const statusEl = document.getElementById('cfg-data-status');
+      if (statusEl) statusEl.textContent = t('Kartendaten werden gerade aktualisiert …', 'Card data is being updated …');
       try {
         const res = await fetch(API + '/sync', { method: 'POST', headers: uploadHeaders() });
         if (res.status === 403) {
@@ -1063,6 +1166,11 @@ function initCollectionUpload() {
   uploadInput.addEventListener('change', async () => {
     const file = uploadInput.files[0];
     if (!file) return;
+    if (!confirm(t(`„${file.name}“ importieren? Alle bisher aus ManaBox importierten Karten werden durch diese Datei ersetzt; in der App hinzugefügte Karten bleiben.`,
+      `Import “${file.name}”? All cards imported from ManaBox so far are replaced by this file; cards added in the app stay.`))) {
+      uploadInput.value = '';
+      return;
+    }
     showLoading(t(`Lade „${file.name}" hoch...`, `Uploading “${file.name}”...`));
     try {
       await uploadCollectionCSV(file);

@@ -17,9 +17,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -37,36 +37,35 @@ import (
 var (
 	remoteImportMu     sync.Mutex
 	remoteImportClient = &http.Client{Timeout: 5 * time.Minute}
+	// remoteImportRunning: a round is in progress (for /api/status).
+	remoteImportRunning atomic.Bool
 )
 
-// startRemoteImportScheduler starts the periodic remote-import checker unless no
-// source is configured. Interval defaults to 15 min (REMOTE_IMPORT_INTERVAL_MINUTES).
+// startRemoteImportScheduler starts the remote-import loop unless no source is
+// configured. Whether it checks on its own, and how often, comes from the
+// import settings (importconfig.go) and may change while it runs.
 func startRemoteImportScheduler() {
 	if !webdavConfigured() && !gdriveConfigured() {
 		log.Printf("[remote-import] disabled (no source configured)")
 		return
 	}
-	interval := 15 * time.Minute
-	if v := os.Getenv("REMOTE_IMPORT_INTERVAL_MINUTES"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			interval = time.Duration(n) * time.Minute
-		}
-	}
-	sources := []string{}
-	if webdavConfigured() {
-		sources = append(sources, "Nextcloud/WebDAV")
-	}
-	if gdriveConfigured() {
-		sources = append(sources, "Google Drive")
-	}
-	log.Printf("[remote-import] enabled (%s), interval: %s", strings.Join(sources, " + "), interval)
+	cfg := loadImportConfig()
+	log.Printf("[remote-import] sources: %s; mode: %s, interval: %d min", strings.Join(remoteImportSources(), " + "), cfg.Mode, cfg.IntervalMinutes)
 
 	go func() {
-		checkRemoteImports()
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-		for range ticker.C {
-			checkRemoteImports()
+		var last time.Time
+		for {
+			due, wait := nextImportWait(loadImportConfig(), last, time.Now())
+			if due {
+				checkRemoteImports()
+				last = time.Now()
+			}
+			t := time.NewTimer(wait)
+			select {
+			case <-t.C:
+			case <-importConfigChanged:
+				t.Stop()
+			}
 		}
 	}()
 }
@@ -78,9 +77,14 @@ func checkRemoteImports() {
 		return
 	}
 	defer remoteImportMu.Unlock()
+	remoteImportRunning.Store(true)
+	defer remoteImportRunning.Store(false)
+	metaSet(db, "remote_import_last_check_at", time.Now().UTC().Format(time.RFC3339))
 
+	failed := false
 	if webdavConfigured() {
 		if err := checkWebDAV(); err != nil {
+			failed = true
 			log.Printf("[remote-import] Nextcloud/WebDAV: %v", err)
 			metaSet(db, "remote_import_last_error", "WebDAV: "+err.Error())
 			logActivityDedup("error", "Import", "Nextcloud import failed: "+err.Error())
@@ -91,6 +95,7 @@ func checkRemoteImports() {
 	}
 	if gdriveConfigured() {
 		if err := checkGDrive(); err != nil {
+			failed = true
 			log.Printf("[remote-import] Google Drive: %v", err)
 			metaSet(db, "remote_import_last_error", "Google Drive: "+err.Error())
 			logActivityDedup("error", "Import", "Google Drive import failed: "+err.Error())
@@ -98,6 +103,10 @@ func checkRemoteImports() {
 		} else {
 			metricRemoteChecks.inc(labels("source", "gdrive", "result", "ok"))
 		}
+	}
+	// Every source answered: an older error is no longer current.
+	if !failed {
+		metaSet(db, "remote_import_last_error", "")
 	}
 }
 

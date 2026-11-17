@@ -23,6 +23,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +53,8 @@ import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.network.ApiResult
+import net.kirkanos.mtgportal.core.network.dto.ImportConfigDto
+import net.kirkanos.mtgportal.core.network.dto.RemoteImportStatusDto
 import net.kirkanos.mtgportal.core.network.dto.StatusDto
 import net.kirkanos.mtgportal.core.network.dto.UiConfigInputDto
 import net.kirkanos.mtgportal.core.network.safeCall
@@ -105,6 +108,31 @@ class AdminViewModel(private val c: AppContainer) : ViewModel() {
         null
     }
 
+    fun saveImport(mode: String, minutes: Int, ok: String) = run {
+        safeCall { c.api.setImportConfig(ImportConfigDto(mode, minutes)) }.toMessage(ok)
+    }
+
+    /** Looks for a new CSV now and follows /api/status until the round is over. */
+    fun importNow(done: String, nothing: String, failed: (String) -> String) = run {
+        val before = _state.value.status?.remoteImport?.lastAt.orEmpty()
+        val r = safeStatus { c.api.importRun() }
+        if (r !is ApiResult.Success) return@run r.toMessage("")
+        repeat(150) {
+            delay(2000)
+            val s = (safeCall { c.api.status() } as? ApiResult.Success)?.data ?: return@repeat
+            _state.update { it.copy(status = s) }
+            val ri = s.remoteImport
+            if (!ri.running) {
+                return@run when {
+                    ri.lastAt.isNotEmpty() && ri.lastAt != before -> { c.collectionWrite.noteExternalChange(); done }
+                    ri.lastError.isNotEmpty() -> failed(ri.lastError)
+                    else -> nothing
+                }
+            }
+        }
+        null
+    }
+
     fun imagesSync(ok: String) = run { safeStatus { c.api.imagesSync() }.toMessage(ok) }
     fun backup(ok: String) = run { safeStatus { c.api.backup() }.toMessage(ok) }
     fun restoreLatest(ok: String) = run { safeStatus { c.api.restoreLatest() }.toMessage(ok) }
@@ -112,7 +140,7 @@ class AdminViewModel(private val c: AppContainer) : ViewModel() {
 
     fun upload(bytes: ByteArray, format: (Int, Int, Int) -> String) = run {
         when (val r = safeCall { c.api.upload(bytes.toRequestBody("text/csv".toMediaType())) }) {
-            is ApiResult.Success -> format(r.data.total, r.data.added, r.data.updated)
+            is ApiResult.Success -> { c.collectionWrite.noteExternalChange(); format(r.data.total, r.data.added, r.data.updated) }
             else -> r.toMessage("")
         }
     }
@@ -193,9 +221,13 @@ fun AdminScreen() {
             Button(enabled = !st.busy, onClick = { vm.sync(started) }) { Text(stringResource(R.string.admin_sync)) }
             HelpButton(stringResource(R.string.admin_sync_hint))
         }
-        OutlinedButton(enabled = !st.busy, onClick = { picker.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "*/*")) }) {
-            Text(stringResource(R.string.admin_upload))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(enabled = !st.busy, onClick = { picker.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "*/*")) }) {
+                Text(stringResource(R.string.admin_upload))
+            }
+            HelpButton(stringResource(R.string.admin_upload_hint))
         }
+        st.status?.remoteImport?.let { ri -> ImportSettings(ri, st.busy, vm) }
         if (st.status?.imageMirror?.enabled == true) {
             OutlinedButton(enabled = !st.busy, onClick = { vm.imagesSync(started) }) {
                 Text(stringResource(R.string.admin_images))
@@ -249,5 +281,61 @@ fun AdminScreen() {
             confirmButton = { TextButton(onClick = { confirm = null; action() }) { Text(stringResource(R.string.common_ok)) } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.common_cancel)) } },
         )
+    }
+}
+
+/** Remote import: automatic every n minutes or only on demand. */
+@Composable
+private fun ImportSettings(ri: RemoteImportStatusDto, busy: Boolean, vm: AdminViewModel) {
+    val res = LocalResources.current
+    if (!ri.enabled) {
+        Text(stringResource(R.string.admin_import_none), fontSize = 12.sp, color = PortalColors.TextDim)
+        return
+    }
+    var mode by remember(ri.mode) { mutableStateOf(ri.mode) }
+    var minutes by remember(ri.intervalMinutes) { mutableStateOf(ri.intervalMinutes.toString()) }
+    val saved = stringResource(R.string.admin_saved)
+    val badInterval = stringResource(R.string.admin_import_bad_interval)
+    val done = stringResource(R.string.admin_import_done)
+    val nothing = stringResource(R.string.admin_import_nothing)
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.admin_import_title, ri.sources.joinToString(" + ")), style = MaterialTheme.typography.titleSmall)
+        HelpButton(stringResource(R.string.admin_import_hint))
+    }
+    for ((value, label) in listOf("auto" to R.string.admin_import_auto, "manual" to R.string.admin_import_manual)) {
+        Row(Modifier.fillMaxWidth().clickable { mode = value }, verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = mode == value, onClick = null)
+            Text(stringResource(label), modifier = Modifier.padding(start = 6.dp))
+        }
+    }
+    OutlinedTextField(
+        minutes, { minutes = it.filter(Char::isDigit).take(5) },
+        label = { Text(stringResource(R.string.admin_import_interval)) }, singleLine = true, enabled = mode == "auto",
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.width(200.dp),
+    )
+    error?.let { Text(it, fontSize = 12.sp, color = PortalColors.Red) }
+    Button(enabled = !busy, onClick = {
+        val n = minutes.toIntOrNull()
+        if (n == null || n !in 1..10080) {
+            error = badInterval
+        } else {
+            error = null
+            vm.saveImport(mode, n, saved)
+        }
+    }) { Text(stringResource(R.string.admin_import_save)) }
+    Text(
+        if (ri.lastAt.isNotEmpty()) stringResource(R.string.admin_import_last, relTime(ri.lastAt), ri.lastSource.ifEmpty { "?" })
+        else stringResource(R.string.admin_import_never),
+        fontSize = 12.sp, color = PortalColors.TextDim,
+    )
+    if (ri.lastCheckAt.isNotEmpty()) Text(stringResource(R.string.admin_import_checked, relTime(ri.lastCheckAt)), fontSize = 12.sp, color = PortalColors.TextDim)
+    if (ri.lastError.isNotEmpty()) Text(stringResource(R.string.admin_import_error, ri.lastError), fontSize = 12.sp, color = PortalColors.Red)
+    OutlinedButton(enabled = !busy && !ri.running, onClick = {
+        vm.importNow(done, nothing) { e -> res.getString(R.string.admin_import_error, e) }
+    }) {
+        Text(stringResource(if (ri.running) R.string.admin_import_running else R.string.admin_import_run))
     }
 }

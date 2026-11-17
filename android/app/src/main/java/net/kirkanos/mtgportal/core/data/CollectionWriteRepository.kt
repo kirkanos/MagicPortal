@@ -50,6 +50,9 @@ class CollectionWriteRepository(private val api: PortalApi) {
     private val _changes = MutableStateFlow(0L)
     val changes: StateFlow<Long> = _changes.asStateFlow()
 
+    /** The collection changed outside this repository (CSV upload, remote import). */
+    fun noteExternalChange() = _changes.update { n -> n + 1 }
+
     private fun <T> ApiResult<T>.noted(): ApiResult<T> = also { if (it is ApiResult.Success) _changes.update { n -> n + 1 } }
 
     suspend fun addScan(result: ScanSessionResult, target: BinderTarget, condition: String, sessionKey: String): ApiResult<AddCardsResultDto> {

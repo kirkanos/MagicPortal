@@ -109,8 +109,11 @@ variable in it applies to the standalone stack as well.
 
 ## 📥 Filling and updating the collection
 
-Top right in the menu: **"🔑 Login"** → password → then **"⬆ Upload CSV"**, **"Clear"**,
-**"💾 Backup"** and **"⟲ Restore"** appear (all actions are hidden until you log in).
+Top right in the menu: **"🔑 Login"** → password → then the **⚙ settings** appear (all
+actions are hidden until you log in). Under **"Import & data"** they hold **"⬆ Upload CSV"**
+(mostly for the initial setup), the automatic import and **"🔄 Update card data"**; under
+**"Maintenance"** **"Clear"**, **"💾 Backup"** and **"⟲ Restore"**. The Android app has the
+same controls in its admin screen.
 The import **replaces** the collection entirely: afterwards the data matches the uploaded CSV
 exactly – cards no longer in it are removed (atomically; on error the previous collection
 stays intact). **"Clear"** removes the whole collection.
@@ -128,7 +131,7 @@ Expected columns (standard ManaBox export):
 `Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, Scryfall ID, Purchase price, Purchase price currency, Condition, Language, Added`.
 
 The **data timestamp** (last update of card data/prices) is shown at the top right of the menu;
-**"🔄 Refresh"** triggers an immediate Scryfall sync.
+**"🔄 Update card data"** in the settings triggers an immediate Scryfall sync.
 
 ## ⚙️ Configuration (`.env`)
 
@@ -165,12 +168,16 @@ The database lives in the named volume `mtg-db`. The password travels in an
 The backend can poll a Nextcloud and/or Google Drive file for a new ManaBox export and import
 it automatically when it changes (full replace, just like a manual upload). Change detection
 uses ETag/`Last-Modified` or the file checksum – unchanged files are not re-imported. All
-fields are optional; empty = disabled. The **"🔄 Refresh" button** also triggers this check
-manually (only when a source is configured); otherwise it just refreshes the Scryfall data.
+fields are optional; empty = disabled.
+
+In the settings (web and app) the import can be switched between **automatic** (checks every
+*n* minutes) and **manual** (only via **"Import now"**). The environment variables below are
+the defaults; what the settings page saves is stored in the database and wins over them.
 
 | Variable | Purpose |
 |---|---|
-| `REMOTE_IMPORT_INTERVAL_MINUTES` | Poll interval (default 15) |
+| `REMOTE_IMPORT_MODE` | Default mode: `auto` (default) or `manual` |
+| `REMOTE_IMPORT_INTERVAL_MINUTES` | Default poll interval in minutes (default 15) |
 | `REMOTE_IMPORT_DELETE` | Delete the source file after a successful import (default `true`; `false` = keep it) |
 | `WEBDAV_URL` | Direct WebDAV URL to the CSV (Nextcloud: `…/remote.php/dav/files/<user>/<path>/export.csv`) |
 | `WEBDAV_USER` | Nextcloud user |
@@ -189,7 +196,8 @@ After a successful import the source file is **deleted** by default (via a WebDA
 Nextcloud), so a fresh ManaBox export can simply be dropped in again. With
 `REMOTE_IMPORT_DELETE=false` the file stays where it is.
 
-The most recent remote import (time, source, any error) is reported under `/api/status`.
+The most recent remote import (time, source, any error) and the current settings are reported
+under `/api/status` (`remoteImport`).
 
 ### 💾 Automatic backup (optional)
 
@@ -335,6 +343,8 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `POST` | `/api/upload` | Upload CSV (replaces the CSV rows; app rows stay) |
 | `POST` | `/api/reset` | Clear the collection; `?origin=csv` or `?origin=app` only that source's rows |
 | `POST` | `/api/sync` | Trigger a Scryfall sync now |
+| `POST` | `/api/import/config` | Import settings `{"mode":"auto"\|"manual","intervalMinutes":n}`; a missing field keeps its value (password protected) |
+| `POST` | `/api/import/run` | Look for a new CSV in Nextcloud/Google Drive now (password protected) |
 | `POST` | `/api/images/sync` | Sync the image mirror now (only with `IMAGE_MIRROR`) |
 | `POST` | `/api/hashes/sync` | Build the image hash index now (only with `HASH_INDEX`) |
 

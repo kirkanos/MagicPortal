@@ -11,6 +11,8 @@ services:
       - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:-}
       - DB_PATH=/data/mtg.db
       # Automatic remote import (all fields optional; empty = disabled).
+      # Defaults only: the settings page can change mode and interval.
+      - REMOTE_IMPORT_MODE=${REMOTE_IMPORT_MODE:-}
       - REMOTE_IMPORT_INTERVAL_MINUTES=${REMOTE_IMPORT_INTERVAL_MINUTES:-15}
       # Delete the source file after a successful import (default: true).
       - REMOTE_IMPORT_DELETE=${REMOTE_IMPORT_DELETE:-true}

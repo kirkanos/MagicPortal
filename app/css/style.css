@@ -368,7 +368,14 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .admin-num { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.9rem; }
 .admin-num input { width: 72px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; }
 .admin-navlist { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 16px; }
-.admin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.admin-status { margin: 0 0 10px; font-size: 0.85rem; color: var(--text-dim); }
+.admin-import { margin-top: 14px; }
+.admin-import h4 { margin: 0 0 6px; font-size: 0.9rem; display: flex; align-items: center; gap: 4px; }
+.admin-import .admin-num { margin: 0 0 4px 26px; }
+.admin-import .admin-num input:disabled { opacity: 0.5; }
+.admin-import .admin-status { margin: 8px 0; }
+.upload-label { cursor: pointer; display: inline-flex; align-items: center; }
 .admin-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--border); }
 .modal-body {
   background: var(--bg-elevated); border-radius: var(--radius); border: 1px solid var(--border);

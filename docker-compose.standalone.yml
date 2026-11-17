@@ -28,6 +28,7 @@ services:
       # Sync against the Scryfall catalog (minutes between two runs).
       - SYNC_INTERVAL_MINUTES=${SYNC_INTERVAL_MINUTES:-}
       # Automatic import from Nextcloud/Google Drive: off until configured.
+      - REMOTE_IMPORT_MODE=${REMOTE_IMPORT_MODE:-}
       - REMOTE_IMPORT_INTERVAL_MINUTES=${REMOTE_IMPORT_INTERVAL_MINUTES:-}
       - REMOTE_IMPORT_DELETE=${REMOTE_IMPORT_DELETE:-false}
       - WEBDAV_URL=${WEBDAV_URL:-}

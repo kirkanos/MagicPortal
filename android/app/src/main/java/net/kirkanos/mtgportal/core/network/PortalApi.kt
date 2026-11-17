@@ -11,6 +11,7 @@ import net.kirkanos.mtgportal.core.network.dto.RowPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
+import net.kirkanos.mtgportal.core.network.dto.ImportConfigDto
 import net.kirkanos.mtgportal.core.network.dto.ConfirmExportDto
 import net.kirkanos.mtgportal.core.network.dto.ImportResultDto
 import net.kirkanos.mtgportal.core.network.dto.UiConfigInputDto
@@ -184,9 +185,17 @@ interface PortalApi {
     @POST("activity/clear")
     suspend fun clearActivity(): Response<Unit>
 
-    /** Card data and prices from Scryfall; also checks for a remote CSV. Returns at once. */
+    /** Card data and prices from Scryfall. Returns at once. */
     @POST("sync")
     suspend fun sync(): Response<Unit>
+
+    /** Automatic or manual remote import, and how often. */
+    @POST("import/config")
+    suspend fun setImportConfig(@Body cfg: ImportConfigDto): ImportConfigDto
+
+    /** Looks for a new CSV in Nextcloud / Google Drive now. Returns at once. */
+    @POST("import/run")
+    suspend fun importRun(): Response<Unit>
 
     @POST("images/sync")
     suspend fun imagesSync(): Response<Unit>

@@ -83,6 +83,8 @@ func main() {
 	mux.HandleFunc("POST /api/upload", handleUpload)
 	mux.HandleFunc("POST /api/reset", handleReset)
 	mux.HandleFunc("POST /api/sync", handleSync)
+	mux.HandleFunc("POST /api/import/config", handleImportConfigSet)
+	mux.HandleFunc("POST /api/import/run", handleImportRun)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
 
 	log.Printf("mtg-portal backend listening on :%s (password protection: %v)", port, uploadPassword != "")
@@ -501,15 +503,10 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		"collectionCount": countRows(db, "collection"),
 		"cardCount":       countRows(db, "scryfall_cards"),
 		"setCount":        countRows(db, "sets"),
-		"remoteImport": map[string]interface{}{
-			"enabled":    webdavConfigured() || gdriveConfigured(),
-			"lastAt":     metaGet(db, "remote_import_last_at"),
-			"lastSource": metaGet(db, "remote_import_last_source"),
-			"lastError":  metaGet(db, "remote_import_last_error"),
-		},
-		"backup":      backupStatus(),
-		"imageMirror": imageStatus(),
-		"hashIndex":   hashStatus(),
+		"remoteImport":    remoteImportStatus(),
+		"backup":          backupStatus(),
+		"imageMirror":     imageStatus(),
+		"hashIndex":       hashStatus(),
 	})
 }
 
@@ -518,19 +515,11 @@ func handleSync(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Wrong or missing password", 403)
 		return
 	}
-	// If a remote source is configured, also look for a new CSV to import first.
-	// checkRemoteImports guards itself (TryLock), so a spammed button is safe.
-	remote := webdavConfigured() || gdriveConfigured()
-	if remote {
-		go checkRemoteImports()
-	}
+	// Card data and prices only; a new CSV is looked for by the import
+	// settings (POST /api/import/run).
 	started := startSync(true)
-	if started || remote {
-		msg := "Manual refresh started"
-		if remote {
-			msg += " (including a check for a new CSV import)"
-		}
-		logActivity("info", "Sync", msg)
+	if started {
+		logActivity("info", "Sync", "Manual refresh started")
 	}
 	writeJSON(w, map[string]bool{"started": started, "running": true})
 }

@@ -190,6 +190,11 @@ func routeLabel(path string) string {
 		case tail != "":
 			return "/api/wishlist/{name}" // collapse the card name
 		}
+	case "import":
+		switch tail {
+		case "config", "run":
+			return "/api/import/" + tail
+		}
 	case "activity":
 		if tail == "clear" {
 			return "/api/activity/clear"

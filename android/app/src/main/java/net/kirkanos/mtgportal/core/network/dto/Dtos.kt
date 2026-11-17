@@ -194,9 +194,22 @@ data class StatusDto(
 @Serializable
 data class RemoteImportStatusDto(
     val enabled: Boolean = false,
+    val running: Boolean = false,
+    val sources: List<String> = emptyList(),
+    /** "auto" or "manual"; from the settings, else the server's environment. */
+    val mode: String = "auto",
+    val intervalMinutes: Int = 15,
     val lastAt: String = "",
     val lastSource: String = "",
     val lastError: String = "",
+    val lastCheckAt: String = "",
+)
+
+/** POST /api/import/config: how the remote import runs. */
+@Serializable
+data class ImportConfigDto(
+    val mode: String = "auto",
+    val intervalMinutes: Int = 15,
 )
 
 @Serializable
