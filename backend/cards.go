@@ -580,6 +580,48 @@ func handleCards(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GET /api/cards/selection (same filters as /api/cards): every matching
+// group, but only its key and collection rows. "Select all" uses it, so the
+// selection covers every card behind the filter, not just the loaded page.
+func handleCardSelection(w http.ResponseWriter, r *http.Request) {
+	cq := parseCardQuery(r)
+	if notModified(w, r, weakETag("s", collectionETag(db)+"|"+r.URL.RawQuery)) {
+		return
+	}
+	rows, _, err := cardRows()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	type rowRef struct {
+		ID         int    `json:"id"`
+		Quantity   int    `json:"quantity"`
+		BinderName string `json:"binderName"`
+	}
+	type groupRef struct {
+		Key      string   `json:"key"`
+		Variants []rowRef `json:"variants"`
+	}
+	out := []*groupRef{}
+	byKey := map[string]*groupRef{}
+	copies := 0
+	for _, c := range rows {
+		if !cq.matches(c) {
+			continue
+		}
+		k := groupKeyOf(c)
+		g := byKey[k]
+		if g == nil {
+			g = &groupRef{Key: k}
+			byKey[k] = g
+			out = append(out, g)
+		}
+		g.Variants = append(g.Variants, rowRef{ID: c.ID, Quantity: c.Quantity, BinderName: c.BinderName})
+		copies += c.Quantity
+	}
+	writeJSONCacheable(w, map[string]interface{}{"groups": out, "copies": copies})
+}
+
 // handleCardFacets serves everything the filter controls need: which values
 // actually occur in the collection, plus the counters above the grid. Computed
 // over the whole index, so the lists stay stable while filtering.

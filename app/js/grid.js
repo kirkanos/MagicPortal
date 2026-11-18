@@ -7,6 +7,7 @@ let setIndex = {};
 let selectedSet = '';     // set code in the custom dropdown ('' = all)
 let pageOffset = 0;       // next start index
 let pageHasMore = false;
+let resultTotal = 0;      // groups behind the current filter
 let loadingPage = false;
 let queryToken = 0;       // discards responses of superseded queries
 
@@ -241,6 +242,7 @@ async function runQuery(append = false) {
   const groups = (data.groups || []).map(adaptGroup);
   pageOffset = data.offset + groups.length;
   pageHasMore = data.hasMore;
+  resultTotal = data.total;
 
   const grid = document.getElementById('card-grid');
   if (!append) {
@@ -256,6 +258,7 @@ async function runQuery(append = false) {
   document.getElementById('result-count').textContent =
     `${data.total} ${t('von', 'of')} ${(facets.stats || {}).distinct || data.total} ${t('Karten', 'cards')}`;
   armLoadMore();
+  if (selecting && !append) renderSelectBar();
 }
 
 /* Sentinel at the end of the grid: once it comes into view, more is loaded. */
@@ -383,7 +386,7 @@ async function renderSelectBar() {
     bar.className = 'select-bar';
     bar.innerHTML = `
       <span class="select-count" id="select-count"></span>
-      <button type="button" id="select-all">${t('Alle auf der Seite', 'All on the page')}</button>
+      <button type="button" id="select-all"></button>
       <button type="button" id="select-none">${t('Keine', 'None')}</button>
       ${binderInputHTML('select-binder', '')}
       <select id="select-binder-type" title="${t('Typ, falls der Ordner neu ist', 'Type, if the folder is new')}">
@@ -393,12 +396,7 @@ async function renderSelectBar() {
       </select>
       <button type="button" class="primary" id="select-move">${t('Verschieben', 'Move')}</button>`;
     document.body.appendChild(bar);
-    bar.querySelector('#select-all').addEventListener('click', () => {
-      // Only what is loaded: the server pages the grid.
-      document.querySelectorAll('#card-grid .card-tile').forEach((tile) => tile.classList.add('selected'));
-      groupsByKey.forEach((g, key) => selectedGroups.set(key, g));
-      renderSelectBar();
-    });
+    bar.querySelector('#select-all').addEventListener('click', selectAllMatching);
     bar.querySelector('#select-none').addEventListener('click', () => {
       selectedGroups.clear();
       tilesByKey.forEach((tile) => tile.classList.remove('selected'));
@@ -410,7 +408,31 @@ async function renderSelectBar() {
   const { copies } = selectedRowIds();
   bar.querySelector('#select-count').textContent =
     t(`${selectedGroups.size} ausgewählt (${copies} Karten)`, `${selectedGroups.size} selected (${copies} cards)`);
+  const all = bar.querySelector('#select-all');
+  all.textContent = t(`Alle (${resultTotal})`, `All (${resultTotal})`);
+  all.disabled = resultTotal === 0 || selectedGroups.size >= resultTotal;
+  bar.querySelector('#select-none').disabled = selectedGroups.size === 0;
   bar.querySelector('#select-move').disabled = copies === 0;
+}
+
+/* Selects every card behind the current filter, not only the loaded pages:
+   the server sends the keys and rows of all of them. Tiles loaded later are
+   marked as selected when they are built. */
+async function selectAllMatching() {
+  const btn = document.getElementById('select-all');
+  if (btn) btn.disabled = true;
+  const p = currentParams();
+  p.delete('sort');
+  try {
+    const res = await fetch(API + '/cards/selection?' + p.toString(), { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    (data.groups || []).forEach((g) => selectedGroups.set(g.key, groupsByKey.get(g.key) || g));
+    tilesByKey.forEach((tile, key) => tile.classList.toggle('selected', selectedGroups.has(key)));
+  } catch (e) {
+    showNotice(t('Auswahl fehlgeschlagen: ', 'Selecting failed: ') + e.message, true);
+  }
+  renderSelectBar();
 }
 
 async function moveSelection() {

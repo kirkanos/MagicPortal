@@ -17,6 +17,17 @@ data class CardsPageDto(
     val hasMore: Boolean = false,
 )
 
+/** GET /api/cards/selection: every group behind a filter, only key and rows. */
+@Serializable
+data class SelectionDto(val groups: List<SelectionGroupDto> = emptyList())
+
+@Serializable
+data class SelectionGroupDto(val key: String = "", val variants: List<SelectionRowDto> = emptyList())
+
+/** A collection row as far as moving it needs. */
+@Serializable
+data class SelectionRowDto(val id: Long = 0, val quantity: Int = 0, val binderName: String = "")
+
 /** One tile of the grid: one printing, its languages/finishes/conditions merged. */
 @Serializable
 data class CardGroupDto(

@@ -177,6 +177,23 @@ class CardsViewModel(
         }
     }
 
+    /** Every card behind the current filter, for "select all". */
+    suspend fun selectionForFilter() = _state.value.filters.let { f ->
+        safeCall {
+            c.api.cardSelection(
+                q = f.query.trim().ifEmpty { null },
+                set = f.set.ifEmpty { null },
+                rarity = f.rarity.ifEmpty { null },
+                color = f.color.ifEmpty { null },
+                foil = f.foil.ifEmpty { null },
+                binder = f.binder.ifEmpty { null },
+                type = f.type.ifEmpty { null },
+                subtype = f.subtype.ifEmpty { null },
+                style = f.style.ifEmpty { null },
+            )
+        }
+    }
+
     private suspend fun fetch(offset: Int) = _state.value.filters.let { f ->
         safeCall {
             c.api.cards(

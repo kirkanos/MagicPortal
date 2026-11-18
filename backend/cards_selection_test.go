@@ -1,0 +1,87 @@
+package main
+
+import (
+	"encoding/json"
+	"net/http/httptest"
+	"testing"
+)
+
+func selectionCall(t *testing.T, query string) (keys map[string]int, copies int) {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	handleCardSelection(rec, httptest.NewRequest("GET", "/api/cards/selection?"+query, nil))
+	if rec.Code != 200 {
+		t.Fatalf("%d %s", rec.Code, rec.Body.String())
+	}
+	var out struct {
+		Groups []struct {
+			Key      string `json:"key"`
+			Variants []struct {
+				ID       int `json:"id"`
+				Quantity int `json:"quantity"`
+			} `json:"variants"`
+		} `json:"groups"`
+		Copies int `json:"copies"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	keys = map[string]int{}
+	for _, g := range out.Groups {
+		for _, v := range g.Variants {
+			if v.ID == 0 {
+				t.Fatalf("row without id in %s", g.Key)
+			}
+			keys[g.Key] += v.Quantity
+		}
+	}
+	return keys, out.Copies
+}
+
+// "Select all" must cover every card behind the filter, also beyond the first
+// page, and only the rows the filter matches.
+func TestCardSelectionCoversTheWholeFilter(t *testing.T) {
+	newTestDB(t)
+	cardIndexMu.Lock()
+	cardIndexRows = nil
+	cardIndexMu.Unlock()
+	if _, err := db.Exec(`INSERT INTO collection (binder_name, binder_type, set_code, set_name, collector_number, name, rarity, foil, language, condition, quantity, purchase_price, currency, added, origin) VALUES
+		('Scans', 'binder', 'snc', 'Streets of New Capenna', '47', 'Ledger Shredder', 'rare', 'normal', 'en', 'near_mint', 2, 0, 'EUR', '', 'app'),
+		('Scans', 'binder', 'ice', 'Ice Age', '61', 'Brainstorm', 'common', 'normal', 'en', 'near_mint', 1, 0, 'EUR', '', 'app'),
+		('Box', 'list', 'snc', 'Streets of New Capenna', '47', 'Ledger Shredder', 'rare', 'normal', 'en', 'near_mint', 3, 0, 'EUR', '', 'app'),
+		('Box', 'list', 'ice', 'Ice Age', '61', 'Brainstorm', 'common', 'normal', 'en', 'near_mint', 4, 0, 'EUR', '', 'csv')`); err != nil {
+		t.Fatal(err)
+	}
+
+	keys, copies := selectionCall(t, "")
+	if len(keys) != 2 || copies != 10 {
+		t.Fatalf("all: %v copies %d", keys, copies)
+	}
+	keys, copies = selectionCall(t, "binder=Box")
+	if len(keys) != 2 || copies != 7 {
+		t.Fatalf("binder: %v copies %d", keys, copies)
+	}
+	keys, copies = selectionCall(t, "q=brainstorm")
+	if len(keys) != 1 || copies != 5 {
+		t.Fatalf("search: %v copies %d", keys, copies)
+	}
+	// The same keys as the paged grid, so the clients can mark loaded tiles.
+	rec := httptest.NewRecorder()
+	handleCards(rec, httptest.NewRequest("GET", "/api/cards?limit=1", nil))
+	var page struct {
+		Groups []struct {
+			Key string `json:"key"`
+		} `json:"groups"`
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	all, _ := selectionCall(t, "")
+	if page.Total != len(all) || len(page.Groups) != 1 {
+		t.Fatalf("page %+v vs %v", page, all)
+	}
+	if _, ok := all[page.Groups[0].Key]; !ok {
+		t.Fatalf("key %q not in selection %v", page.Groups[0].Key, all)
+	}
+}

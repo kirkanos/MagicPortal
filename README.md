@@ -347,6 +347,7 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `GET` | `/api/dashboard` | Ready-made aggregates for the statistics page (ETag, conditional requests) |
 | `GET` | `/api/cards` | Filtered, grouped and sorted page of results for the card grid |
 | `GET` | `/api/cards/facets` | Values for the filter fields + key figures |
+| `GET` | `/api/cards/selection` | Keys and collection rows of every group behind a filter (same parameters as `/api/cards`) – for "select all" |
 | `GET` | `/api/cards/random` | Random cards for the strip above the grid |
 | `GET` | `/api/config` | UI settings (random cards, hidden menu entries) – public |
 | `POST` | `/api/config` | Store UI settings (password protected) |

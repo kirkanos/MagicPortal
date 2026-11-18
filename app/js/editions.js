@@ -720,6 +720,9 @@ function renderEoSelectBar() {
   const { copies } = eoSelectedRows();
   bar.querySelector('#select-count').textContent =
     t(`${eoSelected.size} ausgewählt (${copies} Karten)`, `${eoSelected.size} selected (${copies} cards)`);
+  const ownedShown = document.querySelectorAll('#eo-grid .eo-card.owned').length;
+  bar.querySelector('#select-all').disabled = ownedShown === 0 || document.querySelectorAll('#eo-grid .eo-card.owned.selected').length >= ownedShown;
+  bar.querySelector('#select-none').disabled = eoSelected.size === 0;
   bar.querySelector('#select-move').disabled = copies === 0;
 }
 

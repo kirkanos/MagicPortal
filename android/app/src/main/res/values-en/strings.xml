@@ -523,6 +523,8 @@
     <string name="cards_header_counts">%1$s cards · %2$s distinct · purchase value %3$s</string>
     <string name="cards_selected">%1$d selected (%2$d cards)</string>
     <string name="cards_select_all">All</string>
+    <string name="cards_select_none">None</string>
+    <string name="cards_select_failed">Selecting failed</string>
     <string name="cards_moved">%1$d rows moved to “%2$s”.</string>
     <string name="cards_moved_merged">%1$d of them merged with cards already there.</string>
     <string name="cards_moved_volatile">Cards from ManaBox return to their old binder with the next import.</string>

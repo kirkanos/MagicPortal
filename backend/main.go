@@ -69,6 +69,7 @@ func main() {
 	mux.HandleFunc("GET /api/dashboard", handleDashboard)
 	mux.HandleFunc("GET /api/cards", handleCards)
 	mux.HandleFunc("GET /api/cards/facets", handleCardFacets)
+	mux.HandleFunc("GET /api/cards/selection", handleCardSelection)
 	mux.HandleFunc("GET /api/cards/random", handleRandomCards)
 	mux.HandleFunc("GET /api/config", handleConfigGet)
 	mux.HandleFunc("POST /api/config", handleConfigSet)

@@ -1,6 +1,7 @@
 package net.kirkanos.mtgportal.core.network
 
 import net.kirkanos.mtgportal.core.network.dto.ActivityDto
+import net.kirkanos.mtgportal.core.network.dto.SelectionDto
 import net.kirkanos.mtgportal.core.network.dto.AddCardsRequest
 import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
 import net.kirkanos.mtgportal.core.network.dto.CatalogCardDto
@@ -93,6 +94,19 @@ interface PortalApi {
         @Query("offset") offset: Int = 0,
         @Query("limit") limit: Int? = null,
     ): CardsPageDto
+
+    @GET("cards/selection")
+    suspend fun cardSelection(
+        @Query("q") q: String? = null,
+        @Query("set") set: String? = null,
+        @Query("rarity") rarity: String? = null,
+        @Query("color") color: String? = null,
+        @Query("foil") foil: String? = null,
+        @Query("binder") binder: String? = null,
+        @Query("type") type: String? = null,
+        @Query("subtype") subtype: String? = null,
+        @Query("style") style: String? = null,
+    ): SelectionDto
 
     @GET("cards/facets")
     suspend fun facets(): FacetsDto

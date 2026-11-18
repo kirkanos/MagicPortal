@@ -182,7 +182,7 @@ func routeLabel(path string) string {
 		}
 	case "cards":
 		switch tail {
-		case "facets", "random":
+		case "facets", "random", "selection":
 			return "/api/cards/" + tail
 		}
 	case "wishlist":

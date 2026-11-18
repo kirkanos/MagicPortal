@@ -71,6 +71,7 @@ import net.kirkanos.mtgportal.core.model.Language
 import net.kirkanos.mtgportal.core.model.SetCode
 import net.kirkanos.mtgportal.core.network.dto.CardGroupDto
 import net.kirkanos.mtgportal.core.network.dto.MoveRowsResultDto
+import net.kirkanos.mtgportal.core.network.dto.SelectionRowDto
 import net.kirkanos.mtgportal.core.network.dto.SetDto
 import net.kirkanos.mtgportal.core.ui.Format
 import net.kirkanos.mtgportal.core.ui.appContainer
@@ -122,10 +123,11 @@ fun CardsScreen(binder: String?, set: String?) {
     var filtersOpen by remember { mutableStateOf(false) }
     val grid = rememberLazyGridState()
     // Multi selection to move many cards at once: a long press starts it,
-    // taps then toggle. Only with write access.
+    // taps then toggle. Only with write access. The selection holds the rows
+    // of each group, so "all" also covers cards that are not loaded yet.
     val unlocked = isUnlocked()
-    var selected by remember { mutableStateOf(emptySet<String>()) }
-    val selecting = selected.isNotEmpty()
+    var selected by remember { mutableStateOf(emptyMap<String, List<SelectionRowDto>>()) }
+    var selecting by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
     var binders by remember { mutableStateOf<List<BinderDto>>(emptyList()) }
     var moving by remember { mutableStateOf(false) }
@@ -188,7 +190,10 @@ fun CardsScreen(binder: String?, set: String?) {
             st.groups.isEmpty() ->
                 item(span = full) { Text(stringResource(R.string.cards_empty), color = PortalColors.TextDim) }
             else -> items(st.groups, key = { it.key }) { g ->
-                val toggle = { selected = if (g.key in selected) selected - g.key else selected + g.key }
+                val toggle = {
+                    selecting = true
+                    selected = if (g.key in selected) selected - g.key else selected + (g.key to rowsOf(g))
+                }
                 CardTile(
                     g, st.sets[SetCode.key(g.setCode)], images,
                     selected = g.key in selected,
@@ -202,17 +207,28 @@ fun CardsScreen(binder: String?, set: String?) {
         if (selecting) item(span = full) { Spacer(Modifier.padding(bottom = 64.dp)) }
     }
     if (selecting) {
-        val rows = selectedRows(st.groups.filter { it.key in selected }, st.filters.binder)
+        val rows = selectedRows(selected, st.filters.binder)
         SelectionBar(
             count = selected.size,
             copies = rows.sumOf { it.second },
             busy = moving,
-            onAll = { selected = st.groups.map { it.key }.toSet() },
+            allSelected = st.total > 0 && selected.size >= st.total,
+            onAll = {
+                moving = true
+                scope.launch {
+                    when (val r = vm.selectionForFilter()) {
+                        is ApiResult.Success -> selected = selected + r.data.groups.associate { it.key to it.variants }
+                        else -> Toast.makeText(context, res.getString(R.string.cards_select_failed), Toast.LENGTH_LONG).show()
+                    }
+                    moving = false
+                }
+            },
+            onNone = { selected = emptyMap() },
             onMove = {
                 picking = true
                 scope.launch { (safeCall { c.api.binders() } as? ApiResult.Success)?.let { binders = it.data } }
             },
-            onClear = { selected = emptySet() },
+            onClose = { selected = emptyMap(); selecting = false },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
@@ -221,12 +237,12 @@ fun CardsScreen(binder: String?, set: String?) {
     if (picking) {
         BinderPickerDialog(binders, BinderTarget(st.filters.binder), onDismiss = { picking = false }, onPick = { target ->
             picking = false
-            val ids = selectedRows(st.groups.filter { it.key in selected }, st.filters.binder).map { it.first }
+            val ids = selectedRows(selected, st.filters.binder).map { it.first }
             moving = true
             scope.launch {
                 val r = c.collectionWrite.moveRows(ids, target)
                 moving = false
-                if (r is ApiResult.Success) selected = emptySet()
+                if (r is ApiResult.Success) { selected = emptyMap(); selecting = false }
                 val text = moveMessage(res, r)
                 Toast.makeText(context, text, Toast.LENGTH_LONG).show()
             }
@@ -324,17 +340,38 @@ internal fun moveMessage(res: android.content.res.Resources, r: ApiResult<MoveRo
  * The collection rows behind selected tiles, with their copies: in a binder
  * view only the rows in that binder (the tile shows only those), else all.
  */
-internal fun selectedRows(groups: List<CardGroupDto>, binder: String): List<Pair<Long, Int>> =
-    groups.flatMap { g -> g.variants.filter { it.id != 0L && (binder.isEmpty() || it.binderName == binder) } }
+internal fun selectedRows(selected: Map<String, List<SelectionRowDto>>, binder: String): List<Pair<Long, Int>> =
+    selected.values.flatten().filter { it.id != 0L && (binder.isEmpty() || it.binderName == binder) }
         .map { it.id to it.quantity }
 
+internal fun rowsOf(g: CardGroupDto): List<SelectionRowDto> =
+    g.variants.map { SelectionRowDto(it.id, it.quantity, it.binderName) }
+
+/**
+ * The bar while selecting: close (ends selecting), the count, one button that
+ * selects everything or - once everything is selected - nothing, and move.
+ */
 @Composable
-internal fun SelectionBar(count: Int, copies: Int, busy: Boolean, onAll: () -> Unit, onMove: () -> Unit, onClear: () -> Unit, modifier: Modifier) {
+internal fun SelectionBar(
+    count: Int,
+    copies: Int,
+    busy: Boolean,
+    allSelected: Boolean,
+    onAll: () -> Unit,
+    onNone: () -> Unit,
+    onMove: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier,
+) {
     Surface(color = PortalColors.BgCard, shadowElevation = 8.dp, shape = RoundedCornerShape(16.dp), modifier = modifier.padding(10.dp).fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClear) { AppIconView(Icons.Close, PortalColors.Text) }
+            IconButton(onClick = onClose) { AppIconView(Icons.Close, PortalColors.Text) }
             Text(stringResource(R.string.cards_selected, count, copies), modifier = Modifier.weight(1f), maxLines = 2, fontSize = 14.sp)
-            TextButton(onClick = onAll) { Text(stringResource(R.string.cards_select_all)) }
+            if (allSelected) {
+                TextButton(onClick = onNone, enabled = !busy) { Text(stringResource(R.string.cards_select_none)) }
+            } else {
+                TextButton(onClick = onAll, enabled = !busy) { Text(stringResource(R.string.cards_select_all)) }
+            }
             Button(onClick = onMove, enabled = !busy && copies > 0) { Text(stringResource(R.string.detail_move)) }
         }
     }

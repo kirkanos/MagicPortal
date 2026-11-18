@@ -134,7 +134,7 @@ fun SetCardsScreen(code: String) {
     var open by remember { mutableStateOf<String?>(null) }
     val unlocked = isUnlocked()
     var selected by remember { mutableStateOf(emptySet<String>()) }
-    val selecting = selected.isNotEmpty()
+    var selecting by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
     var moving by remember { mutableStateOf(false) }
     var binders by remember { mutableStateOf<List<BinderDto>>(emptyList()) }
@@ -190,7 +190,10 @@ fun SetCardsScreen(code: String) {
                 if (shown.isEmpty()) item(span = full) { Text(stringResource(R.string.reserved_empty_filter), color = PortalColors.TextDim) }
                 items(shown, key = { it.collectorNumber }) { card ->
                     val n = card.collectorNumber
-                    val toggle = { selected = if (n in selected) selected - n else selected + n }
+                    val toggle = {
+                        selecting = true
+                        selected = if (n in selected) selected - n else selected + n
+                    }
                     SetCardTile(
                         card, images,
                         selected = n in selected,
@@ -202,17 +205,21 @@ fun SetCardsScreen(code: String) {
                 if (selecting) item(span = full) { Spacer(Modifier.padding(bottom = 64.dp)) }
             }
             if (selecting) {
+                // What "all" means here: the owned cards the filter shows.
+                val ownedShown = shown.filter { it.owned != null }.map { it.collectorNumber }.toSet()
                 val rows = allCards.filter { it.collectorNumber in selected }.flatMap { it.owned?.rows.orEmpty() }
                 SelectionBar(
                     count = selected.size,
                     copies = rows.sumOf { it.quantity },
                     busy = moving,
-                    onAll = { selected = shown.filter { it.owned != null }.map { it.collectorNumber }.toSet() },
+                    allSelected = ownedShown.isNotEmpty() && selected.containsAll(ownedShown),
+                    onAll = { selected = selected + ownedShown },
+                    onNone = { selected = emptySet() },
                     onMove = {
                         picking = true
                         scope.launch { (safeCall { c.api.binders() } as? ApiResult.Success)?.let { binders = it.data } }
                     },
-                    onClear = { selected = emptySet() },
+                    onClose = { selected = emptySet(); selecting = false },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -228,7 +235,7 @@ fun SetCardsScreen(code: String) {
             scope.launch {
                 val r = c.collectionWrite.moveRows(ids, target)
                 moving = false
-                if (r is ApiResult.Success) selected = emptySet()
+                if (r is ApiResult.Success) { selected = emptySet(); selecting = false }
                 Toast.makeText(context, moveMessage(res, r), Toast.LENGTH_LONG).show()
             }
         })
