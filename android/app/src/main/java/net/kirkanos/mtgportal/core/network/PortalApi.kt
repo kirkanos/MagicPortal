@@ -12,6 +12,7 @@ import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.DeckCoverInputDto
+import net.kirkanos.mtgportal.core.network.dto.DeckHitsDto
 import net.kirkanos.mtgportal.core.network.dto.DeckSettingsInputDto
 import net.kirkanos.mtgportal.core.network.dto.ImportConfigDto
 import net.kirkanos.mtgportal.core.network.dto.ConfirmExportDto
@@ -112,6 +113,10 @@ interface PortalApi {
 
     @GET("binders")
     suspend fun binders(): List<BinderDto>
+
+    /** Decks with a card matching every term in name, type line or rules text. */
+    @GET("decks/search")
+    suspend fun deckSearch(@Query("q") q: String): Map<String, DeckHitsDto>
 
     @GET("editions")
     suspend fun editions(): List<EditionDto>

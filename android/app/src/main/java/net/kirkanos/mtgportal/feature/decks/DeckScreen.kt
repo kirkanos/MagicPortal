@@ -196,23 +196,22 @@ fun DeckScreen(name: String, onScan: () -> Unit) {
                 if (groups.isEmpty()) {
                     item(span = full) { Text(stringResource(R.string.deck_empty), color = PortalColors.TextDim, modifier = Modifier.padding(16.dp)) }
                 } else if (view == "grid") {
-                    items(groups, key = { it.key }) { g ->
-                        Box(Modifier.padding(horizontal = 4.dp, vertical = 4.dp).clickable { open = DeckLogic.Entry(g.name, listOf(g)) }) {
-                            CardImage(images.card(g.imageId, ImageUrls.Size.SMALL), g.name, Modifier.fillMaxWidth())
-                            if (g.totalQty > 1) Badge("×${g.totalQty}", PortalColors.Accent, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+                    // The deck first, its tokens below under their own heading.
+                    val (tokens, cards) = groups.partition { DeckLogic.isToken(it.typeLine) }
+                    listOf(DeckType.OTHER to cards, DeckType.TOKEN to tokens).forEach { (type, list) ->
+                        if (type == DeckType.TOKEN && list.isNotEmpty()) {
+                            item(span = full, key = "h-grid-token") { SectionHeader(type, list.sumOf { it.totalQty }) }
+                        }
+                        items(list, key = { it.key }) { g ->
+                            Box(Modifier.padding(horizontal = 4.dp, vertical = 4.dp).clickable { open = DeckLogic.Entry(g.name, listOf(g)) }) {
+                                CardImage(images.card(g.imageId, ImageUrls.Size.SMALL), g.name, Modifier.fillMaxWidth())
+                                if (g.totalQty > 1) Badge("×${g.totalQty}", PortalColors.Accent, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+                            }
                         }
                     }
                 } else {
                     sections.forEach { (type, entries) ->
-                        item(span = full, key = "h-$type") {
-                            Row(
-                                Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(stringResource(type.label), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                Text("${entries.sumOf { it.quantity }}", color = PortalColors.TextDim)
-                            }
-                        }
+                        item(span = full, key = "h-$type") { SectionHeader(type, entries.sumOf { it.quantity }) }
                         entries.forEach { e ->
                             item(span = full, key = "e-${e.name}") { DeckLine(e, images) { open = e } }
                         }
@@ -256,7 +255,9 @@ private fun DeckHeader(name: String, deck: BinderDto?, groups: List<CardGroupDto
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ManaCostRow(DeckLogic.pips(deck?.colors.orEmpty()), images, size = 16.dp)
-                Text(stringResource(R.string.deck_cards, Format.count(groups.sumOf { it.totalQty })), color = PortalColors.TextDim, fontSize = 13.sp)
+                val tokens = groups.filter { DeckLogic.isToken(it.typeLine) }.sumOf { it.totalQty }
+                Text(stringResource(R.string.deck_cards, Format.count(groups.sumOf { it.totalQty } - tokens)), color = PortalColors.TextDim, fontSize = 13.sp)
+                if (tokens > 0) Text("🪙 " + stringResource(R.string.deck_tokens, Format.count(tokens)), color = PortalColors.TextDim, fontSize = 13.sp)
                 Text(Format.eur(DeckLogic.value(groups)), color = PortalColors.Accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
@@ -537,7 +538,11 @@ private fun FormatDialog(deck: String, d: BinderDto?, groups: List<CardGroupDto>
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    DeckFormat.entries.forEach { f -> FilterChip(format == f, { format = f }, label = { Text(stringResource(f.label)) }) }
+                    // "No format" first, then the formats alphabetical.
+                    val labels = DeckFormat.entries.associateWith { stringResource(it.label) }
+                    (listOf(DeckFormat.NONE) + DeckFormat.entries.drop(1).sortedBy { labels.getValue(it).lowercase() }).forEach { f ->
+                        FilterChip(format == f, { format = f }, label = { Text(labels.getValue(f)) })
+                    }
                 }
                 if (format.hasCommander) {
                     Text("👑 " + stringResource(R.string.deck_commander), fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
@@ -563,4 +568,15 @@ private fun FormatDialog(deck: String, d: BinderDto?, groups: List<CardGroupDto>
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
+}
+
+@Composable
+private fun SectionHeader(type: DeckType, count: Int) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stringResource(type.label), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text("$count", color = PortalColors.TextDim)
+    }
 }

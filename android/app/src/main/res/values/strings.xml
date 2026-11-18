@@ -369,6 +369,9 @@
         <item quantity="other">%d Decks</item>
     </plurals>
     <string name="decks_empty">Noch keine Decks. Lege mit „+“ eines an, oder stelle einen Ordner unter „Ordner“ (Umbenennen) auf den Typ „Deck“ um.</string>
+    <string name="decks_search">Deckname, Karte, Typ oder Kartentext suchen</string>
+    <string name="decks_search_count">%1$d von %2$d Decks</string>
+    <string name="decks_search_none">Kein Deck passt zur Suche.</string>
     <string name="decks_new">Neues Deck</string>
     <string name="decks_new_hint">Danach fügst du Karten hinzu – das Deck entsteht mit der ersten Karte.</string>
     <string name="decks_new_ok">Anlegen</string>
@@ -424,6 +427,8 @@
     <string name="deck_type_enchantment">Verzauberungen</string>
     <string name="deck_type_land">Länder</string>
     <string name="deck_type_other">Sonstige</string>
+    <string name="deck_type_token">Tokens</string>
+    <string name="deck_tokens">%1$s Tokens</string>
     <string name="binder_filter">Ordner suchen …</string>
     <string name="admin_open">Verwaltung</string>
     <string name="admin_random">Zufallskarten</string>

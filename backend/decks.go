@@ -278,3 +278,65 @@ func handleDeckCover(w http.ResponseWriter, r *http.Request) {
 	logActivity("info", "App", fmt.Sprintf("Cover of %q: %s", name, c.Name))
 	writeJSON(w, c)
 }
+
+// deckSearchHits is how many matching card names a deck reports at most.
+const deckSearchHits = 3
+
+type deckHits struct {
+	Count int      `json:"count"` // matching card names in the deck
+	Cards []string `json:"cards"` // the first deckSearchHits of them, sorted
+}
+
+// handleDeckSearch finds the decks holding a card that matches every term of
+// q in its name, type line or rules text: {"deck": {count, cards}}. The deck name itself is
+// matched by the client, which has the list.
+func handleDeckSearch(w http.ResponseWriter, r *http.Request) {
+	terms := strings.Fields(strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q"))))
+	if notModified(w, r, weakETag("ds", collectionETag(db)+"|"+r.URL.RawQuery)) {
+		return
+	}
+	out := map[string]deckHits{}
+	if len(terms) == 0 {
+		writeJSONCacheable(w, out)
+		return
+	}
+	rows, _, err := cardRows()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	found := map[string]map[string]bool{}
+	for _, c := range rows {
+		if c.BinderType != "deck" {
+			continue
+		}
+		hay := c.haystack + " " + strings.ToLower(c.TypeLine)
+		ok := true
+		for _, t := range terms {
+			if !strings.Contains(hay, t) {
+				ok = false
+				break
+			}
+		}
+		if !ok {
+			continue
+		}
+		if found[c.BinderName] == nil {
+			found[c.BinderName] = map[string]bool{}
+		}
+		found[c.BinderName][c.Name] = true
+	}
+	for deck, names := range found {
+		list := make([]string, 0, len(names))
+		for n := range names {
+			list = append(list, n)
+		}
+		sort.Strings(list)
+		h := deckHits{Count: len(list), Cards: list}
+		if len(list) > deckSearchHits {
+			h.Cards = list[:deckSearchHits]
+		}
+		out[deck] = h
+	}
+	writeJSONCacheable(w, out)
+}

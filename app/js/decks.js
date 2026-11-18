@@ -49,6 +49,11 @@ const DECK_FORMATS = [
 // Formats with a commander; its art is the cover unless another one is picked.
 const COMMANDER_FORMATS = new Set(['commander', 'brawl', 'oathbreaker']);
 
+/* The formats with a name, alphabetical in the page language. */
+function namedFormats() {
+  return DECK_FORMATS.slice(1).sort((a, b) => t(a.de, a.en).localeCompare(t(b.de, b.en), 'de'));
+}
+
 function formatLabel(key) {
   const f = DECK_FORMATS.find((x) => x.key === (key || ''));
   return f && f.key ? t(f.de, f.en) : '';
@@ -68,11 +73,19 @@ const DECK_TYPES = [
   { key: 'enchantment', de: 'Verzauberungen', en: 'Enchantments', icon: '✧' },
   { key: 'land', de: 'Länder', en: 'Lands', icon: '⛰' },
   { key: 'other', de: 'Sonstige', en: 'Other', icon: '•' },
+  { key: 'token', de: 'Tokens', en: 'Tokens', icon: '🪙' },
 ];
 
-/* The group of a card: the front face decides, creatures before artifacts
-   (an artifact creature is a creature), lands before artifacts. */
+/* Tokens and emblems are not part of the deck; they are listed on their own. */
+function isToken(g) {
+  const front = (g.typeLine || '').split('//')[0].trim().toLowerCase();
+  return /\btoken\b/.test(front) || front.startsWith('emblem');
+}
+
+/* The group of a card: tokens apart, then the front face decides, creatures
+   before artifacts (an artifact creature is a creature), lands before artifacts. */
 function deckTypeOf(typeLine) {
+  if (isToken({ typeLine })) return 'token';
   const front = (typeLine || '').split('//')[0].toLowerCase();
   for (const k of ['creature', 'planeswalker', 'battle', 'instant', 'sorcery', 'land', 'artifact', 'enchantment']) {
     if (front.includes(k)) return k;
@@ -129,7 +142,7 @@ async function loadDeckBinders() {
   return deckBinders.filter((b) => (b.type || '').toLowerCase() === 'deck' && b.name);
 }
 
-function deckBoxHTML(d) {
+function deckBoxHTML(d, extra = '') {
   const art = d.cover ? artCropURL(d.cover.imageId) : '';
   // The lid in the deck's colours: one, or a gradient over several.
   const tints = (d.colors || []).map((c) => DECK_TINT[c]).filter(Boolean);
@@ -143,33 +156,96 @@ function deckBoxHTML(d) {
       <div class="deckbox-label">
         <div class="deckbox-name">${escapeHTML(d.name)}</div>
         <div class="deckbox-meta"><span>${d.total.toLocaleString('de-DE')} ${t('Karten', 'cards')}</span><span class="money">${formatCurrency(d.marketValue, 'EUR')}</span></div>
+        ${extra}
       </div>
     </a>`;
 }
 
+let allDecks = [];
+// Formats the viewer folded away; open is the default, nothing is stored.
+const foldedFormats = new Set();
+let deckQuery = '';
+let deckHits = {};
+let deckSearchSeq = 0;
+
 async function renderDeckList() {
-  const list = await loadDeckBinders();
+  allDecks = await loadDeckBinders();
   hideLoading();
-  document.getElementById('deck-count').textContent = `${list.length} ${list.length === 1 ? 'Deck' : 'Decks'}`;
   const el = document.getElementById('deck-list');
-  if (!list.length) {
+  document.querySelector('.deck-search-bar').hidden = !allDecks.length;
+  if (!allDecks.length) {
+    document.getElementById('deck-count').textContent = '0 Decks';
     el.innerHTML = `<p class="section-hint">${t(
       'Noch keine Decks. Lege mit „+ Neues Deck“ eines an, oder stelle einen Ordner auf der Ordner-Seite (✎) auf den Typ „Deck“ um.',
       'No decks yet. Create one with “+ New deck”, or switch a folder to the type “Deck” on the Folders page (✎).')}</p>`;
     return;
   }
-  // One section per format, in the order of DECK_FORMATS, decks without a
-  // format last; a format without decks is left out.
-  const order = [...DECK_FORMATS.slice(1), DECK_FORMATS[0]];
+  renderDeckSections();
+}
+
+/* A deck matches when its name holds every term, or the server found a card
+   in it that does (name, type line, rules text). */
+function deckMatches(d) {
+  if (!deckQuery) return true;
+  const name = d.name.toLowerCase();
+  return deckQuery.split(/\s+/).every((w) => name.includes(w)) || !!deckHits[d.name];
+}
+
+function deckHitsHTML(d) {
+  const h = deckHits[d.name];
+  if (!deckQuery || !h) return '';
+  const more = h.count > h.cards.length ? ` +${h.count - h.cards.length}` : '';
+  return `<div class="deckbox-hits" title="${escapeHTML(h.cards.join(', '))}">🔎 ${escapeHTML(h.cards.join(', '))}${more}</div>`;
+}
+
+/* One foldable section per format, alphabetical in the page language, decks
+   without a format last; a format without (matching) decks is left out. */
+function renderDeckSections() {
+  const list = allDecks.filter(deckMatches);
+  const n = allDecks.length;
+  document.getElementById('deck-count').textContent = deckQuery
+    ? t(`${list.length} von ${n} Decks`, `${list.length} of ${n} decks`)
+    : `${n} ${n === 1 ? 'Deck' : 'Decks'}`;
+  const el = document.getElementById('deck-list');
+  if (!list.length) {
+    el.innerHTML = `<p class="section-hint">${t('Kein Deck passt zur Suche.', 'No deck matches the search.')}</p>`;
+    return;
+  }
+  const order = [...namedFormats(), DECK_FORMATS[0]];
   el.innerHTML = order.map((f) => {
     const decks = list.filter((d) => (d.format || '') === f.key);
     if (!decks.length) return '';
+    // While searching every hit shows, folded or not.
+    const open = deckQuery || !foldedFormats.has(f.key);
     return `
-      <section class="deck-format-sec">
-        <h2 class="deck-format-title">${t(f.de, f.en)} <span>(${decks.length})</span></h2>
-        <div class="deckbox-grid">${decks.map(deckBoxHTML).join('')}</div>
-      </section>`;
+      <details class="deck-format-sec" data-format="${escapeHTML(f.key)}" ${open ? 'open' : ''}>
+        <summary class="deck-format-title">${t(f.de, f.en)} <span>(${decks.length})</span></summary>
+        <div class="deckbox-grid">${decks.map((d) => deckBoxHTML(d, deckHitsHTML(d))).join('')}</div>
+      </details>`;
   }).join('');
+  if (!deckQuery) {
+    el.querySelectorAll('details').forEach((det) => det.addEventListener('toggle', () => {
+      if (det.open) foldedFormats.delete(det.dataset.format);
+      else foldedFormats.add(det.dataset.format);
+    }));
+  }
+}
+
+async function searchDecks(q) {
+  const seq = ++deckSearchSeq;
+  q = q.trim().toLowerCase();
+  let hits = {};
+  if (q) {
+    try {
+      const res = await fetch(`${API}/decks/search?q=${encodeURIComponent(q)}`);
+      if (res.ok) hits = await res.json();
+    } catch (e) { /* deck names still match */ }
+  }
+  // An older, slower answer must not overwrite a newer one.
+  if (seq !== deckSearchSeq) return;
+  deckQuery = q;
+  deckHits = hits;
+  renderDeckSections();
 }
 
 function newDeckDialog() {
@@ -211,7 +287,8 @@ async function loadDeckCards() {
 function renderDeckBanner() {
   const d = currentDeck();
   const art = d.cover ? artCropURL(d.cover.imageId) : '';
-  const qty = sumQty(deckGroups);
+  const tokens = sumQty(deckGroups.filter(isToken));
+  const qty = sumQty(deckGroups) - tokens;
   document.getElementById('deck-banner').innerHTML = `
     <div class="deck-banner-art" ${art ? `style="background-image:url('${escapeHTML(art)}')"` : ''}></div>
     <div class="deck-banner-text">
@@ -219,6 +296,7 @@ function renderDeckBanner() {
       <div class="deck-banner-meta">
         <span class="deckbox-pips">${colorPipsHTML(d.colors)}</span>
         <span>${qty} ${t('Karten', 'cards')}</span>
+        ${tokens ? `<span>🪙 ${tokens} ${t('Tokens', 'tokens')}</span>` : ''}
         <span class="money">${formatCurrency(sumValue(deckGroups), 'EUR')}</span>
         ${d.format ? `<span class="deck-format-badge">${escapeHTML(formatLabel(d.format))}</span>` : ''}
         ${d.commander ? `<span class="deck-banner-cover">👑 ${escapeHTML(d.commander.name)}</span>` : ''}
@@ -241,22 +319,30 @@ function renderDeckCards() {
 }
 
 function gridViewHTML() {
-  viewItems = deckGroups;
-  return '<div class="grid deck-grid">' + viewItems.map((g, i) => {
-    const img = groupImage(g, 'small');
-    return `
-      <div class="card-tile" data-idx="${i}">
-        <div class="thumb">
-          ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(g.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
-          ${g.anyFoil ? '<span class="foil-badge">Foil</span>' : ''}
-          ${g.totalQty > 1 ? `<span class="qty-badge">×${g.totalQty}</span>` : ''}
-        </div>
-        <div class="info">
-          <div class="name">${escapeHTML(g.name)}</div>
-          <div class="meta"><span>${escapeHTML(g.setCode)} #${escapeHTML(g.collectorNumber)}</span><span>${g.marketPrice ? formatCurrency(g.marketPrice, 'EUR') : '–'}</span></div>
-        </div>
-      </div>`;
-  }).join('') + '</div>';
+  // The deck first, its tokens below under their own heading.
+  const cards = deckGroups.filter((g) => !isToken(g));
+  const tokens = deckGroups.filter(isToken);
+  viewItems = [...cards, ...tokens];
+  const tiles = (list, offset) => '<div class="grid deck-grid">' + list.map((g, j) => gridTileHTML(g, offset + j)).join('') + '</div>';
+  return (cards.length ? tiles(cards, 0) : '') + (tokens.length
+    ? `<h3 class="deck-token-title">🪙 ${t('Tokens', 'Tokens')} <span>(${sumQty(tokens)})</span></h3>` + tiles(tokens, cards.length)
+    : '');
+}
+
+function gridTileHTML(g, i) {
+  const img = groupImage(g, 'small');
+  return `
+    <div class="card-tile" data-idx="${i}">
+      <div class="thumb">
+        ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(g.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
+        ${g.anyFoil ? '<span class="foil-badge">Foil</span>' : ''}
+        ${g.totalQty > 1 ? `<span class="qty-badge">×${g.totalQty}</span>` : ''}
+      </div>
+      <div class="info">
+        <div class="name">${escapeHTML(g.name)}</div>
+        <div class="meta"><span>${escapeHTML(g.setCode)} #${escapeHTML(g.collectorNumber)}</span><span>${g.marketPrice ? formatCurrency(g.marketPrice, 'EUR') : '–'}</span></div>
+      </div>
+    </div>`;
 }
 
 function listViewHTML() {
@@ -381,7 +467,7 @@ function formatDialog() {
     <h2>${t('Format', 'Format')}</h2>
     <form class="deck-form" id="deck-format-form">
       <select name="format" class="binder-input">
-        ${DECK_FORMATS.map((f) => `<option value="${f.key}"${f.key === (d.format || '') ? ' selected' : ''}>${t(f.de, f.en)}</option>`).join('')}
+        ${[DECK_FORMATS[0], ...namedFormats()].map((f) => `<option value="${f.key}"${f.key === (d.format || '') ? ' selected' : ''}>${t(f.de, f.en)}</option>`).join('')}
       </select>
       <label class="deck-commander-field">
         <span>👑 Commander</span>
@@ -595,6 +681,11 @@ async function initDeckPage() {
   if (!deckName) {
     showLoading(t('Lade Decks...', 'Loading decks...'));
     document.getElementById('deck-new').addEventListener('click', newDeckDialog);
+    let timer;
+    document.getElementById('deck-search').addEventListener('input', (e) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => searchDecks(e.target.value), 250);
+    });
     await renderDeckList();
     return;
   }

@@ -204,6 +204,10 @@ func routeLabel(path string) string {
 		case "restore-latest", "restore-upload":
 			return "/api/backup/" + tail
 		}
+	case "decks":
+		if tail == "search" {
+			return "/api/decks/search"
+		}
 	case "images", "hashes":
 		if tail == "sync" {
 			return "/api/" + head + "/sync"

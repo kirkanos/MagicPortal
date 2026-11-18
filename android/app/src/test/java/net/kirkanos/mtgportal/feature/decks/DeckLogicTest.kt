@@ -45,8 +45,29 @@ class DeckLogicTest {
     }
 
     @Test
+    fun tokensAreListedApart() {
+        val gs = listOf(
+            CardGroupDto(key = "a", name = "Soldier", typeLine = "Token Creature — Soldier", totalQty = 3),
+            CardGroupDto(key = "b", name = "Ajani Emblem", typeLine = "Emblem — Ajani", totalQty = 1),
+            CardGroupDto(key = "c", name = "Raise the Alarm", typeLine = "Instant", totalQty = 2),
+            CardGroupDto(key = "d", name = "Tokenmaster", typeLine = "Creature — Human", totalQty = 1),
+        )
+        val s = DeckLogic.sections(gs)
+        assertEquals(listOf(DeckType.CREATURE, DeckType.INSTANT, DeckType.TOKEN), s.map { it.first })
+        assertEquals(listOf("Ajani Emblem", "Soldier"), s.last().second.map { it.name })
+    }
+
+    @Test
     fun pips() {
         assertEquals("{C}", DeckLogic.pips(emptyList()))
         assertEquals("{W}{B}", DeckLogic.pips(listOf("W", "B")))
+    }
+
+    @Test
+    fun aSearchMatchesDeckNameOrCardHit() {
+        assertEquals(true, DeckLogic.matches("Goblin Rush", "", false))
+        assertEquals(true, DeckLogic.matches("Goblin Rush", "rush gob", false))
+        assertEquals(false, DeckLogic.matches("Goblin Rush", "elf", false))
+        assertEquals(true, DeckLogic.matches("Goblin Rush", "elf", true))
     }
 }

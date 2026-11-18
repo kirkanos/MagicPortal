@@ -16,6 +16,7 @@ enum class DeckType(@StringRes val label: Int) {
     ENCHANTMENT(R.string.deck_type_enchantment),
     LAND(R.string.deck_type_land),
     OTHER(R.string.deck_type_other),
+    TOKEN(R.string.deck_type_token),
 }
 
 /** Deck formats (decks.js DECK_FORMATS); "" is a deck without a format. */
@@ -38,11 +39,20 @@ enum class DeckFormat(val key: String, @StringRes val label: Int, val hasCommand
 }
 
 object DeckLogic {
+    private val tokenWord = Regex("\\btoken\\b")
+
+    /** Tokens and emblems are not part of the deck; they are listed on their own. */
+    fun isToken(typeLine: String): Boolean {
+        val front = typeLine.substringBefore("//").trim().lowercase()
+        return tokenWord.containsMatchIn(front) || front.startsWith("emblem")
+    }
+
     /**
-     * The group of a card: the front face decides, creatures before artifacts
-     * (an artifact creature is a creature), lands before artifacts.
+     * The group of a card: tokens apart, then the front face decides, creatures
+     * before artifacts (an artifact creature is a creature), lands before artifacts.
      */
     fun typeOf(typeLine: String): DeckType {
+        if (isToken(typeLine)) return DeckType.TOKEN
         val front = typeLine.substringBefore("//").lowercase()
         return listOf(
             "creature" to DeckType.CREATURE, "planeswalker" to DeckType.PLANESWALKER, "battle" to DeckType.BATTLE,
@@ -65,6 +75,17 @@ object DeckLogic {
         return entries.groupBy { if (it.name == commander) DeckType.COMMANDER else typeOf(it.first.typeLine) }
             .toSortedMap(compareBy { it.ordinal })
             .map { (type, list) -> type to list.sortedBy { it.name.lowercase() } }
+    }
+
+    /**
+     * A deck shows in a search when its name holds every term, or the server
+     * found a card in it that matches (name, type line, rules text).
+     */
+    fun matches(deckName: String, query: String, hasCardHit: Boolean): Boolean {
+        val terms = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (terms.isEmpty()) return true
+        val name = deckName.lowercase()
+        return hasCardHit || terms.all { name.contains(it) }
     }
 
     /** "{W}{B}" for the colour pips; colourless decks show {C}. */

@@ -50,6 +50,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,6 +61,7 @@ import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
+import net.kirkanos.mtgportal.core.network.dto.DeckHitsDto
 import net.kirkanos.mtgportal.core.network.safeCall
 import net.kirkanos.mtgportal.core.ui.Format
 import net.kirkanos.mtgportal.core.ui.appContainer
@@ -76,6 +79,28 @@ class DecksViewModel(private val c: AppContainer) : ViewModel() {
     init {
         load()
         viewModelScope.launch { c.collectionWrite.changes.drop(1).collect { load(quiet = true) } }
+    }
+
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
+    private val _hits = MutableStateFlow<Map<String, DeckHitsDto>>(emptyMap())
+    val hits: StateFlow<Map<String, DeckHitsDto>> = _hits.asStateFlow()
+    private var searchJob: Job? = null
+
+    /** Card hits come from the server, a moment after the last key; deck names match locally. */
+    fun search(q: String) {
+        _query.value = q
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            val terms = q.trim()
+            if (terms.isEmpty()) {
+                _hits.value = emptyMap()
+                return@launch
+            }
+            delay(300)
+            val r = safeCall { c.api.deckSearch(terms) }
+            _hits.value = (r as? ApiResult.Success)?.data.orEmpty()
+        }
     }
 
     fun load(quiet: Boolean = false) = viewModelScope.launch {
@@ -103,6 +128,11 @@ fun DecksScreen(onOpen: (String) -> Unit) {
     val images by appContainer().config.imageUrls.collectAsStateWithLifecycle()
     val unlocked = isUnlocked()
     var creating by remember { mutableStateOf(false) }
+    val query by vm.query.collectAsStateWithLifecycle()
+    val hits by vm.hits.collectAsStateWithLifecycle()
+    // Formats folded away; open is the default.
+    var folded by remember { mutableStateOf(setOf<String>()) }
+    val labels = DeckFormat.entries.associateWith { stringResource(it.label) }
 
     Box(Modifier.fillMaxSize()) {
         when (val r = st) {
@@ -110,7 +140,9 @@ fun DecksScreen(onOpen: (String) -> Unit) {
             is ApiResult.HttpError -> ErrorRetry(r, onRetry = { vm.load() })
             is ApiResult.NetworkError -> ErrorRetry(r, onRetry = { vm.load() })
             is ApiResult.Success -> {
-                val decks = r.data.filter { it.type.equals("deck", ignoreCase = true) && it.name.isNotEmpty() }
+                val all = r.data.filter { it.type.equals("deck", ignoreCase = true) && it.name.isNotEmpty() }
+                val searching = query.isNotBlank()
+                val decks = all.filter { DeckLogic.matches(it.name, query, hits.containsKey(it.name)) }
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(160.dp),
                     contentPadding = PaddingValues(start = 14.dp, end = 20.dp, top = 12.dp, bottom = 96.dp),
@@ -118,23 +150,48 @@ fun DecksScreen(onOpen: (String) -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(22.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
+                    if (all.isNotEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "search") {
+                            OutlinedTextField(
+                                value = query, onValueChange = vm::search, singleLine = true,
+                                placeholder = { Text(stringResource(R.string.decks_search)) },
+                                trailingIcon = { if (searching) TextButton(onClick = { vm.search("") }) { Text("✕") } },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text(pluralStringResource(R.plurals.decks_count, decks.size, decks.size), color = PortalColors.TextDim)
+                        Text(
+                            if (searching) stringResource(R.string.decks_search_count, decks.size, all.size)
+                            else pluralStringResource(R.plurals.decks_count, all.size, all.size),
+                            color = PortalColors.TextDim,
+                        )
                     }
-                    if (decks.isEmpty()) {
+                    if (all.isEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.decks_empty), color = PortalColors.TextDim) }
+                    } else if (decks.isEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.decks_search_none), color = PortalColors.TextDim) }
                     }
-                    // One section per format, decks without a format last; empty formats are left out.
-                    (DeckFormat.entries.drop(1) + DeckFormat.NONE).forEach { f ->
+                    // One foldable section per format, alphabetical, decks without a format last;
+                    // formats without (matching) decks are left out.
+                    (DeckFormat.entries.drop(1).sortedBy { labels.getValue(it).lowercase() } + DeckFormat.NONE).forEach { f ->
                         val group = decks.filter { DeckFormat.of(it.format) == f }
                         if (group.isEmpty()) return@forEach
+                        // While searching every hit shows, folded or not.
+                        val open = searching || f.key !in folded
                         item(span = { GridItemSpan(maxLineSpan) }, key = "f-${f.key}") {
-                            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
-                                Text(stringResource(f.label), fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            Row(
+                                Modifier.fillMaxWidth().clickable(enabled = !searching) {
+                                    folded = if (f.key in folded) folded - f.key else folded + f.key
+                                }.padding(top = 8.dp, bottom = 2.dp),
+                                verticalAlignment = Alignment.Bottom,
+                            ) {
+                                Text(if (open) "▾ " else "▸ ", color = PortalColors.TextDim, fontSize = 17.sp)
+                                Text(labels.getValue(f), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                                 Text("  (${group.size})", color = PortalColors.TextDim, fontSize = 14.sp)
                             }
                         }
-                        items(group, key = { it.name }) { d -> DeckBox(d, images) { onOpen(d.name) } }
+                        if (open) items(group, key = { it.name }) { d -> DeckBox(d, images, if (searching) hits[d.name] else null) { onOpen(d.name) } }
                     }
                 }
                 if (creating) {
@@ -153,7 +210,7 @@ fun DecksScreen(onOpen: (String) -> Unit) {
 }
 
 @Composable
-internal fun DeckBox(d: BinderDto, images: ImageUrls, onClick: () -> Unit) {
+internal fun DeckBox(d: BinderDto, images: ImageUrls, hits: DeckHitsDto? = null, onClick: () -> Unit) {
     val tints = d.colors.mapNotNull { DECK_TINT[it] }
     val base = Color(0xFF20222E)
     val lid = if (tints.isEmpty()) listOf(Color(0xFF34364A), Color(0xFF2A2C3A))
@@ -202,6 +259,13 @@ internal fun DeckBox(d: BinderDto, images: ImageUrls, onClick: () -> Unit) {
                 Row {
                     Text(stringResource(R.string.deck_cards, Format.count(d.total)), fontSize = 11.sp, color = PortalColors.TextDim, modifier = Modifier.weight(1f))
                     Text(Format.eur(d.marketValue), fontSize = 11.sp, color = PortalColors.Accent, fontWeight = FontWeight.SemiBold)
+                }
+                if (hits != null && hits.cards.isNotEmpty()) {
+                    val more = if (hits.count > hits.cards.size) " +${hits.count - hits.cards.size}" else ""
+                    Text(
+                        "🔎 " + hits.cards.joinToString(", ") + more,
+                        fontSize = 11.sp, color = PortalColors.Accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }

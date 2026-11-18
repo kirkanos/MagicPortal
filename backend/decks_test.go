@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -147,5 +148,31 @@ func TestDeckCommanderIsTheDefaultCover(t *testing.T) {
 	call(t, "POST", "/api/collection/move", `{"ids":[`+itoa64(id)+`],"binderName":"Box","binderType":"binder"}`)
 	if d = deck(); d.Commander != nil || d.Cover != nil || d.Format != "commander" {
 		t.Fatalf("commander left: %+v", d)
+	}
+}
+
+func TestDeckSearchMatchesNameTypeAndText(t *testing.T) {
+	newTestDB(t)
+	seedWriteCatalog(t)
+	if _, err := db.Exec(`UPDATE scryfall_cards SET type_line = 'Creature — Bird Advisor', oracle_text = 'Flying. Whenever a player casts their second spell each turn, Ledger Shredder connives.' WHERE scryfall_id = 'id-ledger'`); err != nil {
+		t.Fatal(err)
+	}
+	decode[addResult](t, call(t, "POST", "/api/collection/cards", `{"items":[
+		{"setCode":"snc","collectorNumber":"47","binderName":"EDH","binderType":"deck"},
+		{"setCode":"ice","collectorNumber":"61","binderName":"EDH"},
+		{"setCode":"ice","collectorNumber":"61","binderName":"Box","binderType":"binder"}]}`))
+	search := func(q string) map[string]deckHits {
+		rec := httptest.NewRecorder()
+		handleDeckSearch(rec, httptest.NewRequest("GET", "/api/decks/search?q="+url.QueryEscape(q), nil))
+		return decode[map[string]deckHits](t, rec)
+	}
+	for q, want := range map[string]int{"shredder": 1, "bird": 1, "connives flying": 1, "brainstorm": 1, "zombie": 0, "": 0} {
+		got := search(q)
+		if len(got) != want {
+			t.Errorf("%q: %v", q, got)
+		}
+		if want == 1 && got["EDH"].Count != 1 {
+			t.Errorf("%q: %v", q, got)
+		}
 	}
 }

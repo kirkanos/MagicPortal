@@ -64,6 +64,9 @@ nav.topnav .brand .brand-logo {
   width: auto;
   display: block;
 }
+/* Larger screens: the logo grows with the width so its tagline stays legible. */
+@media (min-width: 1100px) { nav.topnav .brand .brand-logo { height: 46px; } }
+@media (min-width: 1600px) { nav.topnav .brand .brand-logo { height: 56px; } }
 nav.topnav .brand:hover { background: none; }
 
 nav.topnav a {
@@ -1018,6 +1021,12 @@ body.is-unlocked .unlock-only { display: inline-flex; }
 .deck-format-sec .deckbox-grid { margin-top: 0; }
 .deck-format-title { font-size: 1.1rem; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 .deck-format-title span { color: var(--text-dim); font-weight: 400; font-size: 0.9rem; }
+.deck-format-sec > summary.deck-format-title { cursor: pointer; list-style: none; user-select: none; }
+.deck-format-sec > summary.deck-format-title::-webkit-details-marker { display: none; }
+.deck-format-sec > summary.deck-format-title::before { content: '▾'; display: inline-block; width: 1.1em; color: var(--text-dim); transition: transform 0.15s; }
+.deck-format-sec:not([open]) > summary.deck-format-title::before { transform: rotate(-90deg); }
+.deck-search-bar input[type="text"] { flex: 1; }
+.deckbox-hits { margin-top: 4px; font-size: 0.75rem; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .deck-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .deck-commander-field { display: flex; flex-direction: column; gap: 6px; }
 .deck-commander-field[hidden] { display: none; }
@@ -1060,6 +1069,8 @@ body.is-unlocked .unlock-only { display: inline-flex; }
 .deck-list-sec { break-inside: avoid; margin-bottom: 22px; }
 .deck-list-sec h3 { font-size: 0.95rem; margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 .deck-list-sec h3 span { color: var(--text-dim); font-weight: 400; }
+.deck-token-title { font-size: 0.95rem; margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.deck-token-title span { color: var(--text-dim); font-weight: 400; }
 .deck-line { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-bottom: 1px solid rgba(47,49,64,0.6); cursor: pointer; font-size: 0.92rem; }
 .deck-line:hover { background: var(--bg-card); }
 .deck-line-qty { width: 20px; text-align: right; color: var(--text-dim); }

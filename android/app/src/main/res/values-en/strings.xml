@@ -349,6 +349,9 @@
         <item quantity="other">%d decks</item>
     </plurals>
     <string name="decks_empty">No decks yet. Create one with “+”, or switch a folder to the type “Deck” under “Folders” (Rename).</string>
+    <string name="decks_search">Search deck name, card, type or card text</string>
+    <string name="decks_search_count">%1$d of %2$d decks</string>
+    <string name="decks_search_none">No deck matches the search.</string>
     <string name="decks_new">New deck</string>
     <string name="decks_new_hint">Then add cards – the deck comes into being with the first card.</string>
     <string name="decks_new_ok">Create</string>
@@ -404,6 +407,8 @@
     <string name="deck_type_enchantment">Enchantments</string>
     <string name="deck_type_land">Lands</string>
     <string name="deck_type_other">Other</string>
+    <string name="deck_type_token">Tokens</string>
+    <string name="deck_tokens">%1$s tokens</string>
     <string name="binder_filter">Search folders …</string>
     <string name="admin_open">Administration</string>
     <string name="admin_random">Random cards</string>

@@ -58,6 +58,7 @@ func main() {
 	mux.HandleFunc("PATCH /api/binders/{name}", handleBinderPatch)
 	mux.HandleFunc("POST /api/binders/{name}/cover", handleDeckCover)
 	mux.HandleFunc("PUT /api/binders/{name}/deck", handleDeckSettings)
+	mux.HandleFunc("GET /api/decks/search", handleDeckSearch)
 	mux.HandleFunc("GET /api/subtypes", handleSubtypes)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/summary", handleSummary)
