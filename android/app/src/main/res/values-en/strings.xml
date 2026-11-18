@@ -353,7 +353,7 @@
     <string name="decks_search_count">%1$d of %2$d decks</string>
     <string name="decks_search_none">No deck matches the search.</string>
     <string name="decks_new">New deck</string>
-    <string name="decks_new_hint">Then add cards – the deck comes into being with the first card.</string>
+    <string name="decks_new_hint">Then add cards. The deck stays even while empty, until you delete it.</string>
     <string name="decks_new_ok">Create</string>
     <string name="decks_new_taken">“%1$s” already exists as a folder or list.</string>
     <string name="deck_cards">%1$s cards</string>
@@ -509,6 +509,13 @@
     <string name="detail_origin_app">from the app</string>
     <string name="detail_edit_volatile">Changed – but this is a ManaBox row: the next ManaBox import resets it.</string>
     <string name="binders_rename">Rename</string>
+    <string name="binders_new_binder">New folder</string>
+    <string name="binders_new_list">New list</string>
+    <string name="binders_new_taken">This name exists already.</string>
+    <string name="binders_created">“%1$s” was created.</string>
+    <string name="binders_deleted">“%1$s” was deleted.</string>
+    <string name="binders_delete">Delete</string>
+    <string name="deck_delete_empty">Delete empty deck</string>
     <string name="binders_rename_title">Rename binder</string>
     <string name="binders_rename_hint">If the name exists, the binders are merged.</string>
     <string name="binders_rename_ok">Apply</string>

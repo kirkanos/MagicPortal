@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -55,7 +56,9 @@ func main() {
 	mux.HandleFunc("GET /api/sets/{code}/cards", handleSetCards)
 	mux.HandleFunc("GET /api/prints", handlePrints)
 	mux.HandleFunc("GET /api/binders", handleBinders)
+	mux.HandleFunc("POST /api/binders", handleBinderCreate)
 	mux.HandleFunc("PATCH /api/binders/{name}", handleBinderPatch)
+	mux.HandleFunc("DELETE /api/binders/{name}", handleBinderDelete)
 	mux.HandleFunc("POST /api/binders/{name}/cover", handleDeckCover)
 	mux.HandleFunc("PUT /api/binders/{name}/deck", handleDeckSettings)
 	mux.HandleFunc("GET /api/decks/search", handleDeckSearch)
@@ -434,6 +437,22 @@ func handleBinders(w http.ResponseWriter, r *http.Request) {
 		out = append(out, b)
 	}
 	rows.Close()
+	// Binders created by hand that hold no card (yet).
+	seen := map[string]bool{}
+	for _, b := range out {
+		seen[b.Name] = true
+	}
+	for _, c := range loadCreatedBinders() {
+		if !seen[c.Name] {
+			out = append(out, binderOut{Name: c.Name, Type: c.Type})
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Type != out[j].Type {
+			return out[i].Type < out[j].Type
+		}
+		return out[i].Name < out[j].Name
+	})
 	// Covers and colours after the rows: the one connection is free again.
 	covers := loadDeckCovers()
 	settings := loadDeckSettings()

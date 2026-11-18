@@ -114,6 +114,11 @@ class DeckViewModel(private val c: AppContainer, private val name: String) : Vie
         viewModelScope.launch { c.collectionWrite.changes.drop(1).collect { load(quiet = true) } }
     }
 
+    /** Only an empty deck created by hand can go. */
+    fun delete(onDone: () -> Unit) = viewModelScope.launch {
+        if (c.collectionWrite.deleteBinder(name) is ApiResult.Success) onDone()
+    }
+
     fun load(quiet: Boolean = false) = viewModelScope.launch {
         if (!quiet) _state.value = _state.value.copy(cards = null)
         val binders = async { safeCall { c.api.binders() } }
@@ -141,7 +146,7 @@ class DeckViewModel(private val c: AppContainer, private val name: String) : Vie
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeckScreen(name: String, onScan: () -> Unit) {
+fun DeckScreen(name: String, onScan: () -> Unit, onDeleted: () -> Unit = {}) {
     val vm = containerViewModel { DeckViewModel(it, name) }
     val st by vm.state.collectAsStateWithLifecycle()
     val images by appContainer().config.imageUrls.collectAsStateWithLifecycle()
@@ -195,6 +200,11 @@ fun DeckScreen(name: String, onScan: () -> Unit) {
                 }
                 if (groups.isEmpty()) {
                     item(span = full) { Text(stringResource(R.string.deck_empty), color = PortalColors.TextDim, modifier = Modifier.padding(16.dp)) }
+                    if (unlocked) item(span = full) {
+                        OutlinedButton(onClick = { vm.delete(onDeleted) }, modifier = Modifier.padding(horizontal = 16.dp)) {
+                            Text("🗑 " + stringResource(R.string.deck_delete_empty))
+                        }
+                    }
                 } else if (view == "grid") {
                     // The deck first, its tokens below under their own heading.
                     val (tokens, cards) = groups.partition { DeckLogic.isToken(it.typeLine) }

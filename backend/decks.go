@@ -42,6 +42,8 @@ func saveDeckCovers(covers map[string]deckCover) {
 
 // renameDeckCover keeps the cover, format and commander with a renamed
 // binder. Into an existing binder with settings of its own, those stay.
+// renameDeckCover moves cover and settings of a deck along with a rename; an
+// empty to drops them.
 func renameDeckCover(from, to string) {
 	if from == to {
 		return
@@ -51,7 +53,7 @@ func renameDeckCover(from, to string) {
 	covers := loadDeckCovers()
 	if c, ok := covers[from]; ok {
 		delete(covers, from)
-		if _, taken := covers[to]; !taken {
+		if _, taken := covers[to]; !taken && to != "" {
 			covers[to] = c
 		}
 		saveDeckCovers(covers)
@@ -59,7 +61,7 @@ func renameDeckCover(from, to string) {
 	settings := loadDeckSettings()
 	if d, ok := settings[from]; ok {
 		delete(settings, from)
-		if _, taken := settings[to]; !taken {
+		if _, taken := settings[to]; !taken && to != "" {
 			settings[to] = d
 		}
 		saveDeckSettings(settings)
@@ -112,7 +114,7 @@ func binderExists(w http.ResponseWriter, name string) bool {
 		http.Error(w, err.Error(), 500)
 		return false
 	}
-	if n == 0 {
+	if n == 0 && createdBinderType(name) == "" {
 		writeWriteError(w, &writeError{http.StatusNotFound, -1, "no such binder"})
 		return false
 	}

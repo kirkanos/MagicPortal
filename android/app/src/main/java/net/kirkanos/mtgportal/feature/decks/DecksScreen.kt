@@ -103,6 +103,11 @@ class DecksViewModel(private val c: AppContainer) : ViewModel() {
         }
     }
 
+    /** A new, empty deck (kept by the server until deleted), then open it. */
+    fun create(name: String, exists: Boolean, onDone: () -> Unit) = viewModelScope.launch {
+        if (exists || c.collectionWrite.createBinder(name, "deck") is ApiResult.Success) onDone()
+    }
+
     fun load(quiet: Boolean = false) = viewModelScope.launch {
         if (!quiet) _state.value = null
         val r = safeCall { c.api.binders() }
@@ -195,7 +200,10 @@ fun DecksScreen(onOpen: (String) -> Unit) {
                     }
                 }
                 if (creating) {
-                    NewDeckDialog(r.data, onDismiss = { creating = false }, onCreate = { creating = false; onOpen(it) })
+                    NewDeckDialog(r.data, onDismiss = { creating = false }, onCreate = { n ->
+                        creating = false
+                        vm.create(n, r.data.any { it.name == n }) { onOpen(n) }
+                    })
                 }
             }
         }

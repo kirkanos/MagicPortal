@@ -13,6 +13,7 @@ import net.kirkanos.mtgportal.core.network.PortalApi
 import net.kirkanos.mtgportal.core.network.dto.AddCardItemDto
 import net.kirkanos.mtgportal.core.network.dto.AddCardsRequest
 import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
+import net.kirkanos.mtgportal.core.network.dto.BinderCreateDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.DeckCoverInputDto
@@ -107,6 +108,12 @@ class CollectionWriteRepository(private val api: PortalApi) {
         val cmd = if (commanderSet.isNotEmpty()) DeckCoverInputDto(commanderSet.lowercase(), commanderNumber) else null
         return safeStatus { api.setDeckSettings(deck, DeckSettingsInputDto(format, cmd)) }.withReadableError().noted()
     }
+
+    /** A new, empty binder; it stays until deleted, also without cards. */
+    suspend fun createBinder(name: String, type: String): ApiResult<Unit> =
+        safeStatus { api.createBinder(BinderCreateDto(name.trim(), type)) }.withReadableError().noted()
+
+    suspend fun deleteBinder(name: String): ApiResult<Unit> = safeStatus { api.deleteBinder(name) }.withReadableError().noted()
 
     suspend fun renameBinder(name: String, patch: BinderPatchDto): ApiResult<BinderPatchResultDto> = safeCall { api.patchBinder(name, patch) }.withReadableError().noted()
 

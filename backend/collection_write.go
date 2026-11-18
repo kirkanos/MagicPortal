@@ -350,6 +350,10 @@ func binderTypeTx(tx *sql.Tx, name, given string) (string, error) {
 	if !errors.Is(err, sql.ErrNoRows) {
 		return "", err
 	}
+	// An empty binder created by hand has a type as well.
+	if t := createdBinderTypeTx(tx, name); t != "" {
+		return t, nil
+	}
 	if given == "" {
 		given = "binder"
 	}
@@ -784,6 +788,12 @@ func handleBinderPatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res, err := patchBinder(from, p, time.Now())
+	if isNoSuchBinder(err) {
+		// No cards: perhaps an empty binder created by hand.
+		res, err = patchCreatedBinder(from, p)
+	} else if err == nil {
+		renameCreatedBinder(from, res.Name, res.Type)
+	}
 	if err != nil {
 		writeWriteError(w, err)
 		return

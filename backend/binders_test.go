@@ -77,3 +77,82 @@ func TestBinderTypeChangeAndCSVRows(t *testing.T) {
 		t.Errorf("route label %q", got)
 	}
 }
+
+func TestCreatedBindersStayWhileEmpty(t *testing.T) {
+	newTestDB(t)
+	seedWriteCatalog(t)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/binders", handleBinders)
+	mux.HandleFunc("POST /api/binders", handleBinderCreate)
+	mux.HandleFunc("PATCH /api/binders/{name}", handleBinderPatch)
+	mux.HandleFunc("DELETE /api/binders/{name}", handleBinderDelete)
+	mux.HandleFunc("POST /api/collection/cards", handleCollectionAdd)
+	mux.HandleFunc("PATCH /api/collection/cards/{id}", handleCollectionPatch)
+	do := func(method, path, body string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(method, path, strings.NewReader(body)))
+		return rec
+	}
+	find := func(name string) *binderOut {
+		for _, b := range decode[[]binderOut](t, do("GET", "/api/binders", "")) {
+			if b.Name == name {
+				return &b
+			}
+		}
+		return nil
+	}
+
+	// In this order: the last one meets the binder made just before.
+	for _, c := range []struct {
+		body string
+		want int
+	}{
+		{`{"name":"","type":"binder"}`, 400},
+		{`{"name":"Trade","type":"stack"}`, 400},
+		{`{"name":"Trade","type":""}`, 400},
+		{`{"name":" Trade ","type":"list"}`, 201},
+		{`{"name":"Trade","type":"binder"}`, 409},
+	} {
+		if rec := do("POST", "/api/binders", c.body); rec.Code != c.want {
+			t.Errorf("%s: %d, want %d", c.body, rec.Code, c.want)
+		}
+	}
+	if b := find("Trade"); b == nil || b.Type != "list" || b.Total != 0 {
+		t.Fatalf("empty binder: %+v", b)
+	}
+
+	// Renamed and retyped while empty.
+	if rec := do("PATCH", "/api/binders/Trade", `{"name":"Tausch","type":"binder"}`); rec.Code != 200 {
+		t.Fatalf("rename: %d %s", rec.Code, rec.Body)
+	}
+	if find("Trade") != nil || find("Tausch") == nil || find("Tausch").Type != "binder" {
+		t.Fatal("rename of an empty binder")
+	}
+
+	// A card without a type takes the created binder's type.
+	add := decode[addResult](t, do("POST", "/api/collection/cards", `{"items":[{"setCode":"ice","collectorNumber":"61","binderName":"Tausch"}]}`))
+	if b := find("Tausch"); b == nil || b.Type != "binder" || b.Total != 1 {
+		t.Fatalf("with a card: %+v", b)
+	}
+	if rec := do("DELETE", "/api/binders/Tausch", ""); rec.Code != 409 {
+		t.Errorf("delete with cards: %d", rec.Code)
+	}
+
+	// Emptied, it stays; then it can go.
+	id := add.Items[0].ID
+	if rec := do("PATCH", "/api/collection/cards/"+itoa64(id), `{"binderName":"Box"}`); rec.Code != 200 {
+		t.Fatalf("move: %d %s", rec.Code, rec.Body)
+	}
+	if b := find("Tausch"); b == nil || b.Total != 0 {
+		t.Fatalf("emptied: %+v", b)
+	}
+	if rec := do("DELETE", "/api/binders/Tausch", ""); rec.Code != 204 {
+		t.Errorf("delete: %d", rec.Code)
+	}
+	if find("Tausch") != nil {
+		t.Error("deleted binder still listed")
+	}
+	if rec := do("DELETE", "/api/binders/Tausch", ""); rec.Code != 404 {
+		t.Errorf("delete twice: %d", rec.Code)
+	}
+}

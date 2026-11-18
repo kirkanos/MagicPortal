@@ -3,6 +3,7 @@ package net.kirkanos.mtgportal.feature.binders
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,6 +74,23 @@ class BindersViewModel(private val c: AppContainer) : ViewModel() {
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    private fun report(r: ApiResult<*>, ok: String?) {
+        _message.value = when (r) {
+            is ApiResult.Success -> ok
+            is ApiResult.HttpError -> r.message
+            is ApiResult.NetworkError -> r.cause.message
+        }
+    }
+
+    /** A new, empty binder of the page's type; the list reloads through changes. */
+    fun create(name: String, type: String, okText: String) = viewModelScope.launch {
+        report(c.collectionWrite.createBinder(name, type), okText)
+    }
+
+    fun delete(name: String, okText: String) = viewModelScope.launch {
+        report(c.collectionWrite.deleteBinder(name), okText)
+    }
+
     /** Rename (into an existing binder merges) and/or change the type. */
     fun rename(from: String, to: String, type: String, volatileText: String) = viewModelScope.launch {
         when (val r = c.collectionWrite.renameBinder(from, BinderPatchDto(name = to.trim(), type = type))) {
@@ -97,8 +116,12 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
     val auth by appContainer().auth.state.collectAsStateWithLifecycle()
     val unlocked = auth == AuthState.Open || auth == AuthState.Unlocked
     var renaming by remember { mutableStateOf<BinderDto?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    val createdText = stringResource(R.string.binders_created)
+    val deletedText = stringResource(R.string.binders_deleted)
     val volatileText = stringResource(R.string.binders_rename_volatile)
 
+    Box(Modifier.fillMaxSize()) {
     when (val r = st) {
         null -> Column(Modifier.fillMaxSize().padding(24.dp)) { CircularProgressIndicator() }
         is ApiResult.HttpError -> ErrorRetry(r, onRetry = { vm.load() })
@@ -106,7 +129,7 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
         is ApiResult.Success -> {
             val list = r.data.filter { it.type.equals(type, ignoreCase = true) && it.name.isNotEmpty() }
             LazyColumn(
-                contentPadding = PaddingValues(12.dp),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
@@ -130,6 +153,9 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(b.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            if (unlocked && b.total == 0) {
+                                TextButton(onClick = { vm.delete(b.name, deletedText.format(b.name)) }) { Text(stringResource(R.string.binders_delete)) }
+                            }
                             if (unlocked) TextButton(onClick = { renaming = b }) { Text(stringResource(R.string.binders_rename)) }
                         }
                         Row {
@@ -143,6 +169,23 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
                 }
             }
         }
+    }
+
+    if (unlocked) {
+        FloatingActionButton(
+            onClick = { creating = true },
+            containerColor = PortalColors.Accent,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+        ) { Text("+", fontSize = 26.sp, color = PortalColors.Bg) }
+    }
+    }
+
+    if (creating) {
+        val existing = (st as? ApiResult.Success)?.data.orEmpty()
+        CreateDialog(type, existing, onDismiss = { creating = false }, onCreate = { name ->
+            creating = false
+            vm.create(name, type, createdText.format(name))
+        })
     }
 
     renaming?.let { b ->
@@ -180,6 +223,27 @@ private fun RenameDialog(b: BinderDto, onDismiss: () -> Unit, onRename: (String,
             TextButton(onClick = { onRename(name, type) }, enabled = name.isNotBlank() && (name.trim() != b.name || type != b.type)) {
                 Text(stringResource(R.string.binders_rename_ok))
             }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) } },
+    )
+}
+
+/** Name of a new folder or list; a name in use (any type) is refused. */
+@Composable
+private fun CreateDialog(type: String, existing: List<BinderDto>, onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    val taken = existing.any { it.name == name.trim() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (type == "list") R.string.binders_new_list else R.string.binders_new_binder)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it.take(100) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                if (taken) Text(stringResource(R.string.binders_new_taken), fontSize = 12.sp, color = PortalColors.Red)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onCreate(name.trim()) }, enabled = name.isNotBlank() && !taken) { Text(stringResource(R.string.decks_new_ok)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) } },
     )

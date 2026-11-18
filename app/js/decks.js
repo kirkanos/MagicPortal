@@ -253,12 +253,12 @@ function newDeckDialog() {
     <h2>${t('Neues Deck', 'New deck')}</h2>
     <form class="deck-form" id="deck-new-form">
       <input type="text" class="binder-input" name="name" maxlength="100" required autocomplete="off" placeholder="${t('Name des Decks', 'Deck name')}">
-      <p class="section-hint">${t('Danach fügst du Karten aus deiner Sammlung hinzu – das Deck entsteht mit der ersten Karte.', 'Then add cards from your collection – the deck comes into being with the first card.')}</p>
+      <p class="section-hint">${t('Danach fügst du Karten aus deiner Sammlung hinzu. Das Deck bleibt auch leer bestehen, bis du es löschst.', 'Then add cards from your collection. The deck stays even while empty, until you delete it.')}</p>
       <div class="deck-form-actions"><button type="submit" class="upload-btn">${t('Anlegen', 'Create')}</button></div>
     </form>`);
   const form = document.getElementById('deck-new-form');
   form.elements.name.focus();
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = form.elements.name.value.trim();
     if (!name) return;
@@ -266,6 +266,14 @@ function newDeckDialog() {
     if (existing && (existing.type || '') !== 'deck') {
       showNotice(t(`„${name}“ gibt es schon als Ordner oder Liste.`, `“${name}” already exists as a folder or list.`), true);
       return;
+    }
+    if (!existing) {
+      try {
+        await writeAPI('POST', '/binders', { name, type: 'deck' });
+      } catch (err) {
+        showNotice(t('Anlegen fehlgeschlagen: ', 'Creating failed: ') + err.message, true);
+        return;
+      }
     }
     location.href = `decks.html?deck=${encodeURIComponent(name)}&add=1`;
   });
@@ -310,7 +318,16 @@ function renderDeckCards() {
   document.querySelectorAll('.view-switch button').forEach((b) => b.classList.toggle('active', b.dataset.view === deckView));
   const el = document.getElementById('deck-cards');
   if (!deckGroups.length) {
-    el.innerHTML = `<p class="section-hint deck-empty">${t('Das Deck ist leer. Füge über „+ Karten hinzufügen“ Karten aus deiner Sammlung hinzu.', 'The deck is empty. Add cards from your collection with “+ Add cards”.')}</p>`;
+    el.innerHTML = `<p class="section-hint deck-empty">${t('Das Deck ist leer. Füge über „+ Karten hinzufügen“ Karten aus deiner Sammlung hinzu.', 'The deck is empty. Add cards from your collection with “+ Add cards”.')}</p>
+      <p class="deck-empty"><button type="button" class="reset-btn unlock-only" id="deck-delete-btn">🗑 ${t('Leeres Deck löschen', 'Delete empty deck')}</button></p>`;
+    document.getElementById('deck-delete-btn').addEventListener('click', async () => {
+      try {
+        await writeAPI('DELETE', '/binders/' + encodeURIComponent(deckName));
+        location.href = 'decks.html';
+      } catch (err) {
+        showNotice(t('Löschen fehlgeschlagen: ', 'Deleting failed: ') + err.message, true);
+      }
+    });
     return;
   }
   if (deckView === 'grid') el.innerHTML = gridViewHTML();

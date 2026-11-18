@@ -8,6 +8,7 @@ import net.kirkanos.mtgportal.core.network.dto.RowPatchDto
 import net.kirkanos.mtgportal.core.network.dto.MoveRowsDto
 import net.kirkanos.mtgportal.core.network.dto.MoveRowsResultDto
 import net.kirkanos.mtgportal.core.network.dto.RowPatchResultDto
+import net.kirkanos.mtgportal.core.network.dto.BinderCreateDto
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
@@ -155,6 +156,13 @@ interface PortalApi {
 
     @PUT("binders/{name}/deck")
     suspend fun setDeckSettings(@Path("name") name: String, @Body body: DeckSettingsInputDto): Response<Unit>
+
+    @POST("binders")
+    suspend fun createBinder(@Body body: BinderCreateDto): Response<Unit>
+
+    /** Only an empty binder created by hand; one with cards answers 409. */
+    @DELETE("binders/{name}")
+    suspend fun deleteBinder(@Path("name") name: String): Response<Unit>
 
     @PATCH("binders/{name}")
     suspend fun patchBinder(@Path("name") name: String, @Body body: BinderPatchDto): BinderPatchResultDto

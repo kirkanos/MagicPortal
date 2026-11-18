@@ -162,7 +162,7 @@ fun AppShell() {
                     DeckScreen(name, onScan = {
                         container.scanTarget = BinderTarget(name, "deck")
                         nav.navigate(ScannerRoute) { launchSingleTop = true }
-                    })
+                    }, onDeleted = { nav.popBackStack() })
                 }
                 composable<DashboardRoute> { DashboardScreen() }
                 composable<DeckCheckerRoute> { DeckCheckerScreen() }

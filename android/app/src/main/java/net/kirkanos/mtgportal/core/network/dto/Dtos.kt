@@ -173,6 +173,10 @@ data class DeckCoverInputDto(val setCode: String, val collectorNumber: String = 
 @Serializable
 data class DeckSettingsInputDto(val format: String = "", val commander: DeckCoverInputDto? = null)
 
+/** POST /api/binders: a new, empty binder (binder, list or deck). */
+@Serializable
+data class BinderCreateDto(val name: String, val type: String)
+
 /** GET /api/decks/search: per deck the matching card names (the first few). */
 @Serializable
 data class DeckHitsDto(val count: Int = 0, val cards: List<String> = emptyList())
