@@ -73,19 +73,38 @@ class AuthInterceptor(
         return chain.proceed(request.newBuilder().header(HEADER, pw).build())
     }
 
-    private fun sameOrigin(a: HttpUrl, b: HttpUrl) = a.scheme == b.scheme && a.host == b.host && a.port == b.port
-
     companion object {
         const val HEADER = "X-Upload-Password"
+    }
+}
+
+internal fun sameOrigin(a: HttpUrl, b: HttpUrl) = a.scheme == b.scheme && a.host == b.host && a.port == b.port
+
+/**
+ * A network interceptor, so it sees every hop of a redirect: OkHttp follows
+ * redirects behind the application interceptors and only drops
+ * Authorization on its way to another host, not X-Upload-Password. One 302
+ * from a misconfigured proxy or a mistyped domain would otherwise hand the
+ * password to whatever host it points at. Here the header leaves only
+ * towards the configured server - whether the [AuthInterceptor] or a caller
+ * (the auth probe) set it.
+ */
+class StripAuthOffServer(private val baseUrl: () -> String) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        if (request.header(AuthInterceptor.HEADER) == null) return chain.proceed(request)
+        val server = baseUrl().trim().toHttpUrlOrNull()
+        if (server != null && sameOrigin(request.url, server)) return chain.proceed(request)
+        return chain.proceed(request.newBuilder().removeHeader(AuthInterceptor.HEADER).build())
     }
 }
 
 /**
  * Names the app on every request. Scryfall asks clients to identify
  * themselves, and its image CDN enforces it: a generic "okhttp/5.x" gets an
- * HTTP 400 instead of the image. That hit every card the portal's mirror does
- * not hold (nginx passes the User-Agent through when it fetches from Scryfall),
- * and with the mirror off it would hit all of them.
+ * HTTP 400 instead of the image. That hits every card the portal's mirror does
+ * not hold (nginx redirects those to Scryfall), and with the mirror off all
+ * of them.
  */
 class UserAgentInterceptor(private val userAgent: String) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response =

@@ -638,7 +638,7 @@ async function searchCollection(q) {
     const img = groupImage(g, 'small');
     return `
       <div class="deck-search-row">
-        ${img ? `<img loading="lazy" src="${img}" alt="">` : '<span class="deck-search-noimg"></span>'}
+        ${img ? `<img loading="lazy" src="${escapeHTML(img)}" alt="">` : '<span class="deck-search-noimg"></span>'}
         <div class="deck-search-info">
           <div class="deck-search-name">${escapeHTML(g.name)} <span class="deck-line-mana">${renderManaCost((g.manaCost || '').split('//')[0])}</span></div>
           <div class="section-hint">${escapeHTML(g.setCode)} #${escapeHTML(g.collectorNumber)} · ${languageFlag(v.language) || ''} ${escapeHTML((v.language || '').toUpperCase())}${v.foil && v.foil !== 'normal' ? ' · ' + escapeHTML(v.foil) : ''} · ${escapeHTML(v.binderName || t('ohne Ordner', 'no folder'))} · ×${v.quantity}</div>
@@ -676,7 +676,7 @@ function initListPreview(container) {
     if (!line || !pv) return;
     const g = viewItems[Number(line.dataset.idx)];
     const img = g && groupImage(g, 'normal');
-    pv.innerHTML = img ? `<img src="${img}" alt="">` : '';
+    pv.innerHTML = img ? `<img src="${escapeHTML(img)}" alt="">` : '';
     const r = line.getBoundingClientRect();
     const left = r.right + 260 < window.innerWidth ? r.right + 12 : Math.max(8, r.left - 260);
     pv.style.left = left + 'px';

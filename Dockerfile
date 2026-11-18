@@ -12,6 +12,8 @@ COPY app/ /usr/share/nginx/html/
 ENV NGINX_ENVSUBST_FILTER=^ANALYTICS_
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
+# Included by the template; outside conf.d, which is a tmpfs in compose.
+COPY nginx/security-headers.conf nginx/api-proxy.conf /etc/nginx/snippets/
 
 # Builds the analytics snippets from the ANALYTICS_* variables before nginx
 # starts. Without them they stay empty and nothing happens.

@@ -92,6 +92,27 @@ class PortalApiTest {
     }
 
     @Test
+    fun aRedirectToAnotherHostLosesThePassword() = runTest {
+        val other = MockWebServer().apply { start() }
+        try {
+            secret = "s3cret"
+            repeat(2) {
+                server.enqueue(MockResponse.Builder().code(302).addHeader("Location", other.url("/elsewhere").toString()).build())
+                other.enqueue(MockResponse.Builder().code(204).build())
+            }
+            clients.portalApi.health()
+            assertEquals("s3cret", server.takeRequest().headers[AuthInterceptor.HEADER])
+            assertNull("stored password followed the redirect", other.takeRequest().headers[AuthInterceptor.HEADER])
+
+            clients.portalApi.authCheck("typed")
+            assertEquals("typed", server.takeRequest().headers[AuthInterceptor.HEADER])
+            assertNull("probe password followed the redirect", other.takeRequest().headers[AuthInterceptor.HEADER])
+        } finally {
+            other.close()
+        }
+    }
+
+    @Test
     fun authProbeControlsTheHeaderItself() = runTest {
         secret = "stored"
         server.enqueue(MockResponse.Builder().code(403).build())

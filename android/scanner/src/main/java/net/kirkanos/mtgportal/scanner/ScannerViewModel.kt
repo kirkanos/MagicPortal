@@ -196,7 +196,9 @@ class ScannerViewModel(
                 // Without a card outline the hash describes the table or a
                 // misplaced card; it would only produce false matches.
                 val match = matcher?.match(reading, hash.takeIf { outline != null })
-                Log.d(TAG, "$reading -> ${match?.printing?.let { "${it.setCode}/${it.collectorNumber} ${it.name}" }} ${match?.source} ${match?.confidence}")
+                // What the camera read stays out of release logs: any app
+                // with log access (adb, OEM tools) could follow along.
+                if (BuildConfig.DEBUG) Log.d(TAG, "$reading -> ${match?.printing?.let { "${it.setCode}/${it.collectorNumber} ${it.name}" }} ${match?.source} ${match?.confidence}")
                 dump(frame, raw.name ?: match?.printing?.name ?: "none")
                 val defaults = _state.value
                 val added = session.offer(match, reading.language ?: defaults.defaultLanguage, defaults.defaultFoil)

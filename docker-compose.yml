@@ -7,8 +7,10 @@ services:
     build: ./backend
     container_name: ${SERVICE}-backend
     environment:
-      # Password for upload/reset/sync (from .env; empty = no protection).
+      # Password for upload/reset/sync (from .env). Empty = every write is
+      # refused, unless ALLOW_NO_PASSWORD=true opens them deliberately.
       - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:-}
+      - ALLOW_NO_PASSWORD=${ALLOW_NO_PASSWORD:-false}
       - DB_PATH=/data/mtg.db
       # Automatic remote import (all fields optional; empty = disabled).
       # Defaults only: the settings page can change mode and interval.

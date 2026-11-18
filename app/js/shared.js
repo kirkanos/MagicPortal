@@ -58,17 +58,37 @@ async function fetchSetCards(code) {
 
 /* ---- Upload / reset with password (custom header, no browser auth dialog) ---- */
 
+/* The page never keeps the password: POST /api/login answers with an
+   HttpOnly session cookie, which the browser sends along with every API
+   request on its own and no script can read. Older versions stored the
+   password in localStorage; such a value is used once to log in and removed. */
 const UPLOAD_PW_KEY = 'mtg_upload_pw';
-// localStorage (not sessionStorage) so the login persists across browser sessions.
-let uploadPassword = localStorage.getItem(UPLOAD_PW_KEY) || sessionStorage.getItem(UPLOAD_PW_KEY) || null;
 // Whether write actions are available (no password configured, or logged in).
 // Pages listen for the `auth-change` event instead of polling this.
 let isUnlocked = false;
 
 function uploadHeaders(extra) {
-  const headers = Object.assign({}, extra || {});
-  if (uploadPassword != null) headers['X-Upload-Password'] = uploadPassword;
-  return headers;
+  return Object.assign({}, extra || {});
+}
+
+/* Logs in with the password; true when it was right. */
+async function loginWithPassword(pw) {
+  const res = await fetch(API + '/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw }),
+    cache: 'no-store',
+  });
+  if (res.status === 429) {
+    throw new Error(t('Zu viele falsche Versuche, bitte später noch einmal.', 'Too many wrong attempts, please try again later.'));
+  }
+  return res.ok;
+}
+
+/* /api/status hides its error texts from visitors who are not unlocked. */
+const HIDDEN_STATUS_ERROR = 'error (unlock for details)';
+function statusError(s) {
+  return s === HIDDEN_STATUS_ERROR ? t('Fehler (Details nach dem Entsperren)', 'Error (unlock for details)') : s;
 }
 
 /* A write to the collection API with the upload password. Resolves to the
@@ -204,11 +224,10 @@ function priceHint() {
   );
 }
 
-/* Verifies the upload password against the server. Pass a password to test it,
-   or null to probe whether a password is required. true = access granted (204). */
-async function checkUploadAuth(pw) {
-  const headers = pw != null ? { 'X-Upload-Password': pw } : {};
-  const res = await fetch(API + '/auth-check', { headers, cache: 'no-store' });
+/* Whether writes are allowed right now: no password configured, or a valid
+   session cookie. true = access granted (204). */
+async function checkUploadAuth() {
+  const res = await fetch(API + '/auth-check', { cache: 'no-store' });
   return res.ok;
 }
 
@@ -238,15 +257,18 @@ const SCRYFALL_IMAGE_BASE = 'https://cards.scryfall.io';
    fetched from Scryfall is decided by nginx via try_files - the browser does
    not need to know and saves itself a check per card. */
 let imageMirrorActive = false;
+const SCRYFALL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function imageBase() {
   return imageMirrorActive ? '/img/cards' : SCRYFALL_IMAGE_BASE;
 }
 
+/* Set symbols: the catalog has Scryfall's SVG URL. Only that host and a plain
+   file name are passed on - the value ends up in HTML attributes. */
 function setSymbolURL(uri) {
-  if (!imageMirrorActive || !uri) return uri || '';
-  const code = uri.split('/').pop().split('?')[0];
-  return '/img/sets/' + code;
+  const m = /^https:\/\/svgs\.scryfall\.io\/sets\/([a-z0-9_-]+\.svg)(\?\d+)?$/i.exec(uri || '');
+  if (!m) return '';
+  return imageMirrorActive ? '/img/sets/' + m[1] : uri;
 }
 
 function scryfallImageURL(card, size, face) {
@@ -258,7 +280,9 @@ function scryfallImageURL(card, size, face) {
   // imageId is only present where the catalog carries a different id than the
   // collection row (a diverging printing in the ManaBox export).
   const id = sc.imageId || card.scryfallId || '';
-  if (id.length < 2) return '';
+  // The id lands in a URL inside HTML; ManaBox CSVs are user data, so only a
+  // real Scryfall id (a UUID) is turned into a URL.
+  if (!SCRYFALL_ID.test(id)) return '';
   if (face === 'back' && !sc.hasBack) return '';
   return `${imageBase()}/${size}/${face || 'front'}/${id[0]}/${id[1]}/${id}.jpg`;
 }
@@ -745,13 +769,13 @@ function initModal() {
    of the time nobody wants to see it. */
 function cardFaceHTML(name, frontURL, backURL) {
   if (!frontURL) return `<div class="no-image">${t('Kein Bild', 'No image')}</div>`;
-  if (!backURL) return `<img src="${frontURL}" alt="${escapeHTML(name)}">`;
+  if (!backURL) return `<img src="${escapeHTML(frontURL)}" alt="${escapeHTML(name)}">`;
   const backLabel = `${escapeHTML(name)} (${t('Rückseite', 'back')})`;
   return `
     <div class="card-flip" data-flipped="false">
       <div class="card-flip-inner">
-        <img class="card-face card-front" src="${frontURL}" alt="${escapeHTML(name)}">
-        <img class="card-face card-back" data-src="${backURL}" alt="${backLabel}" aria-hidden="true">
+        <img class="card-face card-front" src="${escapeHTML(frontURL)}" alt="${escapeHTML(name)}">
+        <img class="card-face card-back" data-src="${escapeHTML(backURL)}" alt="${backLabel}" aria-hidden="true">
       </div>
     </div>
     <button type="button" class="flip-btn" aria-pressed="false">
@@ -838,9 +862,9 @@ async function refreshSyncStatus() {
     if (st.lastError) {
       el.innerHTML = label + ' <span class="sync-err">⚠ ' + t('Fehler', 'error') + '</span>';
       el.classList.add('has-error');
-      el.title = t('Letzter Sync-Fehler (klicken für Details): ', 'Last sync error (click for details): ') + st.lastError;
+      el.title = t('Letzter Sync-Fehler (klicken für Details): ', 'Last sync error (click for details): ') + statusError(st.lastError);
       el.style.cursor = 'pointer';
-      el.onclick = () => alert(t('Letzter Sync-Fehler:\n\n', 'Last sync error:\n\n') + st.lastError);
+      el.onclick = () => alert(t('Letzter Sync-Fehler:\n\n', 'Last sync error:\n\n') + statusError(st.lastError));
     } else {
       el.textContent = label;
       el.classList.remove('has-error');
@@ -1016,7 +1040,7 @@ async function renderImportSettings() {
     <label class="admin-num" id="cfg-import-interval-row">${t('alle', 'every')} <input type="number" id="cfg-import-interval" min="1" max="10080" value="${ri.intervalMinutes || 15}"> ${t('Minuten', 'minutes')}</label>
     <label class="admin-check"><input type="radio" name="cfg-import-mode" value="manual" ${mode === 'manual' ? 'checked' : ''}> ${t('Manuell', 'Manual')}</label>
     <p class="admin-status">${escapeHTML(last + checked)}</p>
-    ${ri.lastError ? `<p class="admin-status sync-err">⚠ ${escapeHTML(ri.lastError)}</p>` : ''}
+    ${ri.lastError ? `<p class="admin-status sync-err">⚠ ${escapeHTML(statusError(ri.lastError))}</p>` : ''}
     <div class="admin-actions"><button type="button" id="cfg-import-run" class="reset-btn" ${ri.running ? 'disabled' : ''}>📥 ${ri.running ? t('Import läuft …', 'Import running …') : t('Jetzt importieren', 'Import now')}</button></div>`;
   const syncInterval = () => {
     const auto = box.querySelector('input[name="cfg-import-mode"]:checked').value === 'auto';
@@ -1039,7 +1063,7 @@ function renderBackupStatus(b) {
     ? t(`Letztes Backup: ${relTime(b.lastAt)}`, `Last backup: ${relTime(b.lastAt)}`) + ` (${new Date(b.lastAt).toLocaleString(LANG === 'en' ? 'en-GB' : 'de-DE')})`
     : t('Noch kein Backup.', 'No backup yet.'));
   if (b.lastRestoreAt) html += '<br>' + escapeHTML(t(`Zuletzt wiederhergestellt: ${relTime(b.lastRestoreAt)}`, `Last restored: ${relTime(b.lastRestoreAt)}`));
-  if (b.lastError) html += `<br><span class="sync-err">⚠ ${escapeHTML(b.lastError)}</span>`;
+  if (b.lastError) html += `<br><span class="sync-err">⚠ ${escapeHTML(statusError(b.lastError))}</span>`;
   el.innerHTML = html;
 }
 
@@ -1064,7 +1088,7 @@ async function runImportNow() {
       showNotice(t('Neue CSV importiert.', 'New CSV imported.'));
       setTimeout(() => location.reload(), 1200);
     } else if (ri.lastError) {
-      showNotice(t('Import fehlgeschlagen: ', 'Import failed: ') + ri.lastError, true);
+      showNotice(t('Import fehlgeschlagen: ', 'Import failed: ') + statusError(ri.lastError), true);
     } else {
       showNotice(t('Keine neue CSV gefunden.', 'No new CSV found.'));
     }
@@ -1168,7 +1192,7 @@ function initCollectionUpload() {
           if (st && st.running) {
             setTimeout(wait, 3000);
           } else if (st && st.lastError) {
-            alert(t('Aktualisierung mit Fehler beendet:\n\n', 'Update finished with an error:\n\n') + st.lastError);
+            alert(t('Aktualisierung mit Fehler beendet:\n\n', 'Update finished with an error:\n\n') + statusError(st.lastError));
           } else {
             location.reload();
           }
@@ -1265,9 +1289,7 @@ function initCollectionUpload() {
     const pw = prompt(t('Passwort:', 'Password:'));
     if (pw == null || pw === '') return;
     try {
-      if (await checkUploadAuth(pw)) {
-        uploadPassword = pw;
-        localStorage.setItem(UPLOAD_PW_KEY, pw);
+      if (await loginWithPassword(pw)) {
         setUnlocked(true);
       } else {
         alert(t('Falsches Passwort.', 'Wrong password.'));
@@ -1280,15 +1302,19 @@ function initCollectionUpload() {
   // Determine initial state: no password configured, already-unlocked session, or locked.
   (async () => {
     try {
-      if (await checkUploadAuth(null)) {
-        uploadPassword = null;
-        setUnlocked(true);
-      } else if (uploadPassword && (await checkUploadAuth(uploadPassword))) {
-        setUnlocked(true);
-      } else {
+      let stored = null;
+      try {
+        stored = localStorage.getItem(UPLOAD_PW_KEY) || sessionStorage.getItem(UPLOAD_PW_KEY);
         localStorage.removeItem(UPLOAD_PW_KEY);
         sessionStorage.removeItem(UPLOAD_PW_KEY);
-        uploadPassword = null;
+      } catch (e) {
+        /* ignore */
+      }
+      if (await checkUploadAuth()) {
+        setUnlocked(true);
+      } else if (stored && (await loginWithPassword(stored))) {
+        setUnlocked(true);
+      } else {
         setUnlocked(false);
       }
     } catch (e) {

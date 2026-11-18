@@ -5,7 +5,9 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 // newTestDB points the package-level db at a fresh database in a temp dir.
@@ -120,5 +122,61 @@ func TestRestoreMatchesColumnsByName(t *testing.T) {
 				t.Errorf("columns scrambled: name=%q set=%q qty=%d", name, set, qty)
 			}
 		})
+	}
+}
+
+func TestBackupNamesAndPruning(t *testing.T) {
+	now := time.Date(2026, 11, 18, 15, 30, 12, 0, time.UTC)
+	if n := backupName(backupAuto, now); n != "mtg-portal-backup-auto-2026-11-18.db.gz" {
+		t.Error(n)
+	}
+	manual := backupName(backupManual, now)
+	if manual != "mtg-portal-backup-manual-2026-11-18-153012.db.gz" || !isManualBackup(manual) || !isBackupName(manual) {
+		t.Error(manual)
+	}
+	files := []backupFile{
+		{Name: "mtg-portal-backup-2026-11-14.db.gz"}, // from before the split: automatic
+		{Name: "mtg-portal-backup-auto-2026-11-15.db.gz"},
+		{Name: "mtg-portal-backup-manual-2026-11-01-080000.db.gz"},
+		{Name: "mtg-portal-backup-auto-2026-11-17.db.gz"},
+		{Name: "mtg-portal-backup-auto-2026-11-16.db.gz"},
+	}
+	var pruned []string
+	for _, f := range backupsToPrune(files, 2) {
+		pruned = append(pruned, f.Name)
+	}
+	if strings.Join(pruned, ",") != "mtg-portal-backup-auto-2026-11-15.db.gz,mtg-portal-backup-2026-11-14.db.gz" {
+		t.Errorf("pruned %v", pruned)
+	}
+	if len(backupsToPrune(files, 0)) != 0 {
+		t.Error("keep 0 means keep all")
+	}
+
+	// The newest by modification time, not by name.
+	files = []backupFile{
+		{Name: "mtg-portal-backup-manual-2026-11-18-080000.db.gz", Mod: now.Add(-8 * time.Hour)},
+		{Name: "mtg-portal-backup-auto-2026-11-18.db.gz", Mod: now},
+	}
+	if b, _ := newestBackup(files); b.Name != files[1].Name {
+		t.Errorf("newest %s", b.Name)
+	}
+	files[0].Mod, files[1].Mod = time.Time{}, time.Time{}
+	if b, _ := newestBackup(files); b.Name != files[0].Name {
+		t.Errorf("newest by name %s", b.Name)
+	}
+}
+
+func TestRestoreRefusesAGzipBomb(t *testing.T) {
+	newTestDB(t)
+	old := maxBackupUnpacked
+	maxBackupUnpacked = 1 << 20
+	defer func() { maxBackupUnpacked = old }()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	gz.Write(make([]byte, 4<<20))
+	gz.Close()
+	err := restoreFromGz(buf.Bytes())
+	if err == nil || !strings.Contains(err.Error(), "refused") {
+		t.Errorf("err %v", err)
 	}
 }

@@ -143,7 +143,8 @@ The first three values are only needed when running behind Traefik:
 | `SERVICE` | Service name (container names, Traefik router, systemd unit, `/services/$SERVICE`) |
 | `HOST` | Public domain (Traefik routing + TLS) |
 | `PORT` | Internal port of the `web` container (nginx, 80) |
-| `UPLOAD_PASSWORD` | Password for upload/reset/sync (empty = no protection) |
+| `UPLOAD_PASSWORD` | Password for upload/reset/sync (empty = every write is refused) |
+| `ALLOW_NO_PASSWORD` | `true` opens all writes when no password is set – only for a portal bound to localhost (default `false`; the standalone stack sets `true`) |
 
 Standalone stack only:
 
@@ -205,9 +206,18 @@ The **data that is yours and cannot be recreated** – the collection (`collecti
 history (`value_snapshots`, `price_history`) and the settings/metadata (`meta`, including the
 admin `ui_config`) – is backed up regularly into a compact, gzip-compressed SQLite file and
 uploaded as a **dated copy** to every configured source (Nextcloud via WebDAV `PUT`, Google
-Drive via API). The Scryfall catalog (`scryfall_cards`, `sets`) is **not** backed up (it is
+Drive via API). Automatic and manual backups have different names:
+
+| Kind | File name | Pruned |
+|---|---|---|
+| automatic | `mtg-portal-backup-auto-2026-11-18.db.gz` – one per day, later runs that day overwrite it | yes, beyond `BACKUP_KEEP` |
+| manual ("Backup now") | `mtg-portal-backup-manual-2026-11-18-153012.db.gz` – one per click (UTC) | never |
+
+Files from before the split (`mtg-portal-backup-2026-11-18.db.gz`) count as automatic. A
+restore takes the most recently written file of either kind. A backup on its way in may be at
+most 512 MB packed and 2 GB unpacked. The Scryfall catalog (`scryfall_cards`, `sets`) is **not** backed up (it is
 re-downloaded anyway – after a restore its tables are empty, which forces the download), so a
-backup stays small (typically < 2 MB).
+backup stays fairly small (a few dozen MB packed, most of it price history).
 
 With an **empty database** (a fresh volume) the backend restores the latest remote backup
 automatically on startup. Doing it manually works too – see the endpoints below.
@@ -215,7 +225,7 @@ automatically on startup. Doing it manually works too – see the endpoints belo
 | Variable | Purpose |
 |---|---|
 | `BACKUP_INTERVAL_HOURS` | Backup interval (default 24) |
-| `BACKUP_KEEP` | Number of copies to keep; older ones are deleted (default 30, `0` = keep all) |
+| `BACKUP_KEEP` | Number of automatic copies to keep; older ones are deleted (default 30, `0` = keep all). Manual backups are never deleted |
 | `WEBDAV_BACKUP_DIR` | Target **folder** as a WebDAV URL (e.g. `…/remote.php/dav/files/<user>/mtg-backups/`); uses `WEBDAV_USER`/`WEBDAV_PASSWORD` |
 | `GDRIVE_BACKUP_FOLDER_ID` | Target **folder ID** in Google Drive; uses `GDRIVE_SA_JSON` |
 
@@ -237,7 +247,9 @@ A push to `main` triggers the [Woodpecker](https://woodpecker-ci.org) pipeline
 2. **Deploy** – sources are copied to `/services/$SERVICE`, the systemd unit is installed.
 3. **Restart** – the service restarts and builds on the host via `docker compose up --build`.
 
-Secrets (Woodpecker): `sops_age_key`, `ssh_host_local`.
+Secrets (Woodpecker): `sops_age_key`, `ssh_host_local` – for push events only. The PR check
+([`.woodpecker/pr-check.yml`](.woodpecker/pr-check.yml)) runs code from the pull request and
+therefore takes no secret: it checks the compose file against `.env.sample`.
 Credentials live **encrypted** in [`.env.enc`](.env.enc); a plaintext `.env` is gitignored.
 
 ```bash
@@ -297,6 +309,17 @@ Both containers run with a `read_only` rootfs, `cap_drop: ALL` (web keeps only t
 needs), `no-new-privileges` plus memory and PID limits. The backend runs as a non-root user
 (uid 10001); its port is not published – it is reachable only through the nginx proxy.
 
+nginx sends a Content Security Policy (scripts only from the own origin – Chart.js is bundled
+under `app/js/vendor/`), `X-Frame-Options: DENY`, `nosniff`, a `same-origin` referrer policy
+and HSTS, and hides its version. Card images the mirror does not hold are **redirected** to
+Scryfall rather than proxied, so the server cannot be used to fetch images on its bandwidth.
+
+The web interface logs in with `POST /api/login` and gets an `HttpOnly`, `SameSite=Strict`
+session cookie; the password itself is never stored in the browser. The cookie holds only an
+expiry and an HMAC keyed with the password, so changing the password ends every session.
+Wrong passwords are throttled per client (5 attempts, then one per 30 s; nginx additionally
+limits the login paths), and `/api/status` shows error texts only to unlocked clients.
+
 ## 📈 Monitoring (optional)
 
 The backend exposes Prometheus metrics on a separate port (`METRICS_PORT`, default `9090`)
@@ -331,7 +354,9 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `POST` | `/api/wishlist` | Add or update one entry (password protected) |
 | `DELETE` | `/api/wishlist/{name}` | Remove one entry (password protected) |
 | `GET` | `/api/wishlist/export` | The list in Cardmarket's decklist format (`text/plain`) |
-| `GET` | `/api/auth-check` | Password check (204/403) |
+| `GET` | `/api/auth-check` | Password check (204/403, 429 while throttled): header `X-Upload-Password` or the session cookie |
+| `POST` | `/api/login` | `{"password"}` → session cookie for the web interface (204/403/429) |
+| `POST` | `/api/logout` | Drops the session cookie |
 | `POST` | `/api/collection/cards` | Add cards (Android app): `{"items":[{setCode, collectorNumber, quantity, foil, language, condition, binderName, binderType}]}`, one transaction, merges equal rows, name and IDs from the catalog; `Idempotency-Key` makes retries safe (password protected) |
 | `GET` | `/api/collection/cards/{id}` | One collection row |
 | `PATCH` | `/api/collection/cards/{id}` | Change `quantity` or `quantityDelta` (0 deletes), move with `binderName`/`foil`/`language`/`condition` – merges into an existing row; edits of CSV rows answer `volatile: true`, the next import resets them (password protected) |

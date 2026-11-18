@@ -51,6 +51,10 @@ android {
         }
         release {
             if (keystore != null) signingConfig = signingConfigs.getByName("release")
+            // R8 (minify + shrinkResources) cuts the code from ~50 MB of dex
+            // to 6 MB, but is not switched on yet: without the rules in
+            // proguard-rules.pro images and the scanner broke; with them it
+            // is still untested on a device.
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

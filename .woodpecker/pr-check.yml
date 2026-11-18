@@ -1,7 +1,10 @@
 # PR check: validates pull requests (above all Renovate's) without deploying
 # anything. The deploy in woodpecker.yml still only runs on a push to main.
 #
-#   1. decrypt .env from .env.enc so compose knows every variable
+#   1. .env from .env.sample, so compose knows every variable. Deliberately
+#      NOT the decrypted .env: a pull request runs code from the PR (go test,
+#      any script it changes), and that code must never see a secret. This
+#      pipeline therefore takes no secret at all.
 #   2. docker compose config: syntax, variables, included files
 #   3. every image tag from the compose file and the Dockerfile must exist in
 #      its registry - a Renovate PR with a wrong tag fails here, not at deploy
@@ -15,19 +18,10 @@ when:
   - event: pull_request
 
 steps:
-  - name: env
-    image: registry.kirkanos.net/images/ci-build:alpine
-    pull: true
-    environment:
-      SOPS_AGE_KEY:
-        from_secret: sops_age_key
-    commands:
-      - for f in .env.enc docker-compose.env.enc; do if [ -f "$f" ]; then sops --decrypt --input-type dotenv --output-type dotenv --output "$(echo $f | sed 's/\.enc$//')" "$f"; fi; done
-      - ls -la .env* 2>/dev/null || true
-
   - name: compose config
     image: docker:cli
     commands:
+      - cp .env.sample .env
       - docker compose config --quiet
       - docker compose config --format json > .compose.json
       - echo "compose config ok"

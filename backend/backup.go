@@ -15,9 +15,11 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -32,8 +34,36 @@ import (
 // it is re-downloaded on the next sync (its tables are empty after a restore,
 // which forces that download regardless of restored sync markers).
 
+// File names tell the two kinds apart:
+//
+//	mtg-portal-backup-auto-2026-11-18.db.gz            automatic, one per day
+//	                                                    (later runs that day
+//	                                                    overwrite it), pruned to
+//	                                                    BACKUP_KEEP
+//	mtg-portal-backup-manual-2026-11-18-153012.db.gz   "Backup now", one per
+//	                                                    click, never pruned
+//
+// Names from before the split (mtg-portal-backup-2026-11-18.db.gz) count as
+// automatic. A restore takes the newest file of any kind.
 const backupPrefix = "mtg-portal-backup-"
 const backupSuffix = ".db.gz"
+
+const (
+	backupAuto   = "auto"
+	backupManual = "manual"
+)
+
+// Limits for a backup on its way in: the gzip file (upload or download) and
+// what it unpacks to. Without the second a small crafted file could fill the
+// disk. A real backup is far below both (~30 MB packed, ~75 MB unpacked with
+// a year of price history).
+const maxBackupPacked = 512 << 20
+
+var maxBackupUnpacked int64 = 2 << 30 // a var for the test
+
+// backupMu serialises backups and restores: a manual backup during the
+// scheduled one would otherwise attach the same schema name twice.
+var backupMu sync.Mutex
 
 // meta is included so admin settings (ui_config) and other non-derivable keys
 // come back on restore. The Scryfall catalog (scryfall_cards, sets) is still not
@@ -73,17 +103,106 @@ func startBackupScheduler() {
 	}
 	log.Printf("[backup] enabled, interval: %s", interval)
 	go func() {
-		runBackup()
+		runBackup(backupAuto)
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 		for range ticker.C {
-			runBackup()
+			runBackup(backupAuto)
 		}
 	}()
 }
 
+func backupName(kind string, now time.Time) string {
+	if kind == backupManual {
+		return backupPrefix + "manual-" + now.UTC().Format("2006-01-02-150405") + backupSuffix
+	}
+	return backupPrefix + "auto-" + now.UTC().Format(dateLayout) + backupSuffix
+}
+
+func isManualBackup(name string) bool {
+	return strings.HasPrefix(name, backupPrefix+"manual-")
+}
+
+// backupStamp is the date (and time) in a name, comparable across kinds.
+func backupStamp(name string) string {
+	s := strings.TrimSuffix(strings.TrimPrefix(name, backupPrefix), backupSuffix)
+	return strings.TrimPrefix(strings.TrimPrefix(s, "auto-"), "manual-")
+}
+
+// A backup file on a remote; ID only on Google Drive.
+type backupFile struct {
+	Name, ID string
+	Mod      time.Time
+}
+
+// newestBackup is the most recently written backup. The modification time
+// decides: an automatic backup keeps its date-only name all day, so a manual
+// one from the morning would win by name over the evening's automatic one.
+func newestBackup(files []backupFile) (backupFile, bool) {
+	if len(files) == 0 {
+		return backupFile{}, false
+	}
+	best := files[0]
+	for _, f := range files[1:] {
+		switch {
+		case !f.Mod.IsZero() && !best.Mod.IsZero():
+			if f.Mod.After(best.Mod) {
+				best = f
+			}
+		case backupStamp(f.Name) > backupStamp(best.Name):
+			best = f
+		}
+	}
+	return best, true
+}
+
+// backupsToPrune: the automatic backups beyond the newest keep. Manual
+// backups are never pruned.
+func backupsToPrune(files []backupFile, keep int) []backupFile {
+	if keep <= 0 {
+		return nil
+	}
+	var auto []backupFile
+	for _, f := range files {
+		if !isManualBackup(f.Name) {
+			auto = append(auto, f)
+		}
+	}
+	if len(auto) <= keep {
+		return nil
+	}
+	sort.Slice(auto, func(i, j int) bool { return backupStamp(auto[i].Name) > backupStamp(auto[j].Name) })
+	return auto[keep:]
+}
+
+// backupTempDir holds the temporary SQLite files of backup and restore: next
+// to the database, on disk. /tmp is a tmpfs, i.e. memory, and the container
+// only has 512 MB of that.
+func backupTempDir() string {
+	if dbFilePath != "" {
+		return filepath.Dir(dbFilePath)
+	}
+	return os.TempDir()
+}
+
+// readLimited reads at most max bytes and fails beyond that instead of
+// silently cutting the file.
+func readLimited(r io.Reader, max int64) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(r, max+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > max {
+		return nil, fmt.Errorf("backup larger than %d MB", max>>20)
+	}
+	return data, nil
+}
+
 // runBackup builds one backup and uploads it to every configured target.
-func runBackup() {
+// kind is backupAuto or backupManual.
+func runBackup(kind string) {
+	backupMu.Lock()
+	defer backupMu.Unlock()
 	// Nothing worth saving yet.
 	if countRows(db, "value_snapshots") == 0 && countRows(db, "collection") == 0 {
 		return
@@ -95,7 +214,7 @@ func runBackup() {
 		logActivityDedup("error", "Backup", "Creating the backup failed: "+err.Error())
 		return
 	}
-	name := backupPrefix + time.Now().UTC().Format(dateLayout) + backupSuffix
+	name := backupName(kind, time.Now())
 
 	ok := false
 	if os.Getenv("WEBDAV_BACKUP_DIR") != "" {
@@ -135,10 +254,18 @@ func runBackup() {
 // buildBackup copies the user tables into a fresh SQLite file and returns it
 // gzip-compressed. Serialized against other writes via the single DB connection.
 func buildBackup() ([]byte, error) {
-	tmp := "/tmp/mtg-backup.db"
-	for _, s := range []string{tmp, tmp + "-wal", tmp + "-shm"} {
-		_ = os.Remove(s)
+	// A fresh name each time; SQLite takes the empty file as an empty database.
+	f, err := os.CreateTemp(backupTempDir(), "mtg-backup-*.db")
+	if err != nil {
+		return nil, err
 	}
+	tmp := f.Name()
+	f.Close()
+	defer func() {
+		for _, s := range []string{tmp, tmp + "-wal", tmp + "-shm", tmp + "-journal"} {
+			_ = os.Remove(s)
+		}
+	}()
 	if _, err := db.Exec(`ATTACH DATABASE '` + tmp + `' AS bak`); err != nil {
 		return nil, err
 	}
@@ -157,9 +284,6 @@ func buildBackup() ([]byte, error) {
 	}
 
 	raw, err := os.ReadFile(tmp)
-	for _, s := range []string{tmp, tmp + "-wal", tmp + "-shm"} {
-		_ = os.Remove(s)
-	}
 	if err != nil {
 		return nil, err
 	}
@@ -177,27 +301,40 @@ func buildBackup() ([]byte, error) {
 
 // restoreFromGz replaces the user tables with the contents of a gzipped backup.
 func restoreFromGz(gzData []byte) error {
-	gr, err := gzip.NewReader(bytes.NewReader(gzData))
+	return restoreFrom(bytes.NewReader(gzData))
+}
+
+// restoreFrom unpacks a gzipped backup straight into a temporary file - at
+// most maxBackupUnpacked bytes, so a gzip bomb fails instead of filling the
+// disk - and copies the user tables from it.
+func restoreFrom(gzr io.Reader) error {
+	backupMu.Lock()
+	defer backupMu.Unlock()
+	gr, err := gzip.NewReader(gzr)
 	if err != nil {
 		return fmt.Errorf("not valid gzip: %w", err)
 	}
-	raw, err := io.ReadAll(gr)
-	gr.Close()
+	defer gr.Close()
+	f, err := os.CreateTemp(backupTempDir(), "mtg-restore-*.db")
 	if err != nil {
 		return err
 	}
-	tmp := "/tmp/mtg-restore.db"
-	for _, s := range []string{tmp, tmp + "-wal", tmp + "-shm"} {
-		_ = os.Remove(s)
-	}
-	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
-		return err
-	}
+	tmp := f.Name()
 	defer func() {
-		for _, s := range []string{tmp, tmp + "-wal", tmp + "-shm"} {
+		for _, s := range []string{tmp, tmp + "-wal", tmp + "-shm", tmp + "-journal"} {
 			_ = os.Remove(s)
 		}
 	}()
+	n, err := io.Copy(f, io.LimitReader(gr, maxBackupUnpacked+1))
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return fmt.Errorf("unpacking: %w", err)
+	}
+	if n > maxBackupUnpacked {
+		return fmt.Errorf("backup unpacks to more than %d MB, refused", maxBackupUnpacked>>20)
+	}
 
 	if _, err := db.Exec(`ATTACH DATABASE '` + tmp + `' AS rst`); err != nil {
 		return err
@@ -329,6 +466,7 @@ func fetchLatestBackup() ([]byte, string) {
 	return nil, ""
 }
 
+// isBackupName: any of our backups, automatic, manual or from before the split.
 func isBackupName(name string) bool {
 	return strings.HasPrefix(name, backupPrefix) && strings.HasSuffix(name, backupSuffix)
 }
@@ -364,12 +502,13 @@ func webdavBackup(name string, data []byte) error {
 
 type davMultistatus struct {
 	Responses []struct {
-		Href string `xml:"href"`
+		Href         string `xml:"href"`
+		LastModified string `xml:"propstat>prop>getlastmodified"`
 	} `xml:"response"`
 }
 
-// webdavList returns the backup file names present in the backup directory.
-func webdavList() ([]string, error) {
+// webdavList returns the backups present in the backup directory.
+func webdavList() ([]backupFile, error) {
 	dir, user, pass := webdavCreds()
 	req, err := http.NewRequest("PROPFIND", dir+"/", strings.NewReader(
 		`<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:getlastmodified/></d:prop></d:propfind>`))
@@ -389,32 +528,39 @@ func webdavList() ([]string, error) {
 	if resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("PROPFIND HTTP %d", resp.StatusCode)
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, err := readLimited(resp.Body, 16<<20)
+	if err != nil {
+		return nil, err
+	}
 	var ms davMultistatus
 	if err := xml.Unmarshal(body, &ms); err != nil {
 		return nil, err
 	}
-	names := []string{}
+	files := []backupFile{}
 	for _, r := range ms.Responses {
 		base := path.Base(r.Href)
 		if unesc, err := url.PathUnescape(base); err == nil {
 			base = unesc
 		}
 		if isBackupName(base) {
-			names = append(names, base)
+			mod, _ := http.ParseTime(strings.TrimSpace(r.LastModified))
+			files = append(files, backupFile{Name: base, Mod: mod})
 		}
 	}
-	sort.Sort(sort.Reverse(sort.StringSlice(names))) // newest (by date name) first
-	return names, nil
+	return files, nil
 }
 
 func webdavFetchLatest() ([]byte, error) {
-	names, err := webdavList()
-	if err != nil || len(names) == 0 {
+	files, err := webdavList()
+	if err != nil {
 		return nil, err
 	}
+	latest, ok := newestBackup(files)
+	if !ok {
+		return nil, nil
+	}
 	dir, user, pass := webdavCreds()
-	req, _ := http.NewRequest("GET", dir+"/"+names[0], nil)
+	req, _ := http.NewRequest("GET", dir+"/"+latest.Name, nil)
 	if user != "" {
 		req.SetBasicAuth(user, pass)
 	}
@@ -426,21 +572,17 @@ func webdavFetchLatest() ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GET HTTP %d", resp.StatusCode)
 	}
-	return io.ReadAll(resp.Body)
+	return readLimited(resp.Body, maxBackupPacked)
 }
 
 func pruneWebDAV() {
-	keep := backupKeep()
-	if keep <= 0 {
-		return
-	}
-	names, err := webdavList()
-	if err != nil || len(names) <= keep {
+	files, err := webdavList()
+	if err != nil {
 		return
 	}
 	dir, user, pass := webdavCreds()
-	for _, name := range names[keep:] {
-		req, _ := http.NewRequest("DELETE", dir+"/"+name, nil)
+	for _, f := range backupsToPrune(files, backupKeep()) {
+		req, _ := http.NewRequest("DELETE", dir+"/"+f.Name, nil)
 		if user != "" {
 			req.SetBasicAuth(user, pass)
 		}
@@ -460,17 +602,12 @@ func gdriveToken() (string, error) {
 	return gdriveAccessToken(sa, "https://www.googleapis.com/auth/drive")
 }
 
-type gdriveFile struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-func gdriveListBackups(token string) ([]gdriveFile, error) {
+func gdriveListBackups(token string) ([]backupFile, error) {
 	folder := os.Getenv("GDRIVE_BACKUP_FOLDER_ID")
 	q := "'" + folder + "' in parents and trashed=false"
 	u := "https://www.googleapis.com/drive/v3/files?" + url.Values{
 		"q":                         {q},
-		"fields":                    {"files(id,name)"},
+		"fields":                    {"files(id,name,modifiedTime)"},
 		"orderBy":                   {"name desc"},
 		"pageSize":                  {"1000"},
 		"supportsAllDrives":         {"true"},
@@ -488,13 +625,17 @@ func gdriveListBackups(token string) ([]gdriveFile, error) {
 		return nil, fmt.Errorf("list HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 	var out struct {
-		Files []gdriveFile `json:"files"`
+		Files []struct {
+			ID           string    `json:"id"`
+			Name         string    `json:"name"`
+			ModifiedTime time.Time `json:"modifiedTime"`
+		} `json:"files"`
 	}
 	_ = json.Unmarshal(body, &out)
-	files := []gdriveFile{}
+	files := []backupFile{}
 	for _, f := range out.Files {
 		if isBackupName(f.Name) {
-			files = append(files, f)
+			files = append(files, backupFile{Name: f.Name, ID: f.ID, Mod: f.ModifiedTime})
 		}
 	}
 	return files, nil
@@ -573,10 +714,14 @@ func gdriveFetchLatest() ([]byte, error) {
 		return nil, err
 	}
 	files, err := gdriveListBackups(token)
-	if err != nil || len(files) == 0 {
+	if err != nil {
 		return nil, err
 	}
-	u := "https://www.googleapis.com/drive/v3/files/" + files[0].ID + "?alt=media&supportsAllDrives=true"
+	latest, ok := newestBackup(files)
+	if !ok {
+		return nil, nil
+	}
+	u := "https://www.googleapis.com/drive/v3/files/" + latest.ID + "?alt=media&supportsAllDrives=true"
 	req, _ := http.NewRequest("GET", u, nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := remoteImportClient.Do(req)
@@ -588,19 +733,15 @@ func gdriveFetchLatest() ([]byte, error) {
 		b, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("download HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
 	}
-	return io.ReadAll(resp.Body)
+	return readLimited(resp.Body, maxBackupPacked)
 }
 
 func pruneGDrive(token string) {
-	keep := backupKeep()
-	if keep <= 0 {
-		return
-	}
 	files, err := gdriveListBackups(token)
-	if err != nil || len(files) <= keep {
+	if err != nil {
 		return
 	}
-	for _, f := range files[keep:] {
+	for _, f := range backupsToPrune(files, backupKeep()) {
 		req, _ := http.NewRequest("DELETE", "https://www.googleapis.com/drive/v3/files/"+f.ID+"?supportsAllDrives=true", nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 		if resp, err := remoteImportClient.Do(req); err == nil {
@@ -620,7 +761,7 @@ func handleBackupNow(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No backup target configured", 400)
 		return
 	}
-	go runBackup()
+	go runBackup(backupManual)
 	writeJSON(w, map[string]bool{"started": true})
 }
 
@@ -657,12 +798,7 @@ func handleRestoreUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	data, err := io.ReadAll(io.LimitReader(r.Body, 512*1024*1024))
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	if err := restoreFromGz(data); err != nil {
+	if err := restoreFrom(http.MaxBytesReader(w, r.Body, maxBackupPacked)); err != nil {
 		http.Error(w, "Restore failed: "+err.Error(), 400)
 		return
 	}

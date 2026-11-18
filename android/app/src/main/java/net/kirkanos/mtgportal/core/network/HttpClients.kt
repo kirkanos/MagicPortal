@@ -44,6 +44,7 @@ class HttpClients(
         .addInterceptor(UserAgentInterceptor(userAgent))
         .addInterceptor(BaseUrlInterceptor(baseUrl))
         .addInterceptor(AuthInterceptor(baseUrl, secret))
+        .addNetworkInterceptor(StripAuthOffServer(baseUrl))
         .apply {
             if (debug) {
                 addInterceptor(

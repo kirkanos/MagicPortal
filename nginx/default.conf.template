@@ -1,8 +1,28 @@
+# Login attempts per client, on top of the backend's own throttle for wrong
+# passwords. (http level: conf.d files are included inside http {}.)
+limit_req_zone $binary_remote_addr zone=mtg_auth:1m rate=30r/m;
+
 server {
     listen       80;
     server_name  _;
     root   /usr/share/nginx/html;
     index  index.html;
+
+    # No nginx version in headers and error pages.
+    server_tokens off;
+
+    # The real client address: Traefik (or another proxy in a private
+    # network) puts it into X-Forwarded-For. Only addresses from private
+    # ranges are trusted to set it, so a client on the internet cannot pick
+    # its own.
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 192.168.0.0/16;
+    set_real_ip_from 127.0.0.1;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
+
+    include /etc/nginx/snippets/security-headers.conf;
 
     # Collection/card JSON payloads run into several MB uncompressed for large
     # collections; gzip cuts that drastically for both the API and static assets.
@@ -14,27 +34,27 @@ server {
 
     # --- Local image mirror with a fallback to Scryfall ---
     # The volume sits at <root>/img. try_files decides per file: if it is
-    # mirrored it comes from here, otherwise nginx fetches it from Scryfall.
-    # That is why the browser needs no existence check per card - that would
-    # be an extra request per image and cost more than the mirror saves.
+    # mirrored it comes from here, otherwise the browser is redirected to
+    # Scryfall. That is why the browser needs no existence check per card -
+    # that would be an extra request per image and cost more than the mirror
+    # saves.
+    #
+    # A redirect, not a proxy: proxied, anybody could fetch any Scryfall image
+    # through this server, on its bandwidth. Redirected, the browser loads it
+    # from Scryfall itself, without our cookies (another domain).
     #
     # With the mirror off (IMAGE_MIRROR), the frontend builds Scryfall URLs
     # directly and these blocks are never requested.
     location /img/cards/ {
         try_files $uri @scryfall_cards;
+        include /etc/nginx/snippets/security-headers.conf;
         add_header Cache-Control "public, max-age=2592000" always;
     }
     location @scryfall_cards {
-        rewrite ^/img/cards/(.*)$ /$1 break;
-        proxy_pass https://cards.scryfall.io;
-        proxy_set_header Host cards.scryfall.io;
-        proxy_ssl_server_name on;
-        # Do not forward visitor headers to a third-party CDN: an SSO cookie
-        # for our own domain rides along on this request too and has no
-        # business at Scryfall - and their CDN even aborts requests carrying a
-        # large cookie (which shows up as a 414 instead of an image).
-        proxy_set_header Cookie "";
-        proxy_set_header Authorization "";
+        include /etc/nginx/snippets/security-headers.conf;
+        # Short, so an image mirrored later is soon taken from here.
+        add_header Cache-Control "public, max-age=86400" always;
+        rewrite ^/img/cards/(.*)$ https://cards.scryfall.io/$1 redirect;
     }
 
     location /img/sets/ {
@@ -46,28 +66,14 @@ server {
         expires 30d;
     }
     location @scryfall_svg {
-        rewrite ^/img/sets/(.*)$ /sets/$1 break;
-        proxy_pass https://svgs.scryfall.io;
-        proxy_set_header Host svgs.scryfall.io;
-        proxy_ssl_server_name on;
-        # Do not forward visitor headers to a third-party CDN: an SSO cookie
-        # for our own domain rides along on this request too and has no
-        # business at Scryfall - and their CDN even aborts requests carrying a
-        # large cookie (which shows up as a 414 instead of an image).
-        proxy_set_header Cookie "";
-        proxy_set_header Authorization "";
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=86400" always;
+        rewrite ^/img/sets/(.*)$ https://svgs.scryfall.io/sets/$1 redirect;
     }
     location @scryfall_symbols {
-        rewrite ^/img/symbols/(.*)$ /card-symbols/$1 break;
-        proxy_pass https://svgs.scryfall.io;
-        proxy_set_header Host svgs.scryfall.io;
-        proxy_ssl_server_name on;
-        # Do not forward visitor headers to a third-party CDN: an SSO cookie
-        # for our own domain rides along on this request too and has no
-        # business at Scryfall - and their CDN even aborts requests carrying a
-        # large cookie (which shows up as a 414 instead of an image).
-        proxy_set_header Cookie "";
-        proxy_set_header Authorization "";
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=86400" always;
+        rewrite ^/img/symbols/(.*)$ https://svgs.scryfall.io/card-symbols/$1 redirect;
     }
 
     # --- Analytics (optional) ---
@@ -88,24 +94,30 @@ server {
             application/vnd.android.package-archive apk;
             application/json json;
         }
+        include /etc/nginx/snippets/security-headers.conf;
         add_header Cache-Control "no-cache";
         try_files $uri =404;
     }
 
     location /api/ {
-        proxy_pass http://mtg-portal-backend:8080;
-        proxy_set_header Host $host;
-        proxy_read_timeout 300s;
-        client_max_body_size 25m;
-        # Stream API responses straight through instead of buffering large JSON
-        # payloads to a temp file (avoids disk-dependent truncation).
-        proxy_buffering off;
+        include /etc/nginx/snippets/api-proxy.conf;
+    }
+    location = /api/login {
+        limit_req zone=mtg_auth burst=10 nodelay;
+        limit_req_status 429;
+        include /etc/nginx/snippets/api-proxy.conf;
+    }
+    location = /api/auth-check {
+        limit_req zone=mtg_auth burst=30 nodelay;
+        limit_req_status 429;
+        include /etc/nginx/snippets/api-proxy.conf;
     }
 
     location / {
         try_files $uri $uri/ =404;
         # Always revalidate HTML/JS/CSS via ETag so updated assets are never
         # served stale from the browser cache (returns 304 when unchanged).
+        include /etc/nginx/snippets/security-headers.conf;
         add_header Cache-Control "no-cache" always;
 
         # Replaces the <!--analytics--> placeholder in the HTML pages with

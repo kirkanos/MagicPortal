@@ -20,6 +20,7 @@ func main() {
 	dbPath := envOr("DB_PATH", "/data/mtg.db")
 	dbFilePath = dbPath
 	uploadPassword = os.Getenv("UPLOAD_PASSWORD")
+	allowNoPassword = os.Getenv("ALLOW_NO_PASSWORD") == "true"
 	port := envOr("PORT", "8080")
 
 	var err error
@@ -86,6 +87,8 @@ func main() {
 	mux.HandleFunc("POST /api/backup/restore-latest", handleRestoreLatest)
 	mux.HandleFunc("POST /api/backup/restore-upload", handleRestoreUpload)
 	mux.HandleFunc("GET /api/auth-check", handleAuthCheck)
+	mux.HandleFunc("POST /api/login", handleLogin)
+	mux.HandleFunc("POST /api/logout", handleLogout)
 	mux.HandleFunc("POST /api/upload", handleUpload)
 	mux.HandleFunc("POST /api/reset", handleReset)
 	mux.HandleFunc("POST /api/sync", handleSync)
@@ -93,7 +96,14 @@ func main() {
 	mux.HandleFunc("POST /api/import/run", handleImportRun)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
 
-	log.Printf("mtg-portal backend listening on :%s (password protection: %v)", port, uploadPassword != "")
+	switch {
+	case uploadPassword != "":
+		log.Printf("mtg-portal backend listening on :%s (password protection on)", port)
+	case allowNoPassword:
+		log.Printf("mtg-portal backend listening on :%s (NO password: every write is open, ALLOW_NO_PASSWORD=true)", port)
+	default:
+		log.Printf("mtg-portal backend listening on :%s (no UPLOAD_PASSWORD set: all writes are refused; set one, or ALLOW_NO_PASSWORD=true)", port)
+	}
 	if err := http.ListenAndServe(":"+port, instrument(mux)); err != nil {
 		log.Fatal(err)
 	}
@@ -104,13 +114,6 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
-}
-
-func authorized(r *http.Request) bool {
-	if uploadPassword == "" {
-		return true
-	}
-	return r.Header.Get("X-Upload-Password") == uploadPassword
 }
 
 func writeJSON(w http.ResponseWriter, v interface{}) {
@@ -493,14 +496,6 @@ func handleSubtypes(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(v))
 }
 
-func handleAuthCheck(w http.ResponseWriter, r *http.Request) {
-	if authorized(r) {
-		w.WriteHeader(204)
-	} else {
-		w.WriteHeader(403)
-	}
-}
-
 func handleUpload(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r) {
 		http.Error(w, "Wrong or missing password", 403)
@@ -549,20 +544,46 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]interface{}{"status": "reset", "removed": n})
 }
 
+// handleStatus is public (the sync chip polls it on every page), its error
+// texts are not: they can name hosts, folders, even part of a credential that
+// failed to parse. Without authorisation an error is only flagged.
 func handleStatus(w http.ResponseWriter, r *http.Request) {
+	auth := authorized(r)
+	remote, backup, images, hashes := remoteImportStatus(), backupStatus(), imageStatus(), hashStatus()
+	if !auth {
+		for _, m := range []map[string]interface{}{remote, backup, images, hashes} {
+			if v, ok := m["lastError"]; ok {
+				m["lastError"] = hideError(v)
+			}
+		}
+	}
+	syncErr := syncError()
+	if !auth {
+		syncErr = hideError(syncErr).(string)
+	}
 	writeJSON(w, map[string]interface{}{
 		"running":         syncInProgress(),
-		"lastError":       syncError(),
+		"lastError":       syncErr,
 		"setsSyncedAt":    metaGet(db, "sets_synced_at"),
 		"cardsSyncedAt":   metaGet(db, "bulk_synced_at"),
 		"collectionCount": countRows(db, "collection"),
 		"cardCount":       countRows(db, "scryfall_cards"),
 		"setCount":        countRows(db, "sets"),
-		"remoteImport":    remoteImportStatus(),
-		"backup":          backupStatus(),
-		"imageMirror":     imageStatus(),
-		"hashIndex":       hashStatus(),
+		"remoteImport":    remote,
+		"backup":          backup,
+		"imageMirror":     images,
+		"hashIndex":       hashes,
 	})
+}
+
+// hiddenError replaces an error text for visitors who are not unlocked.
+const hiddenError = "error (unlock for details)"
+
+func hideError(v interface{}) interface{} {
+	if s, _ := v.(string); s != "" {
+		return hiddenError
+	}
+	return ""
 }
 
 func handleSync(w http.ResponseWriter, r *http.Request) {

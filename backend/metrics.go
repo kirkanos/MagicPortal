@@ -127,6 +127,8 @@ var (
 
 	// Last backup payload size, set on every successful backup.
 	metricBackupBytes atomic.Int64
+	// Wrong passwords (header or login form), throttled clients included.
+	metricAuthFailures atomic.Int64
 
 	processStart = time.Now()
 )
@@ -242,15 +244,32 @@ func (s *statusRecorder) Write(b []byte) (int, error) {
 func instrument(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+		method := knownMethod(r.Method)
 		rec := &statusRecorder{ResponseWriter: w}
-		next.ServeHTTP(rec, r)
+		if method == "other" {
+			// The API has no route for it anyway; answering here keeps an
+			// invented method out of the mux and, above all, out of the
+			// metric labels, where every new name would be a new series.
+			http.Error(rec, "Method not allowed", http.StatusMethodNotAllowed)
+		} else {
+			next.ServeHTTP(rec, r)
+		}
 		if rec.status == 0 {
 			rec.status = http.StatusOK
 		}
 		route := routeLabel(r.URL.Path)
-		metricHTTPRequests.inc(labels("route", route, "method", r.Method, "status", strconv.Itoa(rec.status)))
+		metricHTTPRequests.inc(labels("route", route, "method", method, "status", strconv.Itoa(rec.status)))
 		metricHTTPDuration.observe(labels("route", route), time.Since(start).Seconds())
 	})
+}
+
+// knownMethod is the method as a metric label: the ones the API uses, else "other".
+func knownMethod(m string) string {
+	switch m {
+	case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions:
+		return m
+	}
+	return "other"
 }
 
 // ---- database-derived gauges ----
@@ -465,6 +484,7 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	simple(n("activity_errors_24h"), "Error entries in the activity log over the last 24h", "gauge", float64(g.activityErrors24h))
 	simple(n("db_size_bytes"), "Size of the SQLite file", "gauge", g.dbBytes)
 	simple(n("backup_last_size_bytes"), "Size of the most recently created backup", "gauge", float64(metricBackupBytes.Load()))
+	simple(n("auth_failures_total"), "Wrong passwords since the start", "counter", float64(metricAuthFailures.Load()))
 	simple(n("wishlist_items"), "Entries on the wishlist", "gauge", float64(g.wishlistItems))
 	simple(n("wishlist_value_eur"), "What the wishlist would cost at the cheapest printing, in EUR", "gauge", g.wishlistValueEUR)
 	simple(n("wishlist_targets_met"), "Wishlist entries at or below their target price", "gauge", float64(g.wishlistTargetsMet))

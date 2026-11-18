@@ -24,6 +24,10 @@ services:
       # as the port binds to 127.0.0.1 only (see below); put something here as
       # soon as the portal is reachable on the network.
       - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:-}
+      # Without a password the backend refuses every write unless this says
+      # an open portal is intended - true here because of the localhost bind.
+      # Set it to false when BIND opens the port to the network.
+      - ALLOW_NO_PASSWORD=${ALLOW_NO_PASSWORD:-true}
       - DB_PATH=/data/mtg.db
       # Sync against the Scryfall catalog (minutes between two runs).
       - SYNC_INTERVAL_MINUTES=${SYNC_INTERVAL_MINUTES:-}

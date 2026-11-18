@@ -2,3 +2,7 @@ mtg-portal
 Copyright 2026 kirkanos
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product bundles Chart.js 4.5.1 (app/js/vendor/chart.umd.min.js),
+Copyright (c) 2014-2024 Chart.js Contributors, released under the MIT
+License (see app/js/vendor/chart.js.LICENSE.md).
