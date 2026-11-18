@@ -35,7 +35,7 @@ import (
 // answering 304 to clients whose cached copy still has the old shape, because
 // the underlying rows did not change - they would render stale data until the
 // next import. Bump this whenever a cacheable response's JSON changes.
-const payloadVersion = "7"
+const payloadVersion = "8"
 
 // collectionETag builds the validator for /api/collection.
 //

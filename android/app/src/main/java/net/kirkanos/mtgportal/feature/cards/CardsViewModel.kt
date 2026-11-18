@@ -57,6 +57,9 @@ data class CardsUiState(
     val random: List<CardGroupDto> = emptyList(),
 )
 
+/** The server's page size of /api/cards. */
+private const val PAGE = 60
+
 @OptIn(FlowPreview::class)
 class CardsViewModel(
     private val c: AppContainer,
@@ -83,29 +86,45 @@ class CardsViewModel(
     init {
         loadAll()
         // Reload after writes made elsewhere (see CollectionWriteRepository.changes).
-        viewModelScope.launch { c.collectionWrite.changes.drop(1).collect { loadAll() } }
+        // The view stays as it is, with as many cards as were loaded.
+        viewModelScope.launch { c.collectionWrite.changes.drop(1).collect { loadAll(keepView = true) } }
         // Typing is debounced like the web's 250 ms; everything else applies at once.
         viewModelScope.launch {
             _state.map { it.filters.query }.distinctUntilChanged().drop(1).debounce(250).collect { runQuery() }
         }
     }
 
-    /** Facets, sets and subtypes in parallel, then the first page. */
-    fun loadAll() {
+    /**
+     * Facets, sets and subtypes in parallel, then the first page. keepView
+     * (after a write) reloads as many cards as are loaded, so the list keeps
+     * its place; if the write moved the last cards out of the binder on show,
+     * the view follows them to where they went.
+     */
+    fun loadAll(keepView: Boolean = false) {
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             val facets = async { safeCall { c.api.facets() } }
             val sets = async { safeCall { c.api.sets() } }
             val subs = async { safeCall { c.api.subtypes() } }
+            var keep = if (keepView) _state.value.groups.size else 0
             when (val f = facets.await()) {
-                is ApiResult.Success -> _state.update { it.copy(facets = f.data) }
+                is ApiResult.Success -> {
+                    val movedTo = if (keepView) c.collectionWrite.takeMoveTarget() else null
+                    val binder = _state.value.filters.binder
+                    if (movedTo != null && binder.isNotEmpty() && binder !in f.data.binders) {
+                        keep = 0
+                        _state.update { it.copy(facets = f.data, filters = it.filters.copy(binder = movedTo)) }
+                    } else {
+                        _state.update { it.copy(facets = f.data) }
+                    }
+                }
                 is ApiResult.HttpError -> return@launch _state.update { it.copy(loading = false, error = f) }
                 is ApiResult.NetworkError -> return@launch _state.update { it.copy(loading = false, error = f) }
             }
             (sets.await() as? ApiResult.Success)?.let { s -> _state.update { it.copy(sets = s.data) } }
             (subs.await() as? ApiResult.Success)?.let { officialSubtypes = it.data.toSet() }
             _state.update { it.copy(subtypes = subtypesFor(it.filters.type)) }
-            runQuery()
+            runQuery(keep)
             loadRandom()
         }
     }
@@ -144,13 +163,16 @@ class CardsViewModel(
         return if (officialSubtypes.isEmpty()) all else all.filter { it in officialSubtypes }
     }
 
-    /** A new query replaces the old one; a still running one is cancelled. */
-    private fun runQuery() {
+    /**
+     * A new query replaces the old one; a still running one is cancelled.
+     * keep > 0 loads that many cards at once (at most the server's 500).
+     */
+    private fun runQuery(keep: Int = 0) {
         queryJob?.cancel()
         pageJob?.cancel()
         queryJob = viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
-            when (val r = fetch(offset = 0)) {
+            when (val r = fetch(offset = 0, limit = if (keep > PAGE) keep.coerceAtMost(500) else null)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(groups = r.data.groups, total = r.data.total, hasMore = r.data.hasMore, loading = false)
                 }
@@ -194,7 +216,7 @@ class CardsViewModel(
         }
     }
 
-    private suspend fun fetch(offset: Int) = _state.value.filters.let { f ->
+    private suspend fun fetch(offset: Int, limit: Int? = null) = _state.value.filters.let { f ->
         safeCall {
             c.api.cards(
                 q = f.query.trim().ifEmpty { null },
@@ -208,6 +230,7 @@ class CardsViewModel(
                 style = f.style.ifEmpty { null },
                 sort = f.sort,
                 offset = offset,
+                limit = limit,
             )
         }
     }

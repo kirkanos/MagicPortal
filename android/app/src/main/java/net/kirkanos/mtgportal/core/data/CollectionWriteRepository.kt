@@ -58,6 +58,17 @@ class CollectionWriteRepository(private val api: PortalApi) {
 
     private fun <T> ApiResult<T>.noted(): ApiResult<T> = also { if (it is ApiResult.Success) _changes.update { n -> n + 1 } }
 
+    /**
+     * Where the last move went. A view of the source binder stays put after a
+     * move - unless the binder is now empty, then it follows the cards there.
+     */
+    @Volatile
+    private var movedTo: String? = null
+
+    fun takeMoveTarget(): String? = movedTo.also { movedTo = null }
+
+    private fun <T> ApiResult<T>.movedTo(name: String?): ApiResult<T> = also { if (it is ApiResult.Success && name != null) movedTo = name }
+
     suspend fun addScan(result: ScanSessionResult, target: BinderTarget, condition: String, sessionKey: String): ApiResult<AddCardsResultDto> {
         val body = toRequest(result, target, condition)
         var attempt = 0
@@ -81,7 +92,8 @@ class CollectionWriteRepository(private val api: PortalApi) {
         api.addCards(AddCardsRequest(listOf(item)), UUID.randomUUID().toString()).items.first()
     }.withReadableError().noted()
 
-    suspend fun patch(id: Long, patch: RowPatchDto): ApiResult<RowPatchResultDto> = safeCall { api.patchRow(id, patch) }.withReadableError().noted()
+    suspend fun patch(id: Long, patch: RowPatchDto): ApiResult<RowPatchResultDto> =
+        safeCall { api.patchRow(id, patch) }.withReadableError().movedTo(patch.binderName).noted()
 
     /** A ManaBox export of the app's cards, to hand them over. */
     data class Export(val id: Long, val cards: Int, val csv: ByteArray)
@@ -97,7 +109,7 @@ class CollectionWriteRepository(private val api: PortalApi) {
 
     /** Moves many rows into one binder at once (the grid's multi selection). */
     suspend fun moveRows(ids: List<Long>, target: BinderTarget, quantity: Int = 0): ApiResult<MoveRowsResultDto> =
-        safeCall { api.moveRows(MoveRowsDto(ids, target.name, target.type, quantity)) }.withReadableError().noted()
+        safeCall { api.moveRows(MoveRowsDto(ids, target.name, target.type, quantity)) }.withReadableError().movedTo(target.name).noted()
 
     /** The art of this printing on the deck box; an empty set code removes it. */
     suspend fun setDeckCover(deck: String, setCode: String, collectorNumber: String): ApiResult<Unit> =

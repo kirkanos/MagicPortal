@@ -537,6 +537,9 @@ function takeOutForm(g, id) {
       closeDeckDialog();
       bindersCache = null;
       await refreshDeck();
+      // The deck stays on show - unless that was its last card: then the
+      // view follows the card to where it went.
+      if (!deckGroups.length) location.href = 'index.html' + (r.binderName ? '?binder=' + encodeURIComponent(r.binderName) : '');
     } catch (e) {
       showNotice(t('Verschieben fehlgeschlagen: ', 'Moving failed: ') + e.message, true);
     }

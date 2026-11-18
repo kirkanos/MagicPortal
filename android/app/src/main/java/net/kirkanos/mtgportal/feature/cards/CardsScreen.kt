@@ -55,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -145,6 +146,15 @@ fun CardsScreen(binder: String?, set: String?) {
         }
     }
     LaunchedEffect(nearEnd, st.groups.size) { if (nearEnd) vm.loadMore() }
+    // A different binder (e.g. after its last cards were moved away) starts
+    // at the top; coming back to the screen keeps the position.
+    var shownBinder by rememberSaveable { mutableStateOf(st.filters.binder) }
+    LaunchedEffect(st.filters.binder) {
+        if (st.filters.binder != shownBinder) {
+            shownBinder = st.filters.binder
+            grid.scrollToItem(0)
+        }
+    }
 
     val full: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
 
@@ -458,7 +468,11 @@ private fun FilterSheet(
 
     if (setPickerOpen) {
         SetPickerDialog(
-            sets = facets?.sets.orEmpty().map { it.code to it.name },
+            // In a binder view only the sets in that binder (plus the chosen
+            // one, so it can be seen and switched off).
+            sets = facets?.sets.orEmpty()
+                .filter { s -> st.filters.binder.isEmpty() || s.code == st.filters.set || facets?.setsByBinder?.get(st.filters.binder)?.contains(s.code) != false }
+                .map { it.code to it.name },
             setIndex = st.sets,
             onPick = { code -> setPickerOpen = false; onChange { it.copy(set = code) } },
             onDismiss = { setPickerOpen = false },

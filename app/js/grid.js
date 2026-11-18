@@ -74,9 +74,14 @@ function updateSetLabel() {
 
 /* Custom set filter: a searchable dropdown showing the edition symbol + name
    (a native <select> can't render the set symbols). */
-function populateSetFilter() {
+function renderSetOptions() {
   const opts = document.getElementById('set-options');
+  // In a binder view only the sets in that binder (plus the chosen one, so it
+  // can be seen and switched off).
+  const binder = document.getElementById('filter-binder').value;
+  const inBinder = binder && facets.setsByBinder ? new Set(facets.setsByBinder[binder] || []) : null;
   const list = (facets.sets || [])
+    .filter((s) => !inBinder || inBinder.has(s.code) || s.code === selectedSet)
     .map((s) => ({ code: s.code, name: (setIndex[s.code.toLowerCase()] || {}).name || s.name || s.code }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -90,7 +95,11 @@ function populateSetFilter() {
           )}<span>${escapeHTML(s.name)}</span></div>`
       )
       .join('');
+}
 
+function populateSetFilter() {
+  renderSetOptions();
+  const opts = document.getElementById('set-options');
   const wrap = document.getElementById('set-filter');
   const toggle = document.getElementById('set-toggle');
   const panel = document.getElementById('set-panel');
@@ -211,8 +220,10 @@ function currentParams() {
 }
 
 /* Fetches one page of results. append=false replaces the grid (new filters),
-   append=true appends the next page (scrolling). */
-async function runQuery(append = false) {
+   append=true appends the next page (scrolling). keepView reloads as many
+   cards as are loaded and keeps the scroll position: after a write the
+   view stays where it was. */
+async function runQuery(append = false, keepView = false) {
   // Only the scroll-driven loading may block itself. A new filter query must
   // never be dropped, otherwise the page silently keeps the previous result;
   // superseded responses are caught by queryToken.
@@ -221,6 +232,8 @@ async function runQuery(append = false) {
   const token = ++queryToken;
   const p = currentParams();
   if (append) p.set('offset', String(pageOffset));
+  if (keepView) p.set('limit', String(Math.min(Math.max(pageOffset, 60), 500)));
+  const scrollY = window.scrollY;
 
   let data;
   try {
@@ -254,6 +267,7 @@ async function runQuery(append = false) {
   const frag = document.createDocumentFragment();
   groups.forEach((g) => frag.appendChild(buildCardTile(g)));
   grid.appendChild(frag);
+  if (keepView) window.scrollTo(0, scrollY);
 
   document.getElementById('result-count').textContent =
     `${data.total} ${t('von', 'of')} ${(facets.stats || {}).distinct || data.total} ${t('Karten', 'cards')}`;
@@ -452,15 +466,18 @@ async function moveSelection() {
     showNotice(msg);
     bindersCache = null;
     setSelecting(false);
-    await refreshAfterWrite();
+    await refreshAfterWrite(r.binderName || '');
   } catch (e) {
     showNotice(t('Verschieben fehlgeschlagen: ', 'Moving failed: ') + e.message, true);
     btn.disabled = false;
   }
 }
 
-/* After a write: facets (binders, counts) and the grid anew. */
-async function refreshAfterWrite() {
+/* After a write: facets (binders, counts) and the grid anew, in the same
+   view. Only when cards were moved out of the binder on show and it is now
+   empty does the view follow them to `movedTo`. */
+async function refreshAfterWrite(movedTo) {
+  let follow = false;
   try {
     const res = await fetch(API + '/cards/facets', { cache: 'no-cache' });
     if (res.ok) {
@@ -475,10 +492,32 @@ async function refreshAfterWrite() {
         o.textContent = b;
         binderSel.appendChild(o);
       });
-      binderSel.value = keep;
+      follow = movedTo !== undefined && keep !== '' && !(facets.binders || []).includes(keep);
+      binderSel.value = follow ? movedTo : keep;
+      renderSetOptions();
     }
   } catch (e) { /* the grid still reloads */ }
-  await runQuery();
+  if (follow) {
+    window.scrollTo(0, 0);
+    await runQuery();
+  } else {
+    await runQuery(false, true);
+  }
+}
+
+/* After moving one card from the detail dialog: stays put unless the binder
+   on show has no cards left. */
+async function followIfBinderEmptied(movedTo) {
+  const binder = document.getElementById('filter-binder').value;
+  if (!binder) return;
+  try {
+    const res = await fetch(API + '/cards/facets', { cache: 'no-cache' });
+    if (!res.ok) return;
+    const f = await res.json();
+    if ((f.binders || []).includes(binder)) return;
+  } catch (e) { return; }
+  document.getElementById('card-modal').classList.remove('open');
+  await refreshAfterWrite(movedTo);
 }
 
 /* ---- editing single rows in the detail dialog ---- */
@@ -545,6 +584,8 @@ async function editRow(act, id) {
       const r = await writeAPI('PATCH', `/collection/cards/${id}`, { binderName: name, binderType: document.getElementById('row-binder-type').value });
       bindersCache = null;
       applyRow(g, r.row, r.mergedInto ? [id] : []);
+      // The source binder may now be empty: then the view follows the card.
+      if (document.getElementById('filter-binder').value === (v.binderName || '')) await followIfBinderEmptied(name);
       if (v.origin === 'csv') showNotice(t('Verschoben – Karten aus ManaBox kommen beim nächsten Import wieder in ihren alten Ordner.', 'Moved – cards from ManaBox return to their old folder with the next import.'));
     }
   } catch (e) {
@@ -633,6 +674,7 @@ async function init() {
   if (binderParam) {
     const binderSel = document.getElementById('filter-binder');
     if ([...binderSel.options].some((o) => o.value === binderParam)) binderSel.value = binderParam;
+    renderSetOptions();
   }
 
   renderStats();
@@ -649,8 +691,9 @@ async function init() {
   document.getElementById('select-mode').addEventListener('click', () => setSelecting(!selecting));
   // Locked again: no more editing.
   document.addEventListener('auth-change', (e) => { if (!e.detail.unlocked && selecting) setSelecting(false); });
-  // The binder view decides which rows the selection means.
-  document.getElementById('filter-binder').addEventListener('change', () => renderSelectBar());
+  // The binder view decides which rows the selection means and which sets
+  // the set filter offers.
+  document.getElementById('filter-binder').addEventListener('change', () => { renderSelectBar(); renderSetOptions(); });
   document.getElementById('filter-type').addEventListener('change', (e) => {
     populateSubtypes(e.target.value);
     runQuery();

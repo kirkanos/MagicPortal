@@ -644,6 +644,7 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 	types := map[string]bool{}
 	subtypesByType := map[string]map[string]bool{}
 	setNames := map[string]string{}
+	setsByBinder := map[string]map[string]bool{}
 	groupKeys := map[string]bool{}
 
 	var totalQty int
@@ -680,6 +681,10 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 		if _, ok := setNames[c.SetCode]; !ok {
 			setNames[c.SetCode] = c.SetName
 		}
+		if setsByBinder[c.BinderName] == nil {
+			setsByBinder[c.BinderName] = map[string]bool{}
+		}
+		setsByBinder[c.BinderName][c.SetCode] = true
 		groupKeys[groupKeyOf(c)] = true
 		totalQty += c.Quantity
 		purchase += c.PurchasePrice * float64(c.Quantity)
@@ -696,14 +701,21 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 	for tp, set := range subtypesByType {
 		subs[tp] = sortedKeys(set)
 	}
+	// Which sets each binder holds: the set filter of a binder view offers
+	// only those. "" is the cards without a binder.
+	binderSets := map[string][]string{}
+	for b, set := range setsByBinder {
+		binderSets[b] = sortedKeys(set)
+	}
 
 	writeJSONCacheable(w, map[string]interface{}{
-		"sets":      setList,
-		"rarities":  sortedKeys(rarities),
-		"colors":    sortedKeys(colors),
-		"colorless": colorless,
-		"binders":   sortedKeys(binders),
-		"foils":     sortedKeys(foils),
+		"sets":         setList,
+		"rarities":     sortedKeys(rarities),
+		"colors":       sortedKeys(colors),
+		"colorless":    colorless,
+		"binders":      sortedKeys(binders),
+		"setsByBinder": binderSets,
+		"foils":        sortedKeys(foils),
 		// In cardStyleOrder, only those the collection has.
 		"styles":         presentInOrder(cardStyleOrder, styles),
 		"types":          sortedKeys(types),

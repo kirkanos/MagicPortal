@@ -79,6 +79,8 @@ data class FacetsDto(
     val colors: List<String> = emptyList(),
     val colorless: Boolean = false,
     val binders: List<String> = emptyList(),
+    /** Set codes per binder ("" = no binder): the set filter of a binder view. */
+    val setsByBinder: Map<String, List<String>> = emptyMap(),
     val foils: List<String> = emptyList(),
     /** Card variants in the collection: fullart, borderless, showcase, extendedart, artseries. */
     val styles: List<String> = emptyList(),

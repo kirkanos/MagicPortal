@@ -85,3 +85,31 @@ func TestCardSelectionCoversTheWholeFilter(t *testing.T) {
 		t.Fatalf("key %q not in selection %v", page.Groups[0].Key, all)
 	}
 }
+
+// The set filter of a binder view offers only the sets in that binder.
+func TestFacetsListSetsPerBinder(t *testing.T) {
+	newTestDB(t)
+	cardIndexMu.Lock()
+	cardIndexRows = nil
+	cardIndexMu.Unlock()
+	if _, err := db.Exec(`INSERT INTO collection (binder_name, binder_type, set_code, set_name, collector_number, name, rarity, foil, language, condition, quantity, purchase_price, currency, added, origin) VALUES
+		('Scans', 'binder', 'snc', 'Streets of New Capenna', '47', 'Ledger Shredder', 'rare', 'normal', 'en', 'near_mint', 2, 0, 'EUR', '', 'app'),
+		('Box', 'list', 'snc', 'Streets of New Capenna', '47', 'Ledger Shredder', 'rare', 'normal', 'en', 'near_mint', 3, 0, 'EUR', '', 'app'),
+		('Box', 'list', 'ice', 'Ice Age', '61', 'Brainstorm', 'common', 'normal', 'en', 'near_mint', 4, 0, 'EUR', '', 'csv')`); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	handleCardFacets(rec, httptest.NewRequest("GET", "/api/cards/facets", nil))
+	var f struct {
+		SetsByBinder map[string][]string `json:"setsByBinder"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &f); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.SetsByBinder["Scans"]; len(got) != 1 || got[0] != "SNC" && got[0] != "snc" {
+		t.Fatalf("Scans: %v", got)
+	}
+	if got := f.SetsByBinder["Box"]; len(got) != 2 {
+		t.Fatalf("Box: %v", got)
+	}
+}

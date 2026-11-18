@@ -146,7 +146,7 @@ class DeckViewModel(private val c: AppContainer, private val name: String) : Vie
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeckScreen(name: String, onScan: () -> Unit, onDeleted: () -> Unit = {}) {
+fun DeckScreen(name: String, onScan: () -> Unit, onDeleted: () -> Unit = {}, onOpenBinder: (String) -> Unit = {}) {
     val vm = containerViewModel { DeckViewModel(it, name) }
     val st by vm.state.collectAsStateWithLifecycle()
     val images by appContainer().config.imageUrls.collectAsStateWithLifecycle()
@@ -239,7 +239,12 @@ fun DeckScreen(name: String, onScan: () -> Unit, onDeleted: () -> Unit = {}) {
         if (fresh.isEmpty()) {
             open = null
         } else {
-            DeckCardSheet(name, st.deck, DeckLogic.Entry(e.name, fresh), images, st.binders, onDismiss = { open = null })
+            DeckCardSheet(
+                name, st.deck, DeckLogic.Entry(e.name, fresh), images, st.binders,
+                deckCopies = groups.sumOf { g -> g.variants.sumOf { it.quantity } },
+                onDismiss = { open = null },
+                onEmptied = { target -> open = null; onOpenBinder(target) },
+            )
         }
     }
     if (adding) AddCardsSheet(name, images, onDismiss = { adding = false })
@@ -297,7 +302,16 @@ private fun DeckLine(e: DeckLogic.Entry, images: ImageUrls, onClick: () -> Unit)
 /** A card of the deck: its rows, take copies out into a binder, use it as the cover. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DeckCardSheet(deck: String, d: BinderDto?, e: DeckLogic.Entry, images: ImageUrls, binders: List<BinderDto>, onDismiss: () -> Unit) {
+private fun DeckCardSheet(
+    deck: String,
+    d: BinderDto?,
+    e: DeckLogic.Entry,
+    images: ImageUrls,
+    binders: List<BinderDto>,
+    deckCopies: Int,
+    onDismiss: () -> Unit,
+    onEmptied: (String) -> Unit,
+) {
     val c = appContainer()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -387,8 +401,12 @@ private fun DeckCardSheet(deck: String, d: BinderDto?, e: DeckLogic.Entry, image
             picking = false
             out = null
             if (t.name == deck) return@BinderPickerDialog
+            // The deck stays on show - unless this takes out its last card:
+            // then the view follows the card to where it went.
+            val emptiesDeck = outQty >= deckCopies
             scope.launch {
                 val r = c.collectionWrite.moveRows(listOf(v.id), t, if (outQty < v.quantity) outQty else 0)
+                if (r is ApiResult.Success && emptiesDeck) onEmptied(t.name)
                 val msg = when (r) {
                     is ApiResult.Success -> res.getString(R.string.deck_taken_out, outQty, g.name, t.name.ifEmpty { res.getString(R.string.scan_add_no_binder) }) +
                         if (r.data.volatile) " " + res.getString(R.string.deck_volatile) else ""

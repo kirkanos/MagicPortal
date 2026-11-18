@@ -162,7 +162,9 @@ fun AppShell() {
                     DeckScreen(name, onScan = {
                         container.scanTarget = BinderTarget(name, "deck")
                         nav.navigate(ScannerRoute) { launchSingleTop = true }
-                    }, onDeleted = { nav.popBackStack() })
+                    }, onDeleted = { nav.popBackStack() }, onOpenBinder = { target ->
+                        nav.navigate(CardsRoute(binder = target)) { popUpTo<DeckRoute> { inclusive = true } }
+                    })
                 }
                 composable<DashboardRoute> { DashboardScreen() }
                 composable<DeckCheckerRoute> { DeckCheckerScreen() }
