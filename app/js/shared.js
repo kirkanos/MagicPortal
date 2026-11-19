@@ -146,13 +146,13 @@ async function loadBinderList(force) {
   return bindersCache;
 }
 
-/* Binders that already hold any of these editions, most copies first:
-   [{b, copies}]. */
+/* Folders (not lists or decks) that already hold any of these editions,
+   most copies first: [{b, copies}]. */
 function binderSuggestions(sets) {
   const codes = (sets || []).map((s) => String(s).toUpperCase()).filter(Boolean);
   if (!codes.length) return [];
   return (bindersCache || [])
-    .filter((b) => b.name)
+    .filter((b) => b.name && binderTypeOf(b) === 'binder')
     .map((b) => ({ b, copies: codes.reduce((n, c) => n + (((binderSetsCache[b.name] || {})[c]) || 0), 0) }))
     .filter((x) => x.copies > 0)
     .sort((x, y) => y.copies - x.copies || x.b.name.localeCompare(y.b.name, 'de'));

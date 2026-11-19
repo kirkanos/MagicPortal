@@ -32,8 +32,8 @@ import net.kirkanos.mtgportal.core.ui.appContainer
 import net.kirkanos.mtgportal.core.ui.theme.PortalColors
 
 /**
- * Binders that already hold any of [sets], most copies first, with those
- * copies. [binderSets] is /api/binders/sets.
+ * Folders (not lists or decks) that already hold any of [sets], most copies
+ * first, with those copies. [binderSets] is /api/binders/sets.
  */
 internal fun binderSuggestions(
     binders: List<BinderDto>,
@@ -42,7 +42,7 @@ internal fun binderSuggestions(
 ): List<Pair<BinderDto, Int>> {
     val codes = sets.map { it.uppercase() }.filter { it.isNotEmpty() }.toSet()
     if (codes.isEmpty()) return emptyList()
-    return binders.filter { it.name.isNotEmpty() }
+    return binders.filter { it.name.isNotEmpty() && it.type.lowercase() !in setOf("list", "deck") }
         .map { b -> b to codes.sumOf { binderSets[b.name]?.get(it) ?: 0 } }
         .filter { it.second > 0 }
         .sortedWith(compareByDescending<Pair<BinderDto, Int>> { it.second }.thenBy { it.first.name.lowercase() })
