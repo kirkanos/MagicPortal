@@ -65,6 +65,8 @@
     <string name="unlock_failed">Password check failed: %1$s</string>
 
     <string name="binder_back">Back</string>
+    <string name="binder_none">No folder</string>
+    <string name="binder_kind_cards">Cards</string>
     <string name="binder_kind_folder">Folder</string>
     <string name="binder_kind_list">List</string>
     <string name="binder_kind_deck">Deck</string>

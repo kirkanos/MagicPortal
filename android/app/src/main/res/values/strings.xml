@@ -74,6 +74,8 @@
 
     <!-- Cards grid (index.html / grid.js) -->
     <string name="binder_back">Zurück</string>
+    <string name="binder_none">Ohne Ordner</string>
+    <string name="binder_kind_cards">Karten</string>
     <string name="binder_kind_folder">Ordner</string>
     <string name="binder_kind_list">Liste</string>
     <string name="binder_kind_deck">Deck</string>

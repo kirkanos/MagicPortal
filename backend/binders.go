@@ -124,6 +124,9 @@ func handleBinderCreate(w http.ResponseWriter, r *http.Request) {
 	case len(in.Name) > 100:
 		writeWriteError(w, badItem(-1, "name too long"))
 		return
+	case in.Name == noBinder:
+		writeWriteError(w, badItem(-1, "name is reserved"))
+		return
 	}
 	in.Type = typ
 	n, err := binderRowCount(in.Name)

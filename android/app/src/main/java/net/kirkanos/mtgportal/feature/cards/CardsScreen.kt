@@ -258,7 +258,7 @@ fun CardsScreen(binder: String?, set: String?, onBack: (() -> Unit)? = null) {
     }
 
     if (picking) {
-        BinderPickerDialog(binders, BinderTarget(st.filters.binder), onDismiss = { picking = false }, onPick = { target ->
+        BinderPickerDialog(binders, BinderTarget(rowBinderName(st.filters.binder)), onDismiss = { picking = false }, onPick = { target ->
             picking = false
             val ids = selectedRows(selected, st.filters.binder).map { it.first }
             moving = true
@@ -313,7 +313,9 @@ private fun Header(st: CardsUiState, set: String?, binderType: String?, onBack: 
  */
 @Composable
 private fun BinderHead(name: String, type: String?, onBack: (() -> Unit)?) {
-    val (icon, kind) = when (type?.lowercase()) {
+    val loose = name == NO_BINDER
+    val (icon, kind) = when (if (loose) "loose" else type?.lowercase()) {
+        "loose" -> Icons.Collection to R.string.binder_kind_cards
         "list" -> Icons.List to R.string.binder_kind_list
         "deck" -> Icons.Planeswalker to R.string.binder_kind_deck
         else -> Icons.Folder to R.string.binder_kind_folder
@@ -336,7 +338,10 @@ private fun BinderHead(name: String, type: String?, onBack: (() -> Unit)?) {
                         stringResource(kind).uppercase(), color = PortalColors.Accent,
                         fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp,
                     )
-                    Text(name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (loose) stringResource(R.string.binder_none) else name,
+                        style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
         }
@@ -404,7 +409,7 @@ internal fun moveMessage(res: android.content.res.Resources, r: ApiResult<MoveRo
  * view only the rows in that binder (the tile shows only those), else all.
  */
 internal fun selectedRows(selected: Map<String, List<SelectionRowDto>>, binder: String): List<Pair<Long, Int>> =
-    selected.values.flatten().filter { it.id != 0L && (binder.isEmpty() || it.binderName == binder) }
+    selected.values.flatten().filter { it.id != 0L && (binder.isEmpty() || it.binderName == rowBinderName(binder)) }
         .map { it.id to it.quantity }
 
 internal fun rowsOf(g: CardGroupDto): List<SelectionRowDto> =

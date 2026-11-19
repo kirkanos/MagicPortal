@@ -128,6 +128,9 @@ func (it *writeItem) normalize(i int) error {
 	if len(it.BinderName) > 100 {
 		return badItem(i, "binderName too long")
 	}
+	if it.BinderName == noBinder {
+		return badItem(i, "binderName is reserved")
+	}
 	if it.BinderType, err = normBinderType(it.BinderType); err != nil {
 		return badItem(i, "%v", err)
 	}
@@ -478,6 +481,9 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 	}
 	if p.BinderName != nil {
 		next.BinderName = strings.TrimSpace(*p.BinderName)
+		if next.BinderName == noBinder {
+			return res, "", badItem(-1, "binderName is reserved")
+		}
 	}
 	if p.Foil != nil {
 		if next.Foil, err = normFoil(*p.Foil); err != nil {
@@ -623,6 +629,9 @@ func handleCollectionMove(w http.ResponseWriter, r *http.Request) {
 func moveRows(m moveRequest, now time.Time) (moveResult, error) {
 	var res moveResult
 	name := strings.TrimSpace(m.BinderName)
+	if name == noBinder {
+		return res, badItem(-1, "binderName is reserved")
+	}
 	if len(name) > 100 {
 		return res, badItem(-1, "binderName too long")
 	}
@@ -811,6 +820,9 @@ func patchBinder(from string, p binderPatch, now time.Time) (binderPatchResult, 
 		to = strings.TrimSpace(*p.Name)
 		if len(to) > 100 {
 			return res, badItem(-1, "name too long")
+		}
+		if to == noBinder {
+			return res, badItem(-1, "name is reserved")
 		}
 	}
 	tx, err := db.Begin()

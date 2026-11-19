@@ -152,3 +152,43 @@ func TestFacetsStatsForOneBinder(t *testing.T) {
 		t.Fatalf("binders stay those of the whole collection: %v", b)
 	}
 }
+
+func TestNoBinderQuery(t *testing.T) {
+	newTestDB(t)
+	cardIndexMu.Lock()
+	cardIndexRows = nil
+	cardIndexMu.Unlock()
+	if _, err := db.Exec(`INSERT INTO collection (binder_name, binder_type, set_code, set_name, collector_number, name, rarity, foil, language, condition, quantity, purchase_price, currency, added, origin) VALUES
+		('', '', 'm11', 'Magic 2011', '1', 'Ajani''s Mantra', 'common', 'normal', 'en', 'near_mint', 2, 0, 'EUR', '', 'app'),
+		('Box', 'binder', 'ice', 'Ice Age', '61', 'Brainstorm', 'common', 'normal', 'en', 'near_mint', 4, 0, 'EUR', '', 'csv')`); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	handleCards(rec, httptest.NewRequest("GET", "/api/cards?binder="+noBinder, nil))
+	var c struct {
+		Total  int `json:"total"`
+		Groups []struct {
+			Name string `json:"name"`
+		} `json:"groups"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &c); err != nil {
+		t.Fatal(err)
+	}
+	if c.Total != 1 || c.Groups[0].Name != "Ajani's Mantra" {
+		t.Fatalf("cards without binder: %+v", c)
+	}
+	rec = httptest.NewRecorder()
+	handleCardFacets(rec, httptest.NewRequest("GET", "/api/cards/facets?binder="+noBinder, nil))
+	var f struct {
+		SetsByBinder map[string][]string `json:"setsByBinder"`
+		Stats        struct {
+			TotalQty int `json:"totalQty"`
+		} `json:"stats"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &f); err != nil {
+		t.Fatal(err)
+	}
+	if f.Stats.TotalQty != 2 || len(f.SetsByBinder[noBinder]) != 1 {
+		t.Fatalf("facets without binder: %+v", f)
+	}
+}

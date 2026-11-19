@@ -123,10 +123,11 @@ function showNotice(text, isError) {
   showNotice.timer = setTimeout(() => el.classList.remove('show'), 6000);
 }
 
-/* The page of one binder (folder or list); no binder means the whole
-   collection. */
+/* The page of one binder (folder or list). No name means the cards without
+   a binder: NO_BINDER, the name the backend reserves for them in ?binder=. */
+const NO_BINDER = '__none__';
 function binderPageURL(name) {
-  return name ? 'binder.html?name=' + encodeURIComponent(name) : 'index.html';
+  return 'binder.html?name=' + encodeURIComponent(name || NO_BINDER);
 }
 
 /* The binders for the binder pickers (name + type), loaded once per page. */

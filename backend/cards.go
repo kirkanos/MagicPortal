@@ -311,7 +311,7 @@ func (cq cardQuery) matches(c *cardRow) bool {
 	if cq.foil != "" && c.Foil != cq.foil {
 		return false
 	}
-	if cq.binder != "" && c.BinderName != cq.binder {
+	if cq.binder != "" && c.BinderName != binderOfQuery(cq.binder) {
 		return false
 	}
 	if cq.cType != "" && !contains(c.types, cq.cType) {
@@ -688,7 +688,7 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 			setsByBinder[c.BinderName] = map[string]bool{}
 		}
 		setsByBinder[c.BinderName][c.SetCode] = true
-		if statsBinder != "" && c.BinderName != statsBinder {
+		if statsBinder != "" && c.BinderName != binderOfQuery(statsBinder) {
 			continue
 		}
 		entries++
@@ -709,9 +709,12 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 		subs[tp] = sortedKeys(set)
 	}
 	// Which sets each binder holds: the set filter of a binder view offers
-	// only those. "" is the cards without a binder.
+	// only those. The cards without a binder are under noBinder.
 	binderSets := map[string][]string{}
 	for b, set := range setsByBinder {
+		if b == "" {
+			b = noBinder
+		}
 		binderSets[b] = sortedKeys(set)
 	}
 
@@ -735,6 +738,18 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 			"marketValue":   round2(market),
 		},
 	})
+}
+
+// noBinder in ?binder= means the cards without a binder (binder.html shows
+// them as "no folder"); "" means no binder filter at all. The name is
+// reserved, no binder can be called that.
+const noBinder = "__none__"
+
+func binderOfQuery(b string) string {
+	if b == noBinder {
+		return ""
+	}
+	return b
 }
 
 // handleRandomCards returns a few random cards for the strip on the cards page.

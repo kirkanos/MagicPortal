@@ -1,6 +1,8 @@
 package net.kirkanos.mtgportal.feature.binders
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import net.kirkanos.mtgportal.feature.cards.NO_BINDER
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -128,6 +130,8 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
         is ApiResult.NetworkError -> ErrorRetry(r, onRetry = { vm.load() })
         is ApiResult.Success -> {
             val list = r.data.filter { it.type.equals(type, ignoreCase = true) && it.name.isNotEmpty() }
+            // The cards without a binder get a tile of their own on the folder page.
+            val loose = if (type == "binder") r.data.firstOrNull { it.name.isEmpty() && it.total > 0 } else null
             LazyColumn(
                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -144,7 +148,7 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
                     )
                 }
                 message?.let { m -> item { Text(m, color = PortalColors.Accent, fontSize = 13.sp) } }
-                if (list.isEmpty()) item { Text(stringResource(R.string.binders_empty), color = PortalColors.TextDim) }
+                if (list.isEmpty() && loose == null) item { Text(stringResource(R.string.binders_empty), color = PortalColors.TextDim) }
                 items(list, key = { it.name }) { b ->
                     Column(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(PortalColors.BgCard)
@@ -164,6 +168,25 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
                                 color = PortalColors.TextDim, fontSize = 13.sp, modifier = Modifier.weight(1f),
                             )
                             Text(Format.eur(b.marketValue), color = PortalColors.Accent, fontSize = 13.sp)
+                        }
+                    }
+                }
+                loose?.let { b ->
+                    item(key = "\u0000loose") {
+                        Column(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                                .border(1.dp, PortalColors.Border, RoundedCornerShape(10.dp))
+                                .clickable { onOpen(NO_BINDER) }.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(stringResource(R.string.binder_none), style = MaterialTheme.typography.titleMedium)
+                            Row {
+                                Text(
+                                    stringResource(R.string.binders_cards, Format.count(b.total)),
+                                    color = PortalColors.TextDim, fontSize = 13.sp, modifier = Modifier.weight(1f),
+                                )
+                                Text(Format.eur(b.marketValue), color = PortalColors.Accent, fontSize = 13.sp)
+                            }
                         }
                     }
                 }

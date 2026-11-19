@@ -60,6 +60,15 @@ data class CardsUiState(
     val random: List<CardGroupDto> = emptyList(),
 )
 
+/**
+ * The binder filter for the cards without a binder (the backend reserves the
+ * name); "" means no binder filter at all.
+ */
+const val NO_BINDER = "__none__"
+
+/** The binder name on the collection rows for a binder filter. */
+fun rowBinderName(filter: String): String = if (filter == NO_BINDER) "" else filter
+
 /** The server's page size of /api/cards. */
 private const val PAGE = 60
 
@@ -114,11 +123,13 @@ class CardsViewModel(
                 is ApiResult.Success -> {
                     val movedTo = if (keepView) c.collectionWrite.takeMoveTarget() else null
                     val binder = _state.value.filters.binder
-                    if (movedTo != null && binder.isNotEmpty() && binder !in f.data.binders) {
+                    // The key figures are those of the binder on show: none left, it is empty.
+                    if (movedTo != null && binder.isNotEmpty() && movedTo != rowBinderName(binder) && f.data.stats.entries == 0) {
                         keep = 0
+                        val target = movedTo.ifEmpty { NO_BINDER }
                         // The key figures of the binder the view now shows.
-                        val moved = (safeCall { c.api.facets(movedTo.ifEmpty { null }) } as? ApiResult.Success)?.data ?: f.data
-                        _state.update { it.copy(facets = moved, filters = it.filters.copy(binder = movedTo)) }
+                        val moved = (safeCall { c.api.facets(target) } as? ApiResult.Success)?.data ?: f.data
+                        _state.update { it.copy(facets = moved, filters = it.filters.copy(binder = target)) }
                     } else {
                         _state.update { it.copy(facets = f.data) }
                     }

@@ -518,6 +518,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .binder-card .binder-meta .money { color: var(--accent); font-weight: 600; }
 .binder-item { position: relative; display: flex; flex-direction: column; }
 .binder-item > .binder-card { flex: 1; }
+.binder-loose > .binder-card { border-style: dashed; }
 .binder-item .binder-card .binder-name { padding-right: 28px; }
 .binder-rename {
   display: none; position: absolute; top: 10px; right: 10px;

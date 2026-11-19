@@ -44,6 +44,7 @@ import net.kirkanos.mtgportal.core.ui.theme.PortalColors
 import androidx.navigation.toRoute
 import net.kirkanos.mtgportal.feature.binders.BindersScreen
 import net.kirkanos.mtgportal.feature.cards.CardsScreen
+import net.kirkanos.mtgportal.feature.cards.NO_BINDER
 import net.kirkanos.mtgportal.feature.dashboard.DashboardScreen
 import net.kirkanos.mtgportal.feature.deckchecker.DeckCheckerScreen
 import net.kirkanos.mtgportal.feature.decks.DeckScreen
@@ -166,7 +167,7 @@ fun AppShell() {
                         container.scanTarget = BinderTarget(name, "deck")
                         nav.navigate(ScannerRoute) { launchSingleTop = true }
                     }, onDeleted = { nav.popBackStack() }, onOpenBinder = { target ->
-                        nav.navigate(if (target.isEmpty()) CardsRoute() else BinderRoute(target)) { popUpTo<DeckRoute> { inclusive = true } }
+                        nav.navigate(BinderRoute(target.ifEmpty { NO_BINDER })) { popUpTo<DeckRoute> { inclusive = true } }
                     })
                 }
                 composable<DashboardRoute> { DashboardScreen() }
@@ -195,7 +196,7 @@ fun AppShell() {
                             if (deck != null) {
                                 nav.navigate(DeckRoute(name)) { popUpTo<DeckRoute> { inclusive = true } }
                             } else {
-                                nav.navigate(if (name.isEmpty()) CardsRoute() else BinderRoute(name)) { popUpTo<ScanResultRoute> { inclusive = true } }
+                                nav.navigate(BinderRoute(name.ifEmpty { NO_BINDER })) { popUpTo<ScanResultRoute> { inclusive = true } }
                             }
                         },
                     )

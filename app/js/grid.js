@@ -15,6 +15,8 @@ let queryToken = 0;       // discards responses of superseded queries
 // collection. The binder is fixed there: no binder filter on either page.
 const BINDER_VIEW = document.body.hasAttribute('data-binder-view');
 const FIXED_BINDER = BINDER_VIEW ? (new URLSearchParams(location.search).get('name') || '') : '';
+// The binder name on the rows: '' on the page of the cards without a binder.
+const BINDER_NAME = FIXED_BINDER === NO_BINDER ? '' : FIXED_BINDER;
 
 /* Facets; in the binder view the key figures are those of the binder. */
 function facetsURL() {
@@ -382,11 +384,10 @@ function setSelecting(on) {
 /* The collection rows behind the selection: in a binder view only the rows
    in that binder (the tiles show only those), else all of them. */
 function selectedRowIds() {
-  const binder = FIXED_BINDER;
   const ids = [];
   let copies = 0;
   selectedGroups.forEach((g) => g.variants.forEach((v) => {
-    if (v.id && (!binder || v.binderName === binder)) {
+    if (v.id && (!FIXED_BINDER || (v.binderName || '') === BINDER_NAME)) {
       ids.push(v.id);
       copies += v.quantity;
     }
@@ -487,7 +488,8 @@ async function refreshAfterWrite(movedTo) {
     const res = await fetch(facetsURL(), { cache: 'no-cache' });
     if (res.ok) {
       facets = await res.json();
-      if (FIXED_BINDER && movedTo !== undefined && !(facets.binders || []).includes(FIXED_BINDER)) {
+      // The key figures are those of the binder on show: none left, it is empty.
+      if (FIXED_BINDER && movedTo !== undefined && movedTo !== BINDER_NAME && !(facets.stats || {}).entries) {
         location.href = binderPageURL(movedTo);
         return;
       }
@@ -501,13 +503,12 @@ async function refreshAfterWrite(movedTo) {
 /* After moving one card from the detail dialog: stays put unless the binder
    on show has no cards left. */
 async function followIfBinderEmptied(movedTo) {
-  const binder = FIXED_BINDER;
-  if (!binder) return;
+  if (!FIXED_BINDER) return;
   try {
     const res = await fetch(facetsURL(), { cache: 'no-cache' });
     if (!res.ok) return;
     const f = await res.json();
-    if ((f.binders || []).includes(binder)) return;
+    if ((f.stats || {}).entries) return;
   } catch (e) { return; }
   document.getElementById('card-modal').classList.remove('open');
   await refreshAfterWrite(movedTo);
@@ -578,7 +579,7 @@ async function editRow(act, id) {
       bindersCache = null;
       applyRow(g, r.row, r.mergedInto ? [id] : []);
       // The source binder may now be empty: then the view follows the card.
-      if (FIXED_BINDER && FIXED_BINDER === (v.binderName || '')) await followIfBinderEmptied(name);
+      if (FIXED_BINDER && BINDER_NAME === (v.binderName || '')) await followIfBinderEmptied(name);
       if (v.origin === 'csv') showNotice(t('Verschoben – Karten aus ManaBox kommen beim nächsten Import wieder in ihren alten Ordner.', 'Moved – cards from ManaBox return to their old folder with the next import.'));
     }
   } catch (e) {
@@ -694,6 +695,16 @@ async function init() {
 /* Head of the binder page: back to the overview of its kind, the name, and
    its type. Folders and lists share the page; the nav marks the right one. */
 async function renderBinderHead() {
+  if (FIXED_BINDER === NO_BINDER) {
+    const title = t('Ohne Ordner', 'No folder');
+    document.getElementById('binder-title').textContent = title;
+    document.title = 'MagicPortal – ' + title;
+    document.getElementById('binder-kind').textContent = t('Karten', 'Cards');
+    document.getElementById('binder-icon').textContent = '📭';
+    document.getElementById('binder-back').textContent = '← ' + t('Alle Ordner', 'All folders');
+    document.querySelector('nav.topnav a[href="binders.html"]').classList.add('active');
+    return;
+  }
   document.getElementById('binder-title').textContent = FIXED_BINDER;
   document.title = 'MagicPortal – ' + FIXED_BINDER;
   const b = (await loadBinderList()).find((x) => x.name === FIXED_BINDER);

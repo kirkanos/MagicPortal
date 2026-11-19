@@ -15,10 +15,23 @@ async function initBinders() {
   hideLoading();
 
   const list = binders.filter((b) => (b.type || '').toLowerCase() === type && b.name);
+  // The cards without a binder get a tile of their own on the folder page.
+  const loose = type === 'binder' ? binders.find((b) => !b.name && b.total) : null;
   document.getElementById('binder-count').textContent =
     `${list.length} ${type === 'list' ? t('Listen', 'lists') : t('Ordner', 'folders')}`;
 
-  if (!list.length) {
+  const looseHTML = loose ? `
+      <div class="binder-item binder-loose">
+        <a class="binder-card" href="${binderPageURL('')}">
+          <div class="binder-name">📭 ${t('Ohne Ordner', 'No folder')}</div>
+          <div class="binder-meta">
+            <span>${loose.total.toLocaleString('de-DE')} ${t('Karten', 'cards')}</span>
+            <span class="money">${formatCurrency(loose.marketValue, 'EUR')}</span>
+          </div>
+        </a>
+      </div>` : '';
+
+  if (!list.length && !loose) {
     el.innerHTML = `<p class="section-hint">${t(
       'Noch nichts vorhanden – lege oben einen an oder lade eine ManaBox-CSV hoch, die Ordner/Listen enthält.',
       'Nothing here yet – create one above, or upload a ManaBox CSV that contains folders/lists.'
@@ -41,7 +54,7 @@ async function initBinders() {
         ${b.total ? '' : `<button type="button" class="binder-delete" title="${t('Leeren Ordner löschen', 'Delete empty folder')}">🗑</button>`}
       </div>`
     )
-    .join('');
+    .join('') + looseHTML;
 }
 
 /* Rename a binder, or change its type. A name that exists already merges the
