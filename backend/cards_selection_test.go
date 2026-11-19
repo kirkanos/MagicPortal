@@ -192,3 +192,26 @@ func TestNoBinderQuery(t *testing.T) {
 		t.Fatalf("facets without binder: %+v", f)
 	}
 }
+
+func TestBinderSets(t *testing.T) {
+	newTestDB(t)
+	cardIndexMu.Lock()
+	cardIndexRows = nil
+	cardIndexMu.Unlock()
+	if _, err := db.Exec(`INSERT INTO collection (binder_name, binder_type, set_code, set_name, collector_number, name, rarity, foil, language, condition, quantity, purchase_price, currency, added, origin) VALUES
+		('', '', 'm11', 'Magic 2011', '1', 'Ajani''s Mantra', 'common', 'normal', 'en', 'near_mint', 2, 0, 'EUR', '', 'app'),
+		('Box', 'binder', 'm11', 'Magic 2011', '2', 'Brainstorm', 'common', 'normal', 'en', 'near_mint', 4, 0, 'EUR', '', 'csv'),
+		('Box', 'binder', 'm11', 'Magic 2011', '3', 'Counsel', 'common', 'foil', 'en', 'near_mint', 1, 0, 'EUR', '', 'csv'),
+		('Old', 'list', 'ice', 'Ice Age', '61', 'Brainstorm', 'common', 'normal', 'en', 'near_mint', 3, 0, 'EUR', '', 'csv')`); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	handleBinderSets(rec, httptest.NewRequest("GET", "/api/binders/sets", nil))
+	var got map[string]map[string]int
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got["Box"]["M11"] != 5 || got["Old"]["ICE"] != 3 {
+		t.Fatalf("binder sets: %v", got)
+	}
+}

@@ -164,6 +164,9 @@ func routeLabel(path string) string {
 			return "/api/catalog/" + tail
 		}
 	case "binders":
+		if tail == "sets" {
+			return "/api/binders/sets"
+		}
 		if tail != "" {
 			return "/api/binders/{name}" // collapse the binder name
 		}

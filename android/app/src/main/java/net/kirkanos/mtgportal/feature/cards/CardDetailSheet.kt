@@ -196,7 +196,7 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
     }
 
     moving?.let { v ->
-        MoveDialog(v, binders, onDismiss = { moving = null }, onPick = { target ->
+        MoveDialog(v, binders, g.setCode, onDismiss = { moving = null }, onPick = { target ->
             moving = null
             if (target.name == v.binderName) return@MoveDialog
             write {
@@ -213,8 +213,8 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun MoveDialog(v: VariantDto, binders: List<BinderDto>, onPick: (BinderTarget) -> Unit, onDismiss: () -> Unit) {
-    BinderPickerDialog(binders, BinderTarget(v.binderName, v.binderType), onPick, onDismiss)
+private fun MoveDialog(v: VariantDto, binders: List<BinderDto>, setCode: String, onPick: (BinderTarget) -> Unit, onDismiss: () -> Unit) {
+    BinderPickerDialog(binders, BinderTarget(v.binderName, v.binderType), onPick, onDismiss, sets = listOf(setCode))
 }
 
 @Composable

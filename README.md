@@ -342,6 +342,7 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `GET` | `/api/sets/{code}/cards` | All cards of a set, with the owned copies per language and binder |
 | `GET` | `/api/prints?name=…` | All printings of a card (editions) |
 | `GET` | `/api/binders` | Binders/lists with card count & value |
+| `GET` | `/api/binders/sets` | Editions per binder with copies (`{"<binder>": {"M11": 12}}`), for the binder suggestions when adding or moving cards |
 | `GET` | `/api/status` | Sync status & data timestamp |
 | `GET` | `/api/summary` | Compact key figures (card count + collection value), public with CORS – for embedding |
 | `GET` | `/api/dashboard` | Ready-made aggregates for the statistics page (ETag, conditional requests) |

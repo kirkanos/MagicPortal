@@ -254,3 +254,29 @@ func isNoSuchBinder(err error) bool {
 	var we *writeError
 	return errors.As(err, &we) && we.status == http.StatusNotFound
 }
+
+// handleBinderSets says which editions each binder holds, with the copies:
+// {"<binder>": {"M11": 12, …}}. The binder pickers put the binders that
+// already hold the edition of the cards being added or moved on top. Cards
+// without a binder are left out.
+func handleBinderSets(w http.ResponseWriter, r *http.Request) {
+	if notModified(w, r, weakETag("bs", collectionETag(db))) {
+		return
+	}
+	rows, _, err := cardRows()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	out := map[string]map[string]int{}
+	for _, c := range rows {
+		if c.BinderName == "" {
+			continue
+		}
+		if out[c.BinderName] == nil {
+			out[c.BinderName] = map[string]int{}
+		}
+		out[c.BinderName][c.SetCode] += c.Quantity
+	}
+	writeJSONCacheable(w, out)
+}

@@ -397,7 +397,7 @@ private fun DeckCardSheet(
     }
     if (pending != null && picking) {
         val (g, v) = pending
-        BinderPickerDialog(binders.filter { it.name != deck }, BinderTarget(""), onDismiss = { picking = false; out = null }, onPick = { t ->
+        BinderPickerDialog(binders.filter { it.name != deck }, BinderTarget(""), sets = listOf(g.setCode), onDismiss = { picking = false; out = null }, onPick = { t ->
             picking = false
             out = null
             if (t.name == deck) return@BinderPickerDialog

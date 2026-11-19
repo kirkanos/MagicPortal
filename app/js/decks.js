@@ -518,7 +518,7 @@ function takeOutForm(g, id) {
       <span>${t('Herausnehmen', 'Take out')}</span>
       <select id="deck-out-qty">${qtyOpts}</select>
       <span>${t('nach', 'into')}</span>
-      ${binderInputHTML('deck-out-binder', '')}
+      ${binderInputHTML('deck-out-binder', '', [g.setCode])}
       ${binderTypeSelect('deck-out-binder-type')}
       <button type="button" class="upload-btn" id="deck-out-ok">OK</button>
     </div>`;

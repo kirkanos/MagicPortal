@@ -228,7 +228,7 @@ fun SetCardsScreen(code: String) {
     }
 
     if (picking) {
-        BinderPickerDialog(binders, BinderTarget(""), onDismiss = { picking = false }, onPick = { target ->
+        BinderPickerDialog(binders, BinderTarget(""), sets = listOf(code), onDismiss = { picking = false }, onPick = { target ->
             picking = false
             val ids = allCards.filter { it.collectorNumber in selected }.flatMap { it.owned?.rows.orEmpty() }.map { it.id }.filter { it != 0L }
             moving = true
@@ -422,14 +422,14 @@ private fun SetCardEditor(card: SetCardDto, setCode: String) {
     notice?.let { Text(it, fontSize = 12.sp, color = PortalColors.Accent) }
 
     moving?.let { v ->
-        BinderPickerDialog(binders, BinderTarget(v.binderName, v.binderType), onDismiss = { moving = null }, onPick = { t ->
+        BinderPickerDialog(binders, BinderTarget(v.binderName, v.binderType), sets = listOf(setCode), onDismiss = { moving = null }, onPick = { t ->
             moving = null
             if (t.name == v.binderName) return@BinderPickerDialog
             write({ c.collectionWrite.patch(v.id, RowPatchDto(binderName = t.name, binderType = t.type)) }) { if (v.origin == "csv") volatileText else null }
         })
     }
     if (pickingAdd) {
-        BinderPickerDialog(binders, target, onDismiss = { pickingAdd = false }, onPick = { t -> pickingAdd = false; target = t })
+        BinderPickerDialog(binders, target, sets = listOf(setCode), onDismiss = { pickingAdd = false }, onPick = { t -> pickingAdd = false; target = t })
     }
 }
 

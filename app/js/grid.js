@@ -433,6 +433,8 @@ async function renderSelectBar() {
   all.textContent = t(`Alle (${resultTotal})`, `All (${resultTotal})`);
   all.disabled = resultTotal === 0 || selectedGroups.size >= resultTotal;
   bar.querySelector('#select-none').disabled = selectedGroups.size === 0;
+  // Binders holding the editions of the selection come first (key = "SET|…").
+  setBinderSets('select-binder', [...selectedGroups.keys()].map((k) => k.split('|')[0]));
   bar.querySelector('#select-move').disabled = copies === 0;
 }
 
@@ -567,7 +569,7 @@ async function editRow(act, id) {
       await ensureBinderDatalist();
       box.innerHTML = `
         <span>${t('Verschieben nach', 'Move to')}:</span>
-        ${binderInputHTML('row-binder', v.binderName)}
+        ${binderInputHTML('row-binder', v.binderName, [g.setCode])}
         <select id="row-binder-type"><option value="binder">${t('Ordner', 'Binder')}</option><option value="list">${t('Liste', 'List')}</option><option value="deck">Deck</option></select>
         <button type="button" class="primary" data-act="move-ok" data-id="${id}">OK</button>`;
       document.getElementById('row-binder').focus();

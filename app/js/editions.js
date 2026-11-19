@@ -562,7 +562,7 @@ function ownershipEditHTML(card) {
     <div class="row-edit">
       <select id="add-lang">${langOpts}</select>
       <select id="add-foil"><option value="normal">${t('Normal', 'Normal')}</option><option value="foil">Foil</option><option value="etched">Etched</option></select>
-      ${binderInputHTML('add-binder', '')}
+      ${binderInputHTML('add-binder', '', [overlayEdition.code])}
       ${binderTypeSelectHTML('add-binder-type')}
       <button type="button" class="primary" data-act="add">+1 ${t('hinzufügen', 'add')}</button>
     </div>`;
@@ -604,7 +604,7 @@ async function editSetRow(act, id) {
       const box = document.getElementById('row-edit');
       box.innerHTML = `
         <span>${t('Verschieben nach', 'Move to')}:</span>
-        ${binderInputHTML('row-binder', row.binderName)}
+        ${binderInputHTML('row-binder', row.binderName, [overlayEdition.code])}
         ${binderTypeSelectHTML('row-binder-type')}
         <button type="button" class="primary" data-act="move-ok" data-id="${id}">OK</button>`;
       document.getElementById('row-binder').focus();
@@ -694,7 +694,7 @@ function renderEoSelectBar() {
       <span class="select-count" id="select-count"></span>
       <button type="button" id="select-all">${t('Alle besessenen', 'All owned')}</button>
       <button type="button" id="select-none">${t('Keine', 'None')}</button>
-      ${binderInputHTML('select-binder', '')}
+      ${binderInputHTML('select-binder', '', [overlayEdition && overlayEdition.code])}
       ${binderTypeSelectHTML('select-binder-type')}
       <button type="button" class="primary" id="select-move">${t('Verschieben', 'Move')}</button>`;
     document.body.appendChild(bar);
@@ -724,6 +724,7 @@ function renderEoSelectBar() {
   bar.querySelector('#select-all').disabled = ownedShown === 0 || document.querySelectorAll('#eo-grid .eo-card.owned.selected').length >= ownedShown;
   bar.querySelector('#select-none').disabled = eoSelected.size === 0;
   bar.querySelector('#select-move').disabled = copies === 0;
+  if (overlayEdition) setBinderSets('select-binder', [overlayEdition.code]);
 }
 
 async function moveEoSelection() {

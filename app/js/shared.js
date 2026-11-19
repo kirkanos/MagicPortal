@@ -130,17 +130,32 @@ function binderPageURL(name) {
   return 'binder.html?name=' + encodeURIComponent(name || NO_BINDER);
 }
 
-/* The binders for the binder pickers (name + type), loaded once per page. */
+/* The binders for the binder pickers (name + type), loaded once per page,
+   and which editions each holds ({binder: {SETCODE: copies}}), for the
+   suggestions on top of the pickers. */
 let bindersCache = null;
+let binderSetsCache = {};
 async function loadBinderList(force) {
   if (bindersCache && !force) return bindersCache;
-  try {
-    const res = await fetch(API + '/binders', { cache: 'no-store' });
-    bindersCache = res.ok ? await res.json() : [];
-  } catch (e) {
-    bindersCache = [];
-  }
+  const [list, sets] = await Promise.all([
+    fetch(API + '/binders', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+    fetch(API + '/binders/sets', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+  ]);
+  bindersCache = list;
+  binderSetsCache = sets || {};
   return bindersCache;
+}
+
+/* Binders that already hold any of these editions, most copies first:
+   [{b, copies}]. */
+function binderSuggestions(sets) {
+  const codes = (sets || []).map((s) => String(s).toUpperCase()).filter(Boolean);
+  if (!codes.length) return [];
+  return (bindersCache || [])
+    .filter((b) => b.name)
+    .map((b) => ({ b, copies: codes.reduce((n, c) => n + (((binderSetsCache[b.name] || {})[c]) || 0), 0) }))
+    .filter((x) => x.copies > 0)
+    .sort((x, y) => y.copies - x.copies || x.b.name.localeCompare(y.b.name, 'de'));
 }
 
 /* A binder field: a list of every binder (grouped by type), "no folder" and
@@ -154,11 +169,23 @@ function binderTypeOf(b) {
   return type === 'list' || type === 'deck' ? type : 'binder';
 }
 
-function binderOptionsHTML(value) {
+/* sets: the editions of the cards being added or moved. Binders that hold
+   them already come first, as suggestions with their copies of it. */
+function binderOptionsHTML(value, sets) {
   const v = value || '';
-  const list = (bindersCache || []).filter((b) => b.name);
-  let html = `<option value=""${v === '' ? ' selected' : ''}>${t('– ohne Ordner –', '– no folder –')}</option>`;
+  const suggested = binderSuggestions(sets);
+  const taken = new Set(suggested.map((x) => x.b.name));
+  const list = (bindersCache || []).filter((b) => b.name && !taken.has(b.name));
+  let html = '';
   let known = v === '';
+  if (suggested.length) {
+    html += `<optgroup label="${escapeHTML(t('Vorschläge: haben diese Edition schon', 'Suggested: already hold this edition'))}">` + suggested.map(({ b, copies }) => {
+      if (b.name === v) known = true;
+      return `<option value="${escapeHTML(b.name)}"${b.name === v ? ' selected' : ''}>★ ${escapeHTML(b.name)} (${copies})</option>`;
+    }).join('') + '</optgroup>';
+  }
+  html += `<option value=""${v === '' ? ' selected' : ''}>${t('– ohne Ordner –', '– no folder –')}</option>`;
+  html += `<option value="${BINDER_NEW}">${t('+ Neuer Ordner …', '+ New folder …')}</option>`;
   for (const [type, label] of [['binder', t('Ordner', 'Binders')], ['list', t('Listen', 'Lists')], ['deck', 'Decks']]) {
     const group = list.filter((b) => binderTypeOf(b) === type).sort((a, b) => a.name.localeCompare(b.name, 'de'));
     if (!group.length) continue;
@@ -169,14 +196,15 @@ function binderOptionsHTML(value) {
   }
   // Not (yet) in the list - keep it selectable rather than losing it.
   if (!known) html += `<option value="${escapeHTML(v)}" selected>${escapeHTML(v)}</option>`;
-  html += `<option value="${BINDER_NEW}">${t('+ Neuer Ordner …', '+ New folder …')}</option>`;
   return html;
 }
 
-function binderInputHTML(id, value) {
+/* sets: the editions of the cards in question (see binderOptionsHTML). */
+function binderInputHTML(id, value, sets) {
   // Not loaded yet: fill the field once the list is there (after this HTML is in the page).
   if (!bindersCache) ensureBinderDatalist();
-  return `<span class="binder-field"><select class="binder-select" id="${id}">${binderOptionsHTML(value)}</select><input
+  const codes = (sets || []).filter(Boolean).join(',');
+  return `<span class="binder-field"><select class="binder-select" id="${id}" data-sets="${escapeHTML(codes)}">${binderOptionsHTML(value, sets)}</select><input
     type="text" class="binder-input" id="${id}-new" placeholder="${t('Name des neuen Ordners', 'Name of the new folder')}" autocomplete="off"></span>`;
 }
 
@@ -200,8 +228,23 @@ document.addEventListener('change', (e) => {
 async function ensureBinderDatalist() {
   await loadBinderList();
   document.querySelectorAll('select.binder-select').forEach((sel) => {
-    if (sel.value !== BINDER_NEW) sel.innerHTML = binderOptionsHTML(sel.value);
+    if (sel.value !== BINDER_NEW) sel.innerHTML = binderOptionsHTML(sel.value, setsOf(sel));
   });
+}
+
+function setsOf(sel) {
+  return (sel.dataset.sets || '').split(',').filter(Boolean);
+}
+
+/* New editions for a binder field (a selection that changed): the
+   suggestions follow, the chosen binder stays. */
+function setBinderSets(id, sets) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  const codes = [...new Set((sets || []).filter(Boolean).map((s) => String(s).toUpperCase()))];
+  if (codes.join(',') === (sel.dataset.sets || '')) return;
+  sel.dataset.sets = codes.join(',');
+  if (sel.value !== BINDER_NEW) sel.innerHTML = binderOptionsHTML(sel.value, codes);
 }
 
 /* Mouseover explanations for the different card-count definitions used across

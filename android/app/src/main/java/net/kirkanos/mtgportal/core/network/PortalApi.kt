@@ -108,6 +108,10 @@ interface PortalApi {
         @Query("style") style: String? = null,
     ): SelectionDto
 
+    /** Which editions each binder holds: binder -> (SETCODE -> copies). */
+    @GET("binders/sets")
+    suspend fun binderSets(): Map<String, Map<String, Int>>
+
     /** binder scopes the key figures (stats) to that binder. */
     @GET("cards/facets")
     suspend fun facets(@Query("binder") binder: String? = null): FacetsDto

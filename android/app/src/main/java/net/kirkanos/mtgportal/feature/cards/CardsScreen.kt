@@ -258,7 +258,11 @@ fun CardsScreen(binder: String?, set: String?, onBack: (() -> Unit)? = null) {
     }
 
     if (picking) {
-        BinderPickerDialog(binders, BinderTarget(rowBinderName(st.filters.binder)), onDismiss = { picking = false }, onPick = { target ->
+        BinderPickerDialog(
+            binders, BinderTarget(rowBinderName(st.filters.binder)),
+            // Group keys start with the set code ("SET|n:…").
+            sets = selected.keys.map { it.substringBefore('|') }.distinct(),
+            onDismiss = { picking = false }, onPick = { target ->
             picking = false
             val ids = selectedRows(selected, st.filters.binder).map { it.first }
             moving = true

@@ -185,7 +185,10 @@ fun ScanResultScreen(result: ScanSessionResult?, onScanAgain: () -> Unit, onOpen
     }
 
     if (picking) {
-        BinderPickerDialog(state.binders, state.target, onPick = { vm.setTarget(it); picking = false }, onDismiss = { picking = false })
+        BinderPickerDialog(
+            state.binders, state.target, onPick = { vm.setTarget(it); picking = false }, onDismiss = { picking = false },
+            sets = items.map { it.setCode }.distinct(),
+        )
     }
 }
 
