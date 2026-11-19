@@ -73,6 +73,10 @@
     <string name="unlock_failed">Passwortprüfung fehlgeschlagen: %1$s</string>
 
     <!-- Cards grid (index.html / grid.js) -->
+    <string name="binder_back">Zurück</string>
+    <string name="binder_kind_folder">Ordner</string>
+    <string name="binder_kind_list">Liste</string>
+    <string name="binder_kind_deck">Deck</string>
     <string name="cards_search">Name, Text, Mana suchen…</string>
     <string name="cards_filter">Filter</string>
     <string name="cards_filter_reset">Zurücksetzen</string>
@@ -81,7 +85,6 @@
     <string name="cards_all_rarities">Alle Raritäten</string>
     <string name="cards_all_colors">Alle Farben</string>
     <string name="cards_all_foils">Normal &amp; Foil</string>
-    <string name="cards_all_binders">Alle Ordner &amp; Listen</string>
     <string name="cards_all_types">Alle Kartentypen</string>
     <string name="cards_all_subtypes">Alle Untertypen</string>
     <string name="cards_sort_name">Sortieren: Name</string>

@@ -36,9 +36,12 @@ data class CardFilters(
     val style: String = "",
     val sort: String = "name",
 ) {
-    /** Filters behind the "Filter" button, for its badge. Search and sort are visible anyway. */
+    /**
+     * Filters behind the "Filter" button, for its badge. Search and sort are
+     * visible anyway; the binder is the page itself, not a filter.
+     */
     val activeCount: Int
-        get() = listOf(set, rarity, color, foil, style, binder, type, subtype).count { it.isNotEmpty() }
+        get() = listOf(set, rarity, color, foil, style, type, subtype).count { it.isNotEmpty() }
 }
 
 data class CardsUiState(
@@ -103,7 +106,7 @@ class CardsViewModel(
     fun loadAll(keepView: Boolean = false) {
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
-            val facets = async { safeCall { c.api.facets() } }
+            val facets = async { safeCall { c.api.facets(_state.value.filters.binder.ifEmpty { null }) } }
             val sets = async { safeCall { c.api.sets() } }
             val subs = async { safeCall { c.api.subtypes() } }
             var keep = if (keepView) _state.value.groups.size else 0
@@ -113,7 +116,9 @@ class CardsViewModel(
                     val binder = _state.value.filters.binder
                     if (movedTo != null && binder.isNotEmpty() && binder !in f.data.binders) {
                         keep = 0
-                        _state.update { it.copy(facets = f.data, filters = it.filters.copy(binder = movedTo)) }
+                        // The key figures of the binder the view now shows.
+                        val moved = (safeCall { c.api.facets(movedTo.ifEmpty { null }) } as? ApiResult.Success)?.data ?: f.data
+                        _state.update { it.copy(facets = moved, filters = it.filters.copy(binder = movedTo)) }
                     } else {
                         _state.update { it.copy(facets = f.data) }
                     }
@@ -154,7 +159,7 @@ class CardsViewModel(
         runQuery()
     }
 
-    fun resetFilters() = setFilters { CardFilters(query = it.query, sort = it.sort) }
+    fun resetFilters() = setFilters { CardFilters(query = it.query, sort = it.sort, binder = it.binder) }
 
     private fun subtypesFor(type: String): List<String> {
         if (type.isEmpty()) return emptyList()

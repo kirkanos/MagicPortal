@@ -106,7 +106,7 @@ class BindersViewModel(private val c: AppContainer) : ViewModel() {
 
 /**
  * Folders or lists (binders.js; one page per type, same data). Tapping one
- * opens the card grid filtered to it, like index.html?binder= on the web.
+ * opens its own page, like binder.html?name= on the web.
  */
 @Composable
 fun BindersScreen(type: String, onOpen: (String) -> Unit) {

@@ -346,7 +346,7 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 | `GET` | `/api/summary` | Compact key figures (card count + collection value), public with CORS – for embedding |
 | `GET` | `/api/dashboard` | Ready-made aggregates for the statistics page (ETag, conditional requests) |
 | `GET` | `/api/cards` | Filtered, grouped and sorted page of results for the card grid |
-| `GET` | `/api/cards/facets` | Values for the filter fields + key figures |
+| `GET` | `/api/cards/facets` | Values for the filter fields + key figures (`?binder=` limits the key figures to one binder) |
 | `GET` | `/api/cards/selection` | Keys and collection rows of every group behind a filter (same parameters as `/api/cards`) – for "select all" |
 | `GET` | `/api/cards/random` | Random cards for the strip above the grid |
 | `GET` | `/api/config` | UI settings (random cards, hidden menu entries) – public |
@@ -384,7 +384,7 @@ rules live in `docs/grafana/`; details in **[docs/monitoring.md](docs/monitoring
 ```text
 mtg-portal/
 ├── app/                     # nginx docroot (static interface)
-│   ├── index.html · editions.html · reserved.html · wishlist.html · binders.html · lists.html
+│   ├── index.html · editions.html · reserved.html · wishlist.html · binders.html · lists.html · binder.html
 │   ├── decks.html · dashboard.html · deck-checker.html · activity.html
 │   ├── css/style.css
 │   ├── js/i18n.js · shared.js · grid.js · editions.js · reserved.js · wishlist.js

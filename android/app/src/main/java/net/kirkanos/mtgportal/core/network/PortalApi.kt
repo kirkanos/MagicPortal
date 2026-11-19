@@ -108,8 +108,9 @@ interface PortalApi {
         @Query("style") style: String? = null,
     ): SelectionDto
 
+    /** binder scopes the key figures (stats) to that binder. */
     @GET("cards/facets")
-    suspend fun facets(): FacetsDto
+    suspend fun facets(@Query("binder") binder: String? = null): FacetsDto
 
     @GET("cards/random")
     suspend fun randomCards(@Query("count") count: Int): List<CardGroupDto>

@@ -6,9 +6,10 @@ import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.ui.icons.AppIcon
 import net.kirkanos.mtgportal.core.ui.icons.Icons
 
-// Type-safe routes. Cards takes optional filters so the folder and edition
-// pages can link into a filtered grid, like ?binder= and ?set= on the web.
-@Serializable data class CardsRoute(val binder: String? = null, val set: String? = null)
+// Type-safe routes. Cards takes an optional set filter, like ?set= on the
+// web; one binder has its own page (binder.html?name= on the web).
+@Serializable data class CardsRoute(val set: String? = null)
+@Serializable data class BinderRoute(val name: String)
 @Serializable data object EditionsRoute
 @Serializable data class SetCardsRoute(val code: String)
 @Serializable data object ReservedRoute

@@ -2,7 +2,12 @@ package net.kirkanos.mtgportal.feature.cards
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.Button
@@ -115,7 +120,7 @@ private val COLORS = listOf(
 )
 
 @Composable
-fun CardsScreen(binder: String?, set: String?) {
+fun CardsScreen(binder: String?, set: String?, onBack: (() -> Unit)? = null) {
     var openCard by remember { mutableStateOf<CardGroupDto?>(null) }
     val onOpenCard: (CardGroupDto) -> Unit = { openCard = it }
     val vm = containerViewModel { CardsViewModel(it, binder, set) }
@@ -156,6 +161,14 @@ fun CardsScreen(binder: String?, set: String?) {
         }
     }
 
+    // The binder page names the kind of binder (folder, list, deck).
+    LaunchedEffect(st.filters.binder) {
+        if (st.filters.binder.isNotEmpty() && binders.none { it.name == st.filters.binder }) {
+            (safeCall { c.api.binders() } as? ApiResult.Success)?.let { binders = it.data }
+        }
+    }
+    val binderType = binders.firstOrNull { it.name == st.filters.binder }?.type
+
     val full: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
 
     // Laid out like ManaBox's collection: value up top, one search row, a
@@ -169,7 +182,7 @@ fun CardsScreen(binder: String?, set: String?) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        item(span = full) { Header(st, binder, set) }
+        item(span = full) { Header(st, set, binderType, onBack) }
         item(span = full) {
             Controls(
                 st = st,
@@ -273,19 +286,59 @@ private fun Loading() {
 
 /** Market value large, counts and purchase value small - the collection at a glance. */
 @Composable
-private fun Header(st: CardsUiState, binder: String?, set: String?) {
+private fun Header(st: CardsUiState, set: String?, binderType: String?, onBack: (() -> Unit)?) {
     val s = st.facets?.stats
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-            binder ?: set?.uppercase() ?: stringResource(R.string.nav_cards),
-            style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold,
-        )
+        if (st.filters.binder.isNotEmpty()) {
+            BinderHead(st.filters.binder, binderType, onBack)
+        } else {
+            Text(
+                set?.uppercase() ?: stringResource(R.string.nav_cards),
+                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold,
+            )
+        }
         if (s != null) {
             Text(Format.eur(s.marketValue), style = MaterialTheme.typography.titleLarge, color = PortalColors.Accent, fontWeight = FontWeight.Bold)
             Text(
                 stringResource(R.string.cards_header_counts, Format.count(s.totalQty), Format.count(s.distinct), Format.eur(s.purchaseValue)),
                 fontSize = 13.sp, color = PortalColors.TextDim,
             )
+        }
+    }
+}
+
+/**
+ * Head of a binder page (binder.html on the web): which binder is open, as
+ * a card with an accent edge, so it does not read like the whole collection.
+ */
+@Composable
+private fun BinderHead(name: String, type: String?, onBack: (() -> Unit)?) {
+    val (icon, kind) = when (type?.lowercase()) {
+        "list" -> Icons.List to R.string.binder_kind_list
+        "deck" -> Icons.Planeswalker to R.string.binder_kind_deck
+        else -> Icons.Folder to R.string.binder_kind_folder
+    }
+    Column(Modifier.padding(bottom = 6.dp)) {
+        if (onBack != null) {
+            TextButton(onClick = onBack, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                Text("← " + stringResource(R.string.binder_back), color = PortalColors.TextDim, fontSize = 13.sp)
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(12.dp)).background(PortalColors.BgCard),
+        ) {
+            Box(Modifier.width(4.dp).fillMaxHeight().background(PortalColors.Accent))
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                AppIconView(icon, PortalColors.Accent, size = 30.dp)
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        stringResource(kind).uppercase(), color = PortalColors.Accent,
+                        fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp,
+                    )
+                    Text(name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
     }
 }
@@ -457,7 +510,6 @@ private fun FilterSheet(
             Filter(R.string.cards_all_colors, f.color, colors) { v -> onChange { it.copy(color = v) } }
             Filter(R.string.cards_all_foils, f.foil, listOf("normal" to "Normal", "foil" to "Foil", "etched" to "Etched")) { v -> onChange { it.copy(foil = v) } }
             Filter(R.string.cards_all_styles, f.style, facets?.styles.orEmpty().map { it to styleLabel(it) }) { v -> onChange { it.copy(style = v) } }
-            Filter(R.string.cards_all_binders, f.binder, facets?.binders.orEmpty().map { it to it }) { v -> onChange { it.copy(binder = v) } }
             Filter(R.string.cards_all_types, f.type, facets?.types.orEmpty().map { it to it }) { v -> onChange { it.copy(type = v) } }
             Filter(
                 R.string.cards_all_subtypes, f.subtype, st.subtypes.map { it to it },

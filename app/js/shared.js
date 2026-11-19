@@ -123,6 +123,12 @@ function showNotice(text, isError) {
   showNotice.timer = setTimeout(() => el.classList.remove('show'), 6000);
 }
 
+/* The page of one binder (folder or list); no binder means the whole
+   collection. */
+function binderPageURL(name) {
+  return name ? 'binder.html?name=' + encodeURIComponent(name) : 'index.html';
+}
+
 /* The binders for the binder pickers (name + type), loaded once per page. */
 let bindersCache = null;
 async function loadBinderList(force) {

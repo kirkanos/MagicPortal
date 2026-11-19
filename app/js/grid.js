@@ -11,6 +11,16 @@ let resultTotal = 0;      // groups behind the current filter
 let loadingPage = false;
 let queryToken = 0;       // discards responses of superseded queries
 
+// binder.html shows one binder, named by ?name=; index.html the whole
+// collection. The binder is fixed there: no binder filter on either page.
+const BINDER_VIEW = document.body.hasAttribute('data-binder-view');
+const FIXED_BINDER = BINDER_VIEW ? (new URLSearchParams(location.search).get('name') || '') : '';
+
+/* Facets; in the binder view the key figures are those of the binder. */
+function facetsURL() {
+  return API + '/cards/facets' + (FIXED_BINDER ? '?binder=' + encodeURIComponent(FIXED_BINDER) : '');
+}
+
 // Editing (with write access): the tiles on the page by group key, the
 // multi selection, and the group whose detail dialog is open.
 const tilesByKey = new Map();
@@ -78,8 +88,7 @@ function renderSetOptions() {
   const opts = document.getElementById('set-options');
   // In a binder view only the sets in that binder (plus the chosen one, so it
   // can be seen and switched off).
-  const binder = document.getElementById('filter-binder').value;
-  const inBinder = binder && facets.setsByBinder ? new Set(facets.setsByBinder[binder] || []) : null;
+  const inBinder = FIXED_BINDER && facets.setsByBinder ? new Set(facets.setsByBinder[FIXED_BINDER] || []) : null;
   const list = (facets.sets || [])
     .filter((s) => !inBinder || inBinder.has(s.code) || s.code === selectedSet)
     .map((s) => ({ code: s.code, name: (setIndex[s.code.toLowerCase()] || {}).name || s.name || s.code }))
@@ -162,9 +171,6 @@ function populateFilters() {
   });
   if (facets.colorless) addOpt(colorSel, 'C', t('Farblos', 'Colorless'));
 
-  const binderSel = document.getElementById('filter-binder');
-  if (binderSel) (facets.binders || []).forEach((b) => addOpt(binderSel, b, b));
-
   // Card variants (scryfall_cards.styles), only those the collection has.
   const styleSel = document.getElementById('filter-style');
   if (styleSel) (facets.styles || []).forEach((s) => addOpt(styleSel, s, STYLE_LABEL[s] ? STYLE_LABEL[s]() : s));
@@ -212,7 +218,7 @@ function currentParams() {
   pick('filter-color', 'color');
   pick('filter-foil', 'foil');
   pick('filter-style', 'style');
-  pick('filter-binder', 'binder');
+  if (FIXED_BINDER) p.set('binder', FIXED_BINDER);
   pick('filter-type', 'type');
   pick('filter-subtype', 'subtype');
   pick('sort-by', 'sort');
@@ -376,7 +382,7 @@ function setSelecting(on) {
 /* The collection rows behind the selection: in a binder view only the rows
    in that binder (the tiles show only those), else all of them. */
 function selectedRowIds() {
-  const binder = document.getElementById('filter-binder').value;
+  const binder = FIXED_BINDER;
   const ids = [];
   let copies = 0;
   selectedGroups.forEach((g) => g.variants.forEach((v) => {
@@ -477,41 +483,28 @@ async function moveSelection() {
    view. Only when cards were moved out of the binder on show and it is now
    empty does the view follow them to `movedTo`. */
 async function refreshAfterWrite(movedTo) {
-  let follow = false;
   try {
-    const res = await fetch(API + '/cards/facets', { cache: 'no-cache' });
+    const res = await fetch(facetsURL(), { cache: 'no-cache' });
     if (res.ok) {
       facets = await res.json();
+      if (FIXED_BINDER && movedTo !== undefined && !(facets.binders || []).includes(FIXED_BINDER)) {
+        location.href = binderPageURL(movedTo);
+        return;
+      }
       renderStats();
-      const binderSel = document.getElementById('filter-binder');
-      const keep = binderSel.value;
-      binderSel.querySelectorAll('option:not([value=""])').forEach((o) => o.remove());
-      (facets.binders || []).forEach((b) => {
-        const o = document.createElement('option');
-        o.value = b;
-        o.textContent = b;
-        binderSel.appendChild(o);
-      });
-      follow = movedTo !== undefined && keep !== '' && !(facets.binders || []).includes(keep);
-      binderSel.value = follow ? movedTo : keep;
       renderSetOptions();
     }
   } catch (e) { /* the grid still reloads */ }
-  if (follow) {
-    window.scrollTo(0, 0);
-    await runQuery();
-  } else {
-    await runQuery(false, true);
-  }
+  await runQuery(false, true);
 }
 
 /* After moving one card from the detail dialog: stays put unless the binder
    on show has no cards left. */
 async function followIfBinderEmptied(movedTo) {
-  const binder = document.getElementById('filter-binder').value;
+  const binder = FIXED_BINDER;
   if (!binder) return;
   try {
-    const res = await fetch(API + '/cards/facets', { cache: 'no-cache' });
+    const res = await fetch(facetsURL(), { cache: 'no-cache' });
     if (!res.ok) return;
     const f = await res.json();
     if ((f.binders || []).includes(binder)) return;
@@ -585,7 +578,7 @@ async function editRow(act, id) {
       bindersCache = null;
       applyRow(g, r.row, r.mergedInto ? [id] : []);
       // The source binder may now be empty: then the view follows the card.
-      if (document.getElementById('filter-binder').value === (v.binderName || '')) await followIfBinderEmptied(name);
+      if (FIXED_BINDER && FIXED_BINDER === (v.binderName || '')) await followIfBinderEmptied(name);
       if (v.origin === 'csv') showNotice(t('Verschoben – Karten aus ManaBox kommen beim nächsten Import wieder in ihren alten Ordner.', 'Moved – cards from ManaBox return to their old folder with the next import.'));
     }
   } catch (e) {
@@ -639,12 +632,17 @@ async function renderRandomStrip() {
 }
 
 async function init() {
+  // Old links into the grid filtered to a binder now open the binder page.
+  const legacyBinder = new URLSearchParams(location.search).get('binder');
+  if (!BINDER_VIEW && legacyBinder) return location.replace(binderPageURL(legacyBinder));
+  if (BINDER_VIEW && !FIXED_BINDER) return location.replace('binders.html');
+  if (BINDER_VIEW) renderBinderHead();
   rememberSelect('sort-by', 'mtg_sort_cards');
   initModal();
-  showLoading(t('Lade Sammlung...', 'Loading collection...'));
+  showLoading(BINDER_VIEW ? t('Lade Ordner...', 'Loading folder...') : t('Lade Sammlung...', 'Loading collection...'));
   try {
     [facets, setIndex, officialSubtypes] = await Promise.all([
-      fetch(API + '/cards/facets', { cache: 'no-cache' }).then((r) => {
+      fetch(facetsURL(), { cache: 'no-cache' }).then((r) => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       }),
@@ -660,6 +658,10 @@ async function init() {
   }
   hideLoading();
 
+  if (BINDER_VIEW && !(facets.stats || {}).entries) {
+    renderEmptyBinder();
+    return;
+  }
   if (!facets.stats || !facets.stats.entries) {
     renderEmptyState();
     return;
@@ -669,14 +671,6 @@ async function init() {
   populateSetFilter();
   populateSubtypes('');
 
-  // Optional deep-link from the Ordner/Listen pages: index.html?binder=<name>
-  const binderParam = new URLSearchParams(location.search).get('binder');
-  if (binderParam) {
-    const binderSel = document.getElementById('filter-binder');
-    if ([...binderSel.options].some((o) => o.value === binderParam)) binderSel.value = binderParam;
-    renderSetOptions();
-  }
-
   renderStats();
   await runQuery();
   await uiConfigReady;
@@ -685,19 +679,44 @@ async function init() {
   // Typing triggers a query - debounced, so not every keystroke becomes a
   // request.
   document.getElementById('search').addEventListener('input', debounce(() => runQuery(), 250));
-  ['filter-rarity', 'filter-color', 'filter-foil', 'filter-style', 'filter-binder', 'filter-subtype', 'sort-by'].forEach((id) => {
+  ['filter-rarity', 'filter-color', 'filter-foil', 'filter-style', 'filter-subtype', 'sort-by'].forEach((id) => {
     document.getElementById(id).addEventListener('change', () => runQuery());
   });
   document.getElementById('select-mode').addEventListener('click', () => setSelecting(!selecting));
   // Locked again: no more editing.
   document.addEventListener('auth-change', (e) => { if (!e.detail.unlocked && selecting) setSelecting(false); });
-  // The binder view decides which rows the selection means and which sets
-  // the set filter offers.
-  document.getElementById('filter-binder').addEventListener('change', () => { renderSelectBar(); renderSetOptions(); });
   document.getElementById('filter-type').addEventListener('change', (e) => {
     populateSubtypes(e.target.value);
     runQuery();
   });
+}
+
+/* Head of the binder page: back to the overview of its kind, the name, and
+   its type. Folders and lists share the page; the nav marks the right one. */
+async function renderBinderHead() {
+  document.getElementById('binder-title').textContent = FIXED_BINDER;
+  document.title = 'MagicPortal – ' + FIXED_BINDER;
+  const b = (await loadBinderList()).find((x) => x.name === FIXED_BINDER);
+  const type = ((b && b.type) || 'binder').toLowerCase();
+  const isList = type === 'list';
+  const isDeck = type === 'deck';
+  const back = document.getElementById('binder-back');
+  back.href = isDeck ? 'decks.html' : isList ? 'lists.html' : 'binders.html';
+  back.textContent = '← ' + (isDeck ? 'Decks' : isList ? t('Alle Listen', 'All lists') : t('Alle Ordner', 'All folders'));
+  document.getElementById('binder-kind').textContent = isDeck ? 'Deck' : isList ? t('Liste', 'List') : t('Ordner', 'Folder');
+  document.getElementById('binder-icon').textContent = isDeck ? '🃏' : isList ? '📋' : '📁';
+  document.querySelectorAll('nav.topnav a').forEach((a) => {
+    if (a.getAttribute('href') === back.getAttribute('href')) a.classList.add('active');
+  });
+}
+
+function renderEmptyBinder() {
+  document.getElementById('stats-bar').innerHTML = '';
+  document.getElementById('result-count').textContent = '';
+  const controls = document.querySelector('.controls');
+  if (controls) controls.style.display = 'none';
+  document.getElementById('card-grid').innerHTML =
+    `<p class="section-hint">${t('Hier liegen noch keine Karten.', 'No cards here yet.')}</p>`;
 }
 
 function renderEmptyState() {

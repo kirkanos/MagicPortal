@@ -146,15 +146,18 @@ fun AppShell() {
             ) {
                 composable<CardsRoute> { entry ->
                     val r = entry.toRoute<CardsRoute>()
-                    CardsScreen(binder = r.binder, set = r.set)
+                    CardsScreen(binder = null, set = r.set)
+                }
+                composable<BinderRoute> { entry ->
+                    CardsScreen(binder = entry.toRoute<BinderRoute>().name, set = null, onBack = { nav.popBackStack() })
                 }
                 composable<EditionsRoute> { EditionsScreen(onOpenSet = { nav.navigate(SetCardsRoute(it)) }) }
                 composable<SetCardsRoute> { entry -> SetCardsScreen(entry.toRoute<SetCardsRoute>().code) }
                 composable<ReservedRoute> { ReservedScreen() }
                 composable<WishlistRoute> { WishlistScreen() }
                 composable<BindersRoute> { entry ->
-                    // Like index.html?binder=: the grid, filtered to that folder.
-                    BindersScreen(entry.toRoute<BindersRoute>().type, onOpen = { nav.navigate(CardsRoute(binder = it)) })
+                    // Like binder.html?name=: the page of that folder.
+                    BindersScreen(entry.toRoute<BindersRoute>().type, onOpen = { nav.navigate(BinderRoute(it)) })
                 }
                 composable<DecksRoute> { DecksScreen(onOpen = { nav.navigate(DeckRoute(it)) }) }
                 composable<DeckRoute> { entry ->
@@ -163,7 +166,7 @@ fun AppShell() {
                         container.scanTarget = BinderTarget(name, "deck")
                         nav.navigate(ScannerRoute) { launchSingleTop = true }
                     }, onDeleted = { nav.popBackStack() }, onOpenBinder = { target ->
-                        nav.navigate(CardsRoute(binder = target)) { popUpTo<DeckRoute> { inclusive = true } }
+                        nav.navigate(if (target.isEmpty()) CardsRoute() else BinderRoute(target)) { popUpTo<DeckRoute> { inclusive = true } }
                     })
                 }
                 composable<DashboardRoute> { DashboardScreen() }
@@ -192,7 +195,7 @@ fun AppShell() {
                             if (deck != null) {
                                 nav.navigate(DeckRoute(name)) { popUpTo<DeckRoute> { inclusive = true } }
                             } else {
-                                nav.navigate(CardsRoute(binder = name)) { popUpTo<ScanResultRoute> { inclusive = true } }
+                                nav.navigate(if (name.isEmpty()) CardsRoute() else BinderRoute(name)) { popUpTo<ScanResultRoute> { inclusive = true } }
                             }
                         },
                     )

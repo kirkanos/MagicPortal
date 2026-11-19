@@ -647,7 +647,10 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 	setsByBinder := map[string]map[string]bool{}
 	groupKeys := map[string]bool{}
 
-	var totalQty int
+	// ?binder= scopes the key figures (stats) to one binder, for the binder
+	// view; the filter values stay those of the whole collection.
+	statsBinder := r.URL.Query().Get("binder")
+	var totalQty, entries int
 	var purchase, market float64
 
 	for _, c := range rows {
@@ -685,6 +688,10 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 			setsByBinder[c.BinderName] = map[string]bool{}
 		}
 		setsByBinder[c.BinderName][c.SetCode] = true
+		if statsBinder != "" && c.BinderName != statsBinder {
+			continue
+		}
+		entries++
 		groupKeys[groupKeyOf(c)] = true
 		totalQty += c.Quantity
 		purchase += c.PurchasePrice * float64(c.Quantity)
@@ -721,7 +728,7 @@ func handleCardFacets(w http.ResponseWriter, r *http.Request) {
 		"types":          sortedKeys(types),
 		"subtypesByType": subs,
 		"stats": map[string]interface{}{
-			"entries":       len(rows),
+			"entries":       entries,
 			"distinct":      len(groupKeys),
 			"totalQty":      totalQty,
 			"purchaseValue": round2(purchase),

@@ -1,5 +1,5 @@
 /* Overview of binders (folders) or lists, depending on document.body.dataset.binderType.
-   Each entry links into the card view filtered to that binder. */
+   Each entry opens the page of that binder (binder.html). */
 async function initBinders() {
   const type = (document.body.dataset.binderType || 'binder').toLowerCase();
   const el = document.getElementById('binder-list');
@@ -30,7 +30,7 @@ async function initBinders() {
     .map(
       (b) => `
       <div class="binder-item" data-name="${escapeHTML(b.name)}" data-type="${escapeHTML(b.type || 'binder')}">
-        <a class="binder-card" href="index.html?binder=${encodeURIComponent(b.name)}" title="${escapeHTML(b.name)}">
+        <a class="binder-card" href="${binderPageURL(b.name)}" title="${escapeHTML(b.name)}">
           <div class="binder-name">${escapeHTML(b.name)}</div>
           <div class="binder-meta">
             <span>${b.total.toLocaleString('de-DE')} ${t('Karten', 'cards')}</span>

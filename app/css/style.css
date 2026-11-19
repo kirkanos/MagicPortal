@@ -492,6 +492,19 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
 /* Folders / Lists overview + Decks placeholder */
 .page-title { font-size: 1.5rem; margin: 0 0 4px; }
+/* Head of a single binder page (binder.html): which folder is open. */
+.binder-head {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px;
+}
+.binder-back { color: var(--text-dim); font-size: 0.85rem; align-self: flex-start; }
+.binder-back:hover { color: var(--accent); }
+.binder-head-title { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.binder-head-title > div { min-width: 0; }
+.binder-head-icon { font-size: 2rem; line-height: 1; }
+.binder-head-kind { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 600; }
+.binder-head .page-title { margin: 0; overflow-wrap: anywhere; }
 .binder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
 .binder-card {
   display: flex; flex-direction: column; gap: 8px;

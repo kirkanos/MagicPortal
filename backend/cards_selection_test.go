@@ -113,3 +113,42 @@ func TestFacetsListSetsPerBinder(t *testing.T) {
 		t.Fatalf("Box: %v", got)
 	}
 }
+
+func TestFacetsStatsForOneBinder(t *testing.T) {
+	newTestDB(t)
+	cardIndexMu.Lock()
+	cardIndexRows = nil
+	cardIndexMu.Unlock()
+	if _, err := db.Exec(`INSERT INTO collection (binder_name, binder_type, set_code, set_name, collector_number, name, rarity, foil, language, condition, quantity, purchase_price, currency, added, origin) VALUES
+		('Scans', 'binder', 'snc', 'Streets of New Capenna', '47', 'Ledger Shredder', 'rare', 'normal', 'en', 'near_mint', 2, 0, 'EUR', '', 'app'),
+		('Box', 'list', 'snc', 'Streets of New Capenna', '47', 'Ledger Shredder', 'rare', 'normal', 'en', 'near_mint', 3, 0, 'EUR', '', 'app'),
+		('Box', 'list', 'ice', 'Ice Age', '61', 'Brainstorm', 'common', 'normal', 'en', 'near_mint', 4, 0, 'EUR', '', 'csv')`); err != nil {
+		t.Fatal(err)
+	}
+	stats := func(url string) (entries, distinct, qty int, binders []string) {
+		rec := httptest.NewRecorder()
+		handleCardFacets(rec, httptest.NewRequest("GET", url, nil))
+		var f struct {
+			Binders []string `json:"binders"`
+			Stats   struct {
+				Entries  int `json:"entries"`
+				Distinct int `json:"distinct"`
+				TotalQty int `json:"totalQty"`
+			} `json:"stats"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &f); err != nil {
+			t.Fatal(err)
+		}
+		return f.Stats.Entries, f.Stats.Distinct, f.Stats.TotalQty, f.Binders
+	}
+	if e, d, q, _ := stats("/api/cards/facets"); e != 3 || d != 2 || q != 9 {
+		t.Fatalf("all: entries %d distinct %d qty %d", e, d, q)
+	}
+	e, d, q, b := stats("/api/cards/facets?binder=Box")
+	if e != 2 || d != 2 || q != 7 {
+		t.Fatalf("Box: entries %d distinct %d qty %d", e, d, q)
+	}
+	if len(b) != 2 {
+		t.Fatalf("binders stay those of the whole collection: %v", b)
+	}
+}

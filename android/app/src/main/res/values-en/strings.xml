@@ -64,6 +64,10 @@
     <string name="unlock_wrong">Wrong password.</string>
     <string name="unlock_failed">Password check failed: %1$s</string>
 
+    <string name="binder_back">Back</string>
+    <string name="binder_kind_folder">Folder</string>
+    <string name="binder_kind_list">List</string>
+    <string name="binder_kind_deck">Deck</string>
     <string name="cards_search">Search name, text, mana…</string>
     <string name="cards_filter">Filter</string>
     <string name="cards_filter_reset">Reset</string>
@@ -72,7 +76,6 @@
     <string name="cards_all_rarities">All rarities</string>
     <string name="cards_all_colors">All colors</string>
     <string name="cards_all_foils">Normal &amp; Foil</string>
-    <string name="cards_all_binders">All folders &amp; lists</string>
     <string name="cards_all_types">All card types</string>
     <string name="cards_all_subtypes">All subtypes</string>
     <string name="cards_sort_name">Sort: Name</string>
