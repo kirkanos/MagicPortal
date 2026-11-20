@@ -1,5 +1,6 @@
 package net.kirkanos.mtgportal.feature.decks
 
+import net.kirkanos.mtgportal.core.ui.components.NoteIcon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -243,6 +244,7 @@ internal fun DeckBox(d: BinderDto, images: ImageUrls, hits: DeckHitsDto? = null,
             ) {
                 val format = DeckFormat.of(d.format)
                 if (format != DeckFormat.NONE) FormatBadge(stringResource(format.label))
+                NoteIcon(d.name, d.note, Modifier.padding(start = 4.dp))
                 Spacer(Modifier.weight(1f))
                 ManaCostRow(DeckLogic.pips(d.colors), images, size = 15.dp)
             }

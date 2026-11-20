@@ -44,8 +44,7 @@ async function initBinders() {
       (b) => `
       <div class="binder-item" data-name="${escapeHTML(b.name)}" data-type="${escapeHTML(b.type || 'binder')}">
         <a class="binder-card" href="${binderPageURL(b.name)}" title="${escapeHTML(b.name)}">
-          <div class="binder-name">${escapeHTML(b.name)}${b.note ? `<span class="binder-note-icon" tabindex="0"
-            aria-label="${t('Notiz', 'Note')}">📝<span class="binder-note-tip" role="tooltip">${escapeHTML(b.note)}</span></span>` : ''}</div>
+          <div class="binder-name">${escapeHTML(b.name)}${noteIconHTML(b.note)}</div>
           <div class="binder-meta">
             <span>${b.total.toLocaleString('de-DE')} ${t('Karten', 'cards')}</span>
             <span class="money">${formatCurrency(b.marketValue, 'EUR')}</span>

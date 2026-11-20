@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.ui.components.HelpButton
+import net.kirkanos.mtgportal.core.ui.components.NoteIcon
 import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.safeCall
@@ -120,7 +121,6 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
     val unlocked = auth == AuthState.Open || auth == AuthState.Unlocked
     var renaming by remember { mutableStateOf<BinderDto?>(null) }
     var creating by remember { mutableStateOf(false) }
-    var showingNote by remember { mutableStateOf<BinderDto?>(null) }
     val createdText = stringResource(R.string.binders_created)
     val deletedText = stringResource(R.string.binders_deleted)
     val volatileText = stringResource(R.string.binders_rename_volatile)
@@ -160,13 +160,7 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(b.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = false))
                             // The note behind a symbol, like the web's tooltip; a tap shows it.
-                            if (b.note.isNotEmpty()) {
-                                Text(
-                                    "📝", fontSize = 16.sp,
-                                    modifier = Modifier.padding(start = 6.dp).clip(RoundedCornerShape(6.dp))
-                                        .clickable { showingNote = b }.padding(4.dp),
-                                )
-                            }
+                            NoteIcon(b.name, b.note, Modifier.padding(start = 4.dp))
                             Spacer(Modifier.weight(1f))
                             if (unlocked && b.total == 0) {
                                 TextButton(onClick = { vm.delete(b.name, deletedText.format(b.name)) }) { Text(stringResource(R.string.binders_delete)) }
@@ -220,15 +214,6 @@ fun BindersScreen(type: String, onOpen: (String) -> Unit) {
             creating = false
             vm.create(name, type, createdText.format(name))
         })
-    }
-
-    showingNote?.let { b ->
-        AlertDialog(
-            onDismissRequest = { showingNote = null },
-            title = { Text(b.name) },
-            text = { Text(b.note, lineHeight = 20.sp) },
-            confirmButton = { TextButton(onClick = { showingNote = null }) { Text(stringResource(android.R.string.ok)) } },
-        )
     }
 
     renaming?.let { b ->

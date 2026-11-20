@@ -721,50 +721,7 @@ async function renderBinderHead() {
   document.querySelectorAll('nav.topnav a').forEach((a) => {
     if (a.getAttribute('href') === back.getAttribute('href')) a.classList.add('active');
   });
-  if (b) renderBinderNote(b.note || '');
-}
-
-/* The note of the binder under its name: free text on what it holds. Shown
-   to everyone; editing (and adding one) needs the unlock. */
-function renderBinderNote(note) {
-  const el = document.getElementById('binder-note');
-  el.hidden = false;
-  el.classList.toggle('empty', !note);
-  el.innerHTML = `${note ? `<div class="binder-note-text">${escapeHTML(note)}</div>` : ''}
-    <button type="button" class="binder-note-edit unlock-only">${note ? '✎ ' + t('Notiz bearbeiten', 'Edit note') : '+ ' + t('Notiz hinzufügen', 'Add note')}</button>`;
-  el.querySelector('.binder-note-edit').addEventListener('click', () => editBinderNote(note));
-}
-
-function editBinderNote(note) {
-  const el = document.getElementById('binder-note');
-  el.classList.remove('empty');
-  el.innerHTML = `
-    <form class="binder-note-form">
-      <textarea name="note" rows="5" maxlength="4000"
-        placeholder="${t('Was ist drin? Z. B. Seite 1–4: Magic 2011, Seite 5: Tauschkarten', 'What is in it? E.g. pages 1–4: Magic 2011, page 5: trades')}"></textarea>
-      <div class="binder-rename-actions">
-        <button type="button" data-act="cancel">${t('Abbrechen', 'Cancel')}</button>
-        <button type="submit" class="primary">${t('Speichern', 'Save')}</button>
-      </div>
-    </form>`;
-  const form = el.querySelector('form');
-  const area = form.elements['note'];
-  area.value = note;
-  area.focus();
-  form.querySelector('[data-act="cancel"]').addEventListener('click', () => renderBinderNote(note));
-  form.addEventListener('keydown', (e) => { if (e.key === 'Escape') renderBinderNote(note); });
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    form.querySelector('[type="submit"]').disabled = true;
-    try {
-      const r = await writeAPI('PUT', '/binders/' + encodeURIComponent(FIXED_BINDER) + '/note', { note: area.value });
-      renderBinderNote(r.note);
-      showNotice(r.note ? t('Notiz gespeichert.', 'Note saved.') : t('Notiz entfernt.', 'Note removed.'));
-    } catch (err) {
-      showNotice(t('Speichern fehlgeschlagen: ', 'Saving failed: ') + err.message, true);
-      form.querySelector('[type="submit"]').disabled = false;
-    }
-  });
+  if (b) renderNoteBox(document.getElementById('binder-note'), FIXED_BINDER, b.note || '');
 }
 
 function renderEmptyBinder() {

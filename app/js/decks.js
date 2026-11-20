@@ -149,7 +149,7 @@ function deckBoxHTML(d, extra = '') {
   const lid = tints.length ? `--tint:${tints[0]};--tint2:${tints[tints.length - 1]}` : '';
   return `
     <a class="deckbox" style="${lid}" href="decks.html?deck=${encodeURIComponent(d.name)}" title="${escapeHTML(d.name)}">
-      <div class="deckbox-lid">${d.format ? `<span class="deckbox-format">${escapeHTML(formatLabel(d.format))}</span>` : ''}<span class="deckbox-pips">${colorPipsHTML(d.colors)}</span></div>
+      <div class="deckbox-lid">${d.format ? `<span class="deckbox-format">${escapeHTML(formatLabel(d.format))}</span>` : ''}${noteIconHTML(d.note)}<span class="deckbox-pips">${colorPipsHTML(d.colors)}</span></div>
       <div class="deckbox-front" ${art ? `style="background-image:url('${escapeHTML(art)}')"` : ''}>
         ${art ? '' : '<span class="deckbox-empty">🃏</span>'}
       </div>
@@ -312,6 +312,7 @@ function renderDeckBanner() {
       </div>
     </div>`;
   document.title = `MagicPortal – ${deckName}`;
+  renderNoteBox(document.getElementById('deck-note'), deckName, d.note || '');
 }
 
 function renderDeckCards() {

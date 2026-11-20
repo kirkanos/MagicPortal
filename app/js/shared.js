@@ -106,6 +106,54 @@ async function writeAPI(method, path, body) {
   return data;
 }
 
+/* The note of a binder (folder, list or deck) in full, in el: free text on
+   what it holds. Shown to everyone; editing (and adding one) needs the
+   unlock. */
+function renderNoteBox(el, binderName, note) {
+  el.hidden = false;
+  el.classList.toggle('empty', !note);
+  el.innerHTML = `${note ? `<div class="binder-note-text">${escapeHTML(note)}</div>` : ''}
+    <button type="button" class="binder-note-edit unlock-only">${note ? '✎ ' + t('Notiz bearbeiten', 'Edit note') : '+ ' + t('Notiz hinzufügen', 'Add note')}</button>`;
+  el.querySelector('.binder-note-edit').addEventListener('click', () => editNoteBox(el, binderName, note));
+}
+
+function editNoteBox(el, binderName, note) {
+  el.classList.remove('empty');
+  el.innerHTML = `
+    <form class="binder-note-form">
+      <textarea name="note" rows="5" maxlength="4000"
+        placeholder="${t('Was ist drin? Z. B. Seite 1–4: Magic 2011, Seite 5: Tauschkarten', 'What is in it? E.g. pages 1–4: Magic 2011, page 5: trades')}"></textarea>
+      <div class="binder-rename-actions">
+        <button type="button" data-act="cancel">${t('Abbrechen', 'Cancel')}</button>
+        <button type="submit" class="primary">${t('Speichern', 'Save')}</button>
+      </div>
+    </form>`;
+  const form = el.querySelector('form');
+  const area = form.elements['note'];
+  area.value = note;
+  area.focus();
+  form.querySelector('[data-act="cancel"]').addEventListener('click', () => renderNoteBox(el, binderName, note));
+  form.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); renderNoteBox(el, binderName, note); } });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    form.querySelector('[type="submit"]').disabled = true;
+    try {
+      const r = await writeAPI('PUT', '/binders/' + encodeURIComponent(binderName) + '/note', { note: area.value });
+      renderNoteBox(el, binderName, r.note);
+      showNotice(r.note ? t('Notiz gespeichert.', 'Note saved.') : t('Notiz entfernt.', 'Note removed.'));
+    } catch (err) {
+      showNotice(t('Speichern fehlgeschlagen: ', 'Saving failed: ') + err.message, true);
+      form.querySelector('[type="submit"]').disabled = false;
+    }
+  });
+}
+
+/* The note in an overview: a symbol, the text as tooltip on hover/focus. */
+function noteIconHTML(note) {
+  if (!note) return '';
+  return `<span class="binder-note-icon" tabindex="0" aria-label="${t('Notiz', 'Note')}">📝<span class="binder-note-tip" role="tooltip">${escapeHTML(note)}</span></span>`;
+}
+
 /* A short message at the bottom of the page, gone after a few seconds. */
 function showNotice(text, isError) {
   let el = document.getElementById('notice');

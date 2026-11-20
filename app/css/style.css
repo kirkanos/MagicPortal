@@ -1098,6 +1098,12 @@ body.is-unlocked .unlock-only { display: inline-flex; }
 .deck-banner-text { position: relative; padding: 18px 20px; }
 .deck-banner-text h1 { margin: 0 0 6px; font-size: 1.7rem; }
 .deck-banner-meta { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: var(--text-dim); font-size: 0.9rem; }
+/* The note under the banner of a deck, and its symbol on the box lid. */
+.deck-note { margin-top: 12px; }
+.deck-note .binder-note-text { border-top: none; padding-top: 0; }
+.deckbox:hover, .deckbox:focus-within { z-index: 5; }
+.deckbox-lid .binder-note-icon { margin: 0 auto 0 0; }
+.deckbox-format:has(+ .binder-note-icon) { margin-right: 6px; }
 .deck-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
 .deck-toolbar-spacer { flex: 1; }
 .view-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }

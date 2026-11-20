@@ -1,5 +1,6 @@
 package net.kirkanos.mtgportal.feature.decks
 
+import net.kirkanos.mtgportal.core.ui.components.NoteBlock
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -172,6 +173,8 @@ fun DeckScreen(name: String, onScan: () -> Unit, onDeleted: () -> Unit = {}, onO
                 modifier = Modifier.fillMaxSize(),
             ) {
                 item(span = full) { DeckHeader(name, st.deck, groups, images) }
+                // The note of the deck (sleeves, box, plan); the list reloads after a save.
+                item(span = full) { NoteBlock(name, st.deck?.note.orEmpty(), unlocked && st.deck != null, Modifier.padding(horizontal = 14.dp)) }
                 item(span = full) {
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {

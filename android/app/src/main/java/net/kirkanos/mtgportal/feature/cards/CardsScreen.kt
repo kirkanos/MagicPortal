@@ -23,6 +23,7 @@ import net.kirkanos.mtgportal.core.network.ApiResult
 import net.kirkanos.mtgportal.core.network.dto.BinderDto
 import net.kirkanos.mtgportal.core.network.safeCall
 import net.kirkanos.mtgportal.core.ui.components.isUnlocked
+import net.kirkanos.mtgportal.core.ui.components.NoteBlock
 import net.kirkanos.mtgportal.feature.collection.BinderPickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -170,7 +171,6 @@ fun CardsScreen(binder: String?, set: String?, onBack: (() -> Unit)? = null) {
     }
     val shownBinderDto = binders.firstOrNull { it.name == st.filters.binder }
     val binderType = shownBinderDto?.type
-    var editingNote by remember { mutableStateOf(false) }
 
     val full: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
 
@@ -186,7 +186,9 @@ fun CardsScreen(binder: String?, set: String?, onBack: (() -> Unit)? = null) {
         modifier = Modifier.fillMaxSize(),
     ) {
         item(span = full) {
-            Header(st, set, binderType, shownBinderDto?.note.orEmpty(), unlocked && shownBinderDto != null, onBack) { editingNote = true }
+            Header(st, set, binderType, shownBinderDto?.note.orEmpty(), unlocked && shownBinderDto != null, onBack) { note ->
+                binders = binders.map { if (it.name == st.filters.binder) it.copy(note = note) else it }
+            }
         }
         item(span = full) {
             Controls(
@@ -262,21 +264,6 @@ fun CardsScreen(binder: String?, set: String?, onBack: (() -> Unit)? = null) {
     }
     }
 
-    if (editingNote && shownBinderDto != null) {
-        val b = shownBinderDto
-        BinderNoteDialog(b.note, onDismiss = { editingNote = false }) { text ->
-            scope.launch {
-                when (val r = c.collectionWrite.setBinderNote(b.name, text)) {
-                    is ApiResult.Success -> {
-                        editingNote = false
-                        binders = binders.map { if (it.name == b.name) it.copy(note = r.data.note) else it }
-                    }
-                    is ApiResult.HttpError -> Toast.makeText(context, res.getString(R.string.binder_note_failed, r.message), Toast.LENGTH_LONG).show()
-                    is ApiResult.NetworkError -> Toast.makeText(context, res.getString(R.string.binder_note_failed, r.cause.message.orEmpty()), Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
     if (picking) {
         BinderPickerDialog(
             binders, BinderTarget(rowBinderName(st.filters.binder)),
@@ -317,12 +304,12 @@ private fun Header(
     note: String,
     canEditNote: Boolean,
     onBack: (() -> Unit)?,
-    onEditNote: () -> Unit,
+    onNoteSaved: (String) -> Unit,
 ) {
     val s = st.facets?.stats
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         if (st.filters.binder.isNotEmpty()) {
-            BinderHead(st.filters.binder, binderType, note, canEditNote, onBack, onEditNote)
+            BinderHead(st.filters.binder, binderType, note, canEditNote, onBack, onNoteSaved)
         } else {
             Text(
                 set?.uppercase() ?: stringResource(R.string.nav_cards),
@@ -344,7 +331,7 @@ private fun Header(
  * a card with an accent edge, so it does not read like the whole collection.
  */
 @Composable
-private fun BinderHead(name: String, type: String?, note: String, canEditNote: Boolean, onBack: (() -> Unit)?, onEditNote: () -> Unit) {
+private fun BinderHead(name: String, type: String?, note: String, canEditNote: Boolean, onBack: (() -> Unit)?, onNoteSaved: (String) -> Unit) {
     val loose = name == NO_BINDER
     val (icon, kind) = when (if (loose) "loose" else type?.lowercase()) {
         "loose" -> Icons.Collection to R.string.binder_kind_cards
@@ -378,18 +365,7 @@ private fun BinderHead(name: String, type: String?, note: String, canEditNote: B
                 }
             }
             // The note: what the binder holds; editing needs the unlock.
-            if (note.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                Text(note, fontSize = 14.sp, lineHeight = 20.sp)
-            }
-            if (canEditNote && !loose) {
-                TextButton(onClick = onEditNote, contentPadding = PaddingValues(horizontal = 0.dp)) {
-                    Text(
-                        stringResource(if (note.isEmpty()) R.string.binder_note_add else R.string.binder_note_edit),
-                        color = PortalColors.TextDim, fontSize = 13.sp,
-                    )
-                }
-            }
+            if (!loose) NoteBlock(name, note, canEditNote, onSaved = onNoteSaved)
             }
         }
     }
@@ -667,28 +643,5 @@ private fun SetPickerDialog(
                 }
             }
         },
-    )
-}
-
-/** The note of a binder: free text on what it holds; empty removes it. */
-@Composable
-private fun BinderNoteDialog(note: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
-    var text by remember { mutableStateOf(note) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.binder_note_title)) },
-        text = {
-            OutlinedTextField(
-                text, { if (it.length <= 4000) text = it },
-                placeholder = { Text(stringResource(R.string.binder_note_hint)) },
-                minLines = 4, maxLines = 12, modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(text) }, enabled = text.trim() != note) {
-                Text(stringResource(R.string.binder_note_save))
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }
