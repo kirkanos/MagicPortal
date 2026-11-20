@@ -8,7 +8,10 @@ plugins {
 // of :app, which only knows ScannerEntry.
 android {
     namespace = "net.kirkanos.mtgportal.scanner"
-    compileSdk = 37
+    // 37.2: Compose 1.13 (BOM 2026.11) needs at least 37.1 to compile against.
+    compileSdk {
+        version = release(37) { minorApiLevel = 2 }
+    }
 
     defaultConfig {
         minSdk = 26
