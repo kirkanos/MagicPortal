@@ -74,6 +74,12 @@
 
     <!-- Cards grid (index.html / grid.js) -->
     <string name="binder_back">Zurück</string>
+    <string name="binder_note_add">+ Notiz hinzufügen</string>
+    <string name="binder_note_edit">✎ Notiz bearbeiten</string>
+    <string name="binder_note_title">Notiz zum Ordner</string>
+    <string name="binder_note_hint">Was ist drin? Z. B. Seite 1–4: Magic 2011, Seite 5: Tauschkarten</string>
+    <string name="binder_note_save">Speichern</string>
+    <string name="binder_note_failed">Notiz nicht gespeichert: %1$s</string>
     <string name="binder_suggested">Vorschläge: haben diese Edition schon</string>
     <string name="binder_suggested_copies">%1$d Karten aus dieser Edition</string>
     <string name="binder_none">Ohne Ordner</string>

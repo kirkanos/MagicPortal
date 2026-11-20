@@ -65,6 +65,12 @@
     <string name="unlock_failed">Password check failed: %1$s</string>
 
     <string name="binder_back">Back</string>
+    <string name="binder_note_add">+ Add note</string>
+    <string name="binder_note_edit">✎ Edit note</string>
+    <string name="binder_note_title">Note</string>
+    <string name="binder_note_hint">What is in it? E.g. pages 1–4: Magic 2011, page 5: trades</string>
+    <string name="binder_note_save">Save</string>
+    <string name="binder_note_failed">Note not saved: %1$s</string>
     <string name="binder_suggested">Suggested: already hold this edition</string>
     <string name="binder_suggested_copies">%1$d cards of this edition</string>
     <string name="binder_none">No folder</string>

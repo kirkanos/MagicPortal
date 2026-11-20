@@ -808,6 +808,7 @@ func handleBinderPatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	renameDeckCover(from, res.Name)
+	renameBinderNote(from, res.Name)
 	metricAppWrites.inc(labels("op", "binder"))
 	logActivity("info", "App", fmt.Sprintf("Binder %q → %q (%s): %d rows, %d merged", from, res.Name, res.Type, res.Rows, res.Merged))
 	writeJSON(w, res)

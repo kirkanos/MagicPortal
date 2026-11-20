@@ -168,6 +168,8 @@ data class BinderDto(
     val format: String = "",
     /** Decks only: the commander, for formats that have one. */
     val commander: DeckCoverDto? = null,
+    /** Free text: what the binder holds (PUT /api/binders/{name}/note). */
+    val note: String = "",
 )
 
 @Serializable
@@ -185,6 +187,10 @@ data class DeckCoverInputDto(val setCode: String, val collectorNumber: String = 
 /** PUT /api/binders/{name}/deck: format and commander (a card of the deck). */
 @Serializable
 data class DeckSettingsInputDto(val format: String = "", val commander: DeckCoverInputDto? = null)
+
+/** PUT /api/binders/{name}/note; the answer carries the stored note. */
+@Serializable
+data class BinderNoteDto(val note: String = "", val name: String = "")
 
 /** POST /api/binders: a new, empty binder (binder, list or deck). */
 @Serializable

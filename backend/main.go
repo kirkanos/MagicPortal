@@ -63,6 +63,7 @@ func main() {
 	mux.HandleFunc("DELETE /api/binders/{name}", handleBinderDelete)
 	mux.HandleFunc("POST /api/binders/{name}/cover", handleDeckCover)
 	mux.HandleFunc("PUT /api/binders/{name}/deck", handleDeckSettings)
+	mux.HandleFunc("PUT /api/binders/{name}/note", handleBinderNote)
 	mux.HandleFunc("GET /api/decks/search", handleDeckSearch)
 	mux.HandleFunc("GET /api/subtypes", handleSubtypes)
 	mux.HandleFunc("GET /api/status", handleStatus)
@@ -414,6 +415,8 @@ type binderOut struct {
 	Colors      []string   `json:"colors,omitempty"`
 	Format      string     `json:"format,omitempty"`
 	Commander   *deckCover `json:"commander,omitempty"`
+	// Free text: what the binder holds (binder_notes.go).
+	Note string `json:"note,omitempty"`
 }
 
 // handleBinders returns per-binder aggregates (folders and lists) for the
@@ -461,6 +464,10 @@ func handleBinders(w http.ResponseWriter, r *http.Request) {
 	// Covers and colours after the rows: the one connection is free again.
 	covers := loadDeckCovers()
 	settings := loadDeckSettings()
+	notes := loadBinderNotes()
+	for i := range out {
+		out[i].Note = notes[out[i].Name]
+	}
 	var colors map[string][]string
 	var held map[string]map[string]bool
 	for i := range out {

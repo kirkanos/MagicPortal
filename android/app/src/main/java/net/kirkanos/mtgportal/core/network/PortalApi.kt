@@ -1,6 +1,7 @@
 package net.kirkanos.mtgportal.core.network
 
 import net.kirkanos.mtgportal.core.network.dto.ActivityDto
+import net.kirkanos.mtgportal.core.network.dto.BinderNoteDto
 import net.kirkanos.mtgportal.core.network.dto.SelectionDto
 import net.kirkanos.mtgportal.core.network.dto.AddCardsRequest
 import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
@@ -175,6 +176,10 @@ interface PortalApi {
 
     @PUT("binders/{name}/deck")
     suspend fun setDeckSettings(@Path("name") name: String, @Body body: DeckSettingsInputDto): Response<Unit>
+
+    /** An empty note removes it. */
+    @PUT("binders/{name}/note")
+    suspend fun setBinderNote(@Path("name") name: String, @Body body: BinderNoteDto): BinderNoteDto
 
     @POST("binders")
     suspend fun createBinder(@Body body: BinderCreateDto): Response<Unit>

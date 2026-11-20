@@ -168,7 +168,9 @@ fun CardsScreen(binder: String?, set: String?, onBack: (() -> Unit)? = null) {
             (safeCall { c.api.binders() } as? ApiResult.Success)?.let { binders = it.data }
         }
     }
-    val binderType = binders.firstOrNull { it.name == st.filters.binder }?.type
+    val shownBinderDto = binders.firstOrNull { it.name == st.filters.binder }
+    val binderType = shownBinderDto?.type
+    var editingNote by remember { mutableStateOf(false) }
 
     val full: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
 
@@ -183,7 +185,9 @@ fun CardsScreen(binder: String?, set: String?, onBack: (() -> Unit)? = null) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        item(span = full) { Header(st, set, binderType, onBack) }
+        item(span = full) {
+            Header(st, set, binderType, shownBinderDto?.note.orEmpty(), unlocked && shownBinderDto != null, onBack) { editingNote = true }
+        }
         item(span = full) {
             Controls(
                 st = st,
@@ -258,6 +262,21 @@ fun CardsScreen(binder: String?, set: String?, onBack: (() -> Unit)? = null) {
     }
     }
 
+    if (editingNote && shownBinderDto != null) {
+        val b = shownBinderDto
+        BinderNoteDialog(b.note, onDismiss = { editingNote = false }) { text ->
+            scope.launch {
+                when (val r = c.collectionWrite.setBinderNote(b.name, text)) {
+                    is ApiResult.Success -> {
+                        editingNote = false
+                        binders = binders.map { if (it.name == b.name) it.copy(note = r.data.note) else it }
+                    }
+                    is ApiResult.HttpError -> Toast.makeText(context, res.getString(R.string.binder_note_failed, r.message), Toast.LENGTH_LONG).show()
+                    is ApiResult.NetworkError -> Toast.makeText(context, res.getString(R.string.binder_note_failed, r.cause.message.orEmpty()), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
     if (picking) {
         BinderPickerDialog(
             binders, BinderTarget(rowBinderName(st.filters.binder)),
@@ -291,11 +310,19 @@ private fun Loading() {
 
 /** Market value large, counts and purchase value small - the collection at a glance. */
 @Composable
-private fun Header(st: CardsUiState, set: String?, binderType: String?, onBack: (() -> Unit)?) {
+private fun Header(
+    st: CardsUiState,
+    set: String?,
+    binderType: String?,
+    note: String,
+    canEditNote: Boolean,
+    onBack: (() -> Unit)?,
+    onEditNote: () -> Unit,
+) {
     val s = st.facets?.stats
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         if (st.filters.binder.isNotEmpty()) {
-            BinderHead(st.filters.binder, binderType, onBack)
+            BinderHead(st.filters.binder, binderType, note, canEditNote, onBack, onEditNote)
         } else {
             Text(
                 set?.uppercase() ?: stringResource(R.string.nav_cards),
@@ -317,7 +344,7 @@ private fun Header(st: CardsUiState, set: String?, binderType: String?, onBack: 
  * a card with an accent edge, so it does not read like the whole collection.
  */
 @Composable
-private fun BinderHead(name: String, type: String?, onBack: (() -> Unit)?) {
+private fun BinderHead(name: String, type: String?, note: String, canEditNote: Boolean, onBack: (() -> Unit)?, onEditNote: () -> Unit) {
     val loose = name == NO_BINDER
     val (icon, kind) = when (if (loose) "loose" else type?.lowercase()) {
         "loose" -> Icons.Collection to R.string.binder_kind_cards
@@ -335,7 +362,8 @@ private fun BinderHead(name: String, type: String?, onBack: (() -> Unit)?) {
             Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(12.dp)).background(PortalColors.BgCard),
         ) {
             Box(Modifier.width(4.dp).fillMaxHeight().background(PortalColors.Accent))
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 AppIconView(icon, PortalColors.Accent, size = 30.dp)
                 Spacer(Modifier.width(12.dp))
                 Column {
@@ -348,6 +376,20 @@ private fun BinderHead(name: String, type: String?, onBack: (() -> Unit)?) {
                         style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold,
                     )
                 }
+            }
+            // The note: what the binder holds; editing needs the unlock.
+            if (note.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Text(note, fontSize = 14.sp, lineHeight = 20.sp)
+            }
+            if (canEditNote && !loose) {
+                TextButton(onClick = onEditNote, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                    Text(
+                        stringResource(if (note.isEmpty()) R.string.binder_note_add else R.string.binder_note_edit),
+                        color = PortalColors.TextDim, fontSize = 13.sp,
+                    )
+                }
+            }
             }
         }
     }
@@ -625,5 +667,28 @@ private fun SetPickerDialog(
                 }
             }
         },
+    )
+}
+
+/** The note of a binder: free text on what it holds; empty removes it. */
+@Composable
+private fun BinderNoteDialog(note: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var text by remember { mutableStateOf(note) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.binder_note_title)) },
+        text = {
+            OutlinedTextField(
+                text, { if (it.length <= 4000) text = it },
+                placeholder = { Text(stringResource(R.string.binder_note_hint)) },
+                minLines = 4, maxLines = 12, modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(text) }, enabled = text.trim() != note) {
+                Text(stringResource(R.string.binder_note_save))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }

@@ -14,6 +14,7 @@ import net.kirkanos.mtgportal.core.network.dto.AddCardItemDto
 import net.kirkanos.mtgportal.core.network.dto.AddCardsRequest
 import net.kirkanos.mtgportal.core.network.dto.AddCardsResultDto
 import net.kirkanos.mtgportal.core.network.dto.BinderCreateDto
+import net.kirkanos.mtgportal.core.network.dto.BinderNoteDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchDto
 import net.kirkanos.mtgportal.core.network.dto.BinderPatchResultDto
 import net.kirkanos.mtgportal.core.network.dto.DeckCoverInputDto
@@ -124,6 +125,9 @@ class CollectionWriteRepository(private val api: PortalApi) {
     /** A new, empty binder; it stays until deleted, also without cards. */
     suspend fun createBinder(name: String, type: String): ApiResult<Unit> =
         safeStatus { api.createBinder(BinderCreateDto(name.trim(), type)) }.withReadableError().noted()
+
+    suspend fun setBinderNote(name: String, note: String): ApiResult<BinderNoteDto> =
+        safeCall { api.setBinderNote(name, BinderNoteDto(note)) }.withReadableError().noted()
 
     suspend fun deleteBinder(name: String): ApiResult<Unit> = safeStatus { api.deleteBinder(name) }.withReadableError().noted()
 

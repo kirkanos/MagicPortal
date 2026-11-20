@@ -190,6 +190,7 @@ func handleBinderDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	renameDeckCover(name, "") // drops cover and format of a deck
+	renameBinderNote(name, "")
 	metricAppWrites.inc(labels("op", "binder"))
 	logActivity("info", "App", fmt.Sprintf("Binder %q deleted", name))
 	w.WriteHeader(http.StatusNoContent)
