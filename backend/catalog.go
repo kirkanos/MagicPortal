@@ -89,7 +89,7 @@ func normalizeName(s string) string {
 
 // catalog returns the cached catalog, rebuilding it after a sync.
 func catalog() (*catalogData, error) {
-	key := metaGet(db, "bulk_synced_at") + "|" + metaGet(db, "sets_synced_at")
+	key := metaGet(db, "bulk_synced_at") + "|" + metaGet(db, "sets_synced_at") + "|" + metaGet(db, "names_synced_at")
 	catalogMu.Lock()
 	defer catalogMu.Unlock()
 	if catalogCache != nil && catalogCache.key == key {
@@ -162,8 +162,31 @@ func catalog() (*catalogData, error) {
 			}
 		}
 	}
+	// German names (card_names, names.go): the scanner reads a German card's
+	// title and must find the English card. Only German - the collection's
+	// other language - keeps the phone's name search fast.
+	foreign, err := scannerNames()
+	if err != nil {
+		return nil, err
+	}
+	englishIdx := map[string][]int{}
+	for i, p := range printings {
+		englishIdx[p.Name] = append(englishIdx[p.Name], i)
+	}
+	for _, f := range foreign {
+		for _, i := range englishIdx[f[1]] {
+			add(f[0], i)
+			if strings.Contains(f[0], "//") {
+				for _, face := range strings.Split(f[0], "//") {
+					add(face, i)
+				}
+			}
+		}
+	}
 	names := make([]string, 0, len(byName))
 	for n, idx := range byName {
+		idx = dedupeInts(idx)
+		byName[n] = idx
 		sort.SliceStable(idx, func(a, b int) bool { return printings[idx[a]].ReleasedAt > printings[idx[b]].ReleasedAt })
 		names = append(names, n)
 	}
@@ -173,8 +196,10 @@ func catalog() (*catalogData, error) {
 	type indexOut struct {
 		Sets  [][]interface{} `json:"sets"`
 		Cards [][]interface{} `json:"cards"`
+		// [printed name, English name, language]
+		Names [][3]string `json:"names"`
 	}
-	out := indexOut{Sets: [][]interface{}{}, Cards: make([][]interface{}, 0, len(printings))}
+	out := indexOut{Sets: [][]interface{}{}, Cards: make([][]interface{}, 0, len(printings)), Names: foreign}
 	codes := make([]string, 0, len(sets))
 	for c := range sets {
 		codes = append(codes, c)
@@ -213,6 +238,43 @@ func catalog() (*catalogData, error) {
 		etag:      weakETag("ci", sha256hex(buf.Bytes())[:16]),
 	}
 	return catalogCache, nil
+}
+
+// scannerLanguages are the languages whose names the scanner gets.
+var scannerLanguages = []string{"de"}
+
+// scannerNames: [printed, English name, language] for the scanner languages,
+// in a stable order (the index ETag hashes the content).
+func scannerNames() ([][3]string, error) {
+	out := [][3]string{}
+	for _, lang := range scannerLanguages {
+		rows, err := db.Query(`SELECT printed, name FROM card_names WHERE lang = ? ORDER BY printed, name`, lang)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var printed, name string
+			if err := rows.Scan(&printed, &name); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			out = append(out, [3]string{printed, name, lang})
+		}
+		rows.Close()
+	}
+	return out, nil
+}
+
+func dedupeInts(xs []int) []int {
+	seen := make(map[int]bool, len(xs))
+	out := xs[:0]
+	for _, x := range xs {
+		if !seen[x] {
+			seen[x] = true
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 func handleCatalogIndex(w http.ResponseWriter, r *http.Request) {

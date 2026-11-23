@@ -70,6 +70,10 @@ data class VariantDto(
     val binderType: String = "",
     /** Null when the printing is unknown to the catalog. */
     val marketPrice: Double? = null,
+    /** A graded copy (slab): "PSA", "BGS", ... and the grade 1..10; "" / 0 = not graded. */
+    val grader: String = "",
+    val grade: Double = 0.0,
+    val signed: Boolean = false,
 )
 
 @Serializable
@@ -515,6 +519,9 @@ data class CollectionRowDto(
     val volatile: Boolean = false,
     /** Only in add results: joined an existing row, quantity is the new total. */
     val merged: Boolean = false,
+    val grader: String = "",
+    val grade: Double = 0.0,
+    val signed: Boolean = false,
 )
 
 @Serializable
@@ -537,6 +544,10 @@ data class RowPatchDto(
     /** With [collectorNumber]: change the printing (edition) of the row. */
     val setCode: String? = null,
     val collectorNumber: String? = null,
+    /** Grading and signature of one copy; "" clears the grading. */
+    val grader: String? = null,
+    val grade: Double? = null,
+    val signed: Boolean? = null,
 )
 
 @Serializable
@@ -544,6 +555,9 @@ data class RowPatchResultDto(
     val row: CollectionRowDto? = null,
     val deleted: Boolean = false,
     val mergedInto: Long = 0,
+    /** After splitting off a graded or signed copy: the rest of its old row, or that it is gone. */
+    val source: CollectionRowDto? = null,
+    val sourceDeleted: Boolean = false,
 )
 
 /** POST /api/collection/export/{id}/confirm */

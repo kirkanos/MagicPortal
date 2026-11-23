@@ -15,7 +15,12 @@ data class Match(
     val source: MatchSource,
     /** Other printings of the same card, best first: the user may pick one. */
     val alternatives: List<Printing> = emptyList(),
+    /** The language of the name read, when it was a foreign one ("de"); null = not told. */
+    val language: String? = null,
 )
+
+/** Printings of the best name for a title, how close it is, and its language if foreign. */
+data class NameHit(val cards: IntArray, val score: Float, val language: String? = null)
 
 /**
  * Finds the printing for a [CardReading], in three tiers:
@@ -99,7 +104,7 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
 
     private fun byNameAndNumber(r: CardReading, hash: CardHash?): Match? {
         if (r.numbers.isEmpty()) return null
-        val (cards, sim) = bestNames(r.name ?: return null) ?: return null
+        val (cards, sim, lang) = bestNames(r.name ?: return null) ?: return null
         val printings = cards.map(index::printing)
         for (n in r.numbers) {
             // The printed set size never exceeds Scryfall's card count, which
@@ -111,14 +116,14 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
                 // Same number in several sets (reprints): the artwork decides.
                 val ranked = if (hits.size > 1 && hash != null) rankByArtwork(hits, hash) else hits
                 val conf = if (hits.size == 1) 0.85f * sim else 0.6f * sim
-                return Match(ranked.first(), conf, MatchSource.OCR_NAME, (ranked.drop(1) + printings.filter { it !in hits }).take(12))
+                return Match(ranked.first(), conf, MatchSource.OCR_NAME, (ranked.drop(1) + printings.filter { it !in hits }).take(12), lang)
             }
             // The set size is the smallest print on the card and misread
             // most ("140/445" for 140/145); the number alone still beats
             // guessing by year.
             val byNumber = printings.filter { it.collectorNumber.equals(n.number, ignoreCase = true) }
             if (n.total != null && byNumber.size == 1) {
-                return Match(byNumber.single(), 0.7f * sim, MatchSource.OCR_NAME, printings.filter { it !in byNumber }.take(12))
+                return Match(byNumber.single(), 0.7f * sim, MatchSource.OCR_NAME, printings.filter { it !in byNumber }.take(12), lang)
             }
         }
         return null
@@ -127,8 +132,8 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
     // ---- C ----
 
     private fun byName(r: CardReading, hash: CardHash?): Match? {
-        val (cards, sim) = bestNames(r.name ?: return null) ?: return null
-        if (hash != null && hashes != null) byNameAndArtwork(cards.map(index::printing), sim, hash)?.let { return it }
+        val (cards, sim, lang) = bestNames(r.name ?: return null) ?: return null
+        if (hash != null && hashes != null) byNameAndArtwork(cards.map(index::printing), sim, hash)?.let { return it.copy(language = lang) }
         val printings = cards.map(index::printing).sortedWith(
             compareBy<Printing> { if (isSide(it.setCode)) 1 else 0 }
                 .thenByDescending { index.sets[it.setCode]?.year ?: 0 }
@@ -156,7 +161,7 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
             year != null -> 0.55f
             else -> 0.5f
         }
-        return Match(pick, conf * sim, MatchSource.OCR_NAME, printings.filter { it != pick }.take(12))
+        return Match(pick, conf * sim, MatchSource.OCR_NAME, printings.filter { it != pick }.take(12), lang)
     }
 
     /**
@@ -268,7 +273,7 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
      * reads as "A" ("A Bruce Banner"), but "A Little Chat" is a real name, so
      * both readings compete.
      */
-    internal fun bestNames(title: String): Pair<IntArray, Float>? {
+    internal fun bestNames(title: String): NameHit? {
         if (shouting(title)) return null
         val readings = buildList {
             add(NameNormalizer.normalize(title))
@@ -287,7 +292,7 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
         }
         val (name, score) = best ?: return null
         if (score < 0.6f) return null
-        return names.getValue(name) to score
+        return NameHit(names.getValue(name), score, index.nameLanguage[name])
     }
 
     /**
@@ -299,12 +304,11 @@ class CardMatcher(private val index: CatalogIndex, private val hashes: HashIndex
         return letters.length >= 4 && letters.count(Char::isUpperCase) > letters.length * 0.6
     }
 
+    /** How close a title is to a card's name, its faces or its names in other languages. */
     private fun nameSimilarity(title: String, catalogName: String): Float {
         val q = NameNormalizer.normalize(title)
-        val faces = listOf(catalogName) + if ("//" in catalogName) catalogName.split("//") else emptyList()
-        return faces.maxOf { f ->
-            val n = NameNormalizer.normalize(f)
-            1f - NameNormalizer.levenshtein(q, n).toFloat() / maxOf(q.length, n.length, 1)
-        }
+        val faces = (listOf(catalogName) + if ("//" in catalogName) catalogName.split("//") else emptyList())
+            .map(NameNormalizer::normalize) + index.foreignNames(catalogName)
+        return faces.maxOf { n -> 1f - NameNormalizer.levenshtein(q, n).toFloat() / maxOf(q.length, n.length, 1) }
     }
 }

@@ -155,6 +155,10 @@ CREATE TABLE IF NOT EXISTS activity_log (
 // cards the Android app added. It is part of the key, so the same card can
 // exist once from each source; the import replaces only its own rows and app
 // rows survive it. Aggregates sum quantities anyway, so two rows count right.
+//
+// grader/grade (a slab from PSA, BGS, ...: "PSA", 9.5) and signed mark single
+// copies; they are part of the key, so a graded or signed copy is a row of
+// its own. ManaBox knows neither: such rows are always origin 'app'.
 const collectionSchema = `
 CREATE TABLE IF NOT EXISTS collection (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,7 +179,10 @@ CREATE TABLE IF NOT EXISTS collection (
   added            TEXT,
   updated_at       TEXT,
   origin           TEXT NOT NULL DEFAULT 'csv',
-  UNIQUE (binder_name, set_code, collector_number, foil, language, condition, origin)
+  grader           TEXT NOT NULL DEFAULT '',
+  grade            REAL NOT NULL DEFAULT 0,
+  signed           INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (binder_name, set_code, collector_number, foil, language, condition, origin, grader, grade, signed)
 );
 `
 
@@ -244,6 +251,11 @@ func migrate(db *sql.DB) {
 			log.Printf("[db] adding the origin column failed, collection unchanged: %v", err)
 		}
 	}
+	if tableExists(db, "collection") && !columnExists(db, "collection", "grader") {
+		if err := addCollectionGrading(db); err != nil {
+			log.Printf("[db] adding the grading columns failed, collection unchanged: %v", err)
+		}
+	}
 	_, _ = db.Exec(collectionIndexes)
 }
 
@@ -262,6 +274,29 @@ func addCollectionOrigin(db *sql.DB) error {
 		`ALTER TABLE collection RENAME TO collection_old`,
 		collectionSchema,
 		`INSERT INTO collection (` + cols + `, origin) SELECT ` + cols + `, 'csv' FROM collection_old`,
+		`DROP TABLE collection_old`,
+	} {
+		if _, err := tx.Exec(stmt); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// addCollectionGrading rebuilds the collection with grader, grade and signed
+// in the key, in one transaction; every row keeps its id and is ungraded.
+func addCollectionGrading(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	cols := `id, binder_name, binder_type, scryfall_id, set_code, set_name, collector_number, name,
+		foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at, origin`
+	for _, stmt := range []string{
+		`ALTER TABLE collection RENAME TO collection_old`,
+		collectionSchema,
+		`INSERT INTO collection (` + cols + `) SELECT ` + cols + ` FROM collection_old`,
 		`DROP TABLE collection_old`,
 	} {
 		if _, err := tx.Exec(stmt); err != nil {

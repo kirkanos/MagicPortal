@@ -68,3 +68,16 @@ object ManaCost {
         data class Symbol(val token: String) : Segment
     }
 }
+
+/** Grading of single copies (gradingFieldsHTML in shared.js). */
+object Grading {
+    val COMPANIES = listOf("PSA", "BGS", "CGC", "SGC", "TAG")
+    /** Chip value for a company typed in by hand. */
+    const val OTHER = "other"
+    /** 10 down to 1 in half steps. */
+    val GRADES = (20 downTo 2).map { it / 2.0 }
+
+    /** 9.5 -> "9,5", 10.0 -> "10", like the web (de-DE). */
+    fun format(grade: Double): String =
+        if (grade % 1.0 == 0.0) grade.toInt().toString() else grade.toString().replace('.', ',')
+}

@@ -459,6 +459,15 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
   padding: 1px 5px; border-radius: 4px; margin-left: 4px;
 }
 
+.grade-badge {
+  font-size: 0.7rem; font-weight: 700; color: var(--bg); background: var(--accent);
+  padding: 1px 6px; border-radius: 4px; margin-left: 4px; white-space: nowrap;
+}
+.signed-badge { margin-left: 4px; }
+.row-signed { display: inline-flex; align-items: center; gap: 4px; font-size: 0.88rem; }
+.row-edit-hint { flex-basis: 100%; margin: 0; font-size: 0.8rem; color: var(--text-dim); }
+#row-grader-other { width: 9em; }
+
 /* Other printings in the card detail modal */
 .modal-variants {
   display: grid;

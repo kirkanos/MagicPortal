@@ -527,6 +527,7 @@ function applyRow(g, row, removed) {
     const fields = {
       id: row.id, origin: row.origin, language: row.language, foil: row.foil, condition: row.condition,
       quantity: row.quantity, binderName: row.binderName, binderType: row.binderType,
+      grader: row.grader || '', grade: row.grade || 0, signed: !!row.signed,
     };
     const existing = g.variants.find((v) => v.id === row.id);
     if (existing) Object.assign(existing, fields);
@@ -596,8 +597,13 @@ async function editRow(act, id) {
         <select id="row-lang" title="${t('Sprache', 'Language')}">${opts(CARD_LANGS, v.language || 'en', (l) => `${languageFlag(l)} ${l.toUpperCase()}`)}</select>
         <select id="row-foil" title="Foil">${opts(['normal', 'foil', 'etched'], v.foil || 'normal', (f) => (f === 'normal' ? t('Normal', 'Normal') : f === 'foil' ? 'Foil' : 'Etched'))}</select>
         <select id="row-cond" title="${t('Zustand', 'Condition')}">${opts(CONDITION_ORDER, v.condition || 'near_mint', conditionLabel)}</select>
+        ${gradingFieldsHTML(v)}
         <button type="button" class="primary" data-act="edit-ok" data-id="${id}">OK</button>
-        <button type="button" data-act="edit-cancel" data-id="${id}">${t('Abbrechen', 'Cancel')}</button>`;
+        <button type="button" data-act="edit-cancel" data-id="${id}">${t('Abbrechen', 'Cancel')}</button>
+        ${v.origin === 'csv' || v.quantity > 1 ? `<p class="row-edit-hint">${t(
+          'Gegradet oder unterschrieben ist immer ein einzelnes Exemplar: es wird als eigene Zeile abgespalten.' + (v.origin === 'csv' ? ' Nimm es in ManaBox heraus, sonst zählt es nach dem nächsten Import doppelt.' : ''),
+          'Graded or signed is always a single copy: it is split off into a row of its own.' + (v.origin === 'csv' ? ' Take it out in ManaBox, or it counts twice after the next import.' : ''))}</p>` : ''}`;
+      wireGradingFields();
       document.getElementById('row-print').focus();
     } else if (act === 'edit-cancel') {
       document.getElementById('row-edit').innerHTML = '';
@@ -612,23 +618,31 @@ async function editRow(act, id) {
       if (lang !== (v.language || 'en')) patch.language = lang;
       if (foil !== (v.foil || 'normal')) patch.foil = foil;
       if (cond !== (v.condition || 'near_mint')) patch.condition = cond;
+      const gr = gradingFieldsValue();
+      if (gr === null) return showNotice(t('Bitte den Namen der Grading-Firma eingeben.', 'Please enter the name of the grading company.'), true);
+      if (gr.grader !== (v.grader || '') || (gr.grader && gr.grade !== (v.grade || 0))) Object.assign(patch, { grader: gr.grader, grade: gr.grade });
+      if (gr.signed !== !!v.signed) patch.signed = gr.signed;
       if (!Object.keys(patch).length) {
         document.getElementById('row-edit').innerHTML = '';
         return;
       }
       const r = await writeAPI('PATCH', `/collection/cards/${id}`, patch);
+      // A graded or signed copy split off: what is left of its row.
+      if (r.source) Object.assign(v, { quantity: r.source.quantity });
       if (printChanged) {
         // The copies now belong to another card: they leave this one, and
         // the grid reloads to show them where they are now.
-        applyRow(g, null, [id]);
+        if (r.source) applyRow(g, r.source, []);
+        else applyRow(g, null, [id]);
         showNotice(t(`Nach ${r.row.setName} (${r.row.setCode} #${r.row.collectorNumber}) geändert.`,
           `Changed to ${r.row.setName} (${r.row.setCode} #${r.row.collectorNumber}).`));
         await refreshAfterWrite();
         return;
       }
-      applyRow(g, r.row, r.mergedInto ? [id] : []);
-      if (r.mergedInto) showNotice(t('Geändert und mit dem vorhandenen Eintrag zusammengeführt.', 'Changed and merged with the existing entry.'));
-      if (v.origin === 'csv') showNotice(t('Geändert – aber das ist eine ManaBox-Zeile: der nächste Import setzt sie zurück.', 'Changed – but this is a ManaBox row: the next import resets it.'));
+      applyRow(g, r.row, r.mergedInto || r.sourceDeleted ? [id] : []);
+      if (r.source || r.sourceDeleted) showNotice(t('Ein Exemplar als eigene Zeile abgespalten.', 'One copy split off into a row of its own.'));
+      else if (r.mergedInto) showNotice(t('Geändert und mit dem vorhandenen Eintrag zusammengeführt.', 'Changed and merged with the existing entry.'));
+      if (v.origin === 'csv' && !r.source && !r.sourceDeleted) showNotice(t('Geändert – aber das ist eine ManaBox-Zeile: der nächste Import setzt sie zurück.', 'Changed – but this is a ManaBox row: the next import resets it.'));
     } else if (act === 'move-ok') {
       const name = binderValue('row-binder');
       if (name === null) return showNotice(t('Bitte einen Namen für den neuen Ordner eingeben.', 'Please enter a name for the new folder.'), true);

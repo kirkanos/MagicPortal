@@ -507,6 +507,65 @@ const LANGUAGE_FLAG = {
   ja: '🇯🇵', ko: '🇰🇷', ru: '🇷🇺', zhs: '🇨🇳', zht: '🇹🇼',
 };
 
+/* ---- grading and signature of single copies ---- */
+
+const GRADERS = ['PSA', 'BGS', 'CGC', 'SGC', 'TAG'];
+
+function formatGrade(g) {
+  return Number(g).toLocaleString('de-DE', { maximumFractionDigits: 1 });
+}
+
+/* "PSA 9,5" and a pen for a signed copy, next to the language. */
+function gradingBadgesHTML(v) {
+  let out = '';
+  if (v.grader) out += ` <span class="grade-badge" title="${t('Gegradet', 'Graded')}">${escapeHTML(v.grader)} ${formatGrade(v.grade)}</span>`;
+  if (v.signed) out += ` <span class="signed-badge" title="${t('Unterschrieben', 'Signed')}">✍</span>`;
+  return out;
+}
+
+/* The grading fields of an edit form: company (or another one typed in),
+   grade 1..10 in half steps, signed. */
+function gradingFieldsHTML(v) {
+  const other = v.grader && !GRADERS.includes(v.grader);
+  const grades = [];
+  for (let x = 10; x >= 1; x -= 0.5) grades.push(x);
+  return `
+    <select id="row-grader" title="${t('Grading-Firma', 'Grading company')}">
+      <option value="">${t('Nicht gegradet', 'Not graded')}</option>
+      ${GRADERS.map((g) => `<option value="${g}"${g === v.grader ? ' selected' : ''}>${g}</option>`).join('')}
+      <option value="other"${other ? ' selected' : ''}>${t('Andere …', 'Other …')}</option>
+    </select>
+    <input type="text" id="row-grader-other" class="binder-input" maxlength="20" placeholder="${t('Firma', 'Company')}" value="${other ? escapeHTML(v.grader) : ''}"${other ? '' : ' hidden'}>
+    <select id="row-grade" title="${t('Note', 'Grade')}"${v.grader ? '' : ' hidden'}>
+      ${grades.map((x) => `<option value="${x}"${x === (v.grade || 10) ? ' selected' : ''}>${formatGrade(x)}</option>`).join('')}
+    </select>
+    <label class="row-signed"><input type="checkbox" id="row-signed"${v.signed ? ' checked' : ''}> ${t('Unterschrieben', 'Signed')}</label>`;
+}
+
+function wireGradingFields() {
+  const sel = document.getElementById('row-grader');
+  if (!sel) return;
+  sel.addEventListener('change', () => {
+    document.getElementById('row-grader-other').hidden = sel.value !== 'other';
+    document.getElementById('row-grade').hidden = sel.value === '';
+    if (sel.value === 'other') document.getElementById('row-grader-other').focus();
+  });
+}
+
+/* {grader, grade, signed} from the fields; null when "other" has no name. */
+function gradingFieldsValue() {
+  let grader = document.getElementById('row-grader').value;
+  if (grader === 'other') {
+    grader = document.getElementById('row-grader-other').value.trim();
+    if (!grader) return null;
+  }
+  return {
+    grader,
+    grade: grader ? parseFloat(document.getElementById('row-grade').value) : 0,
+    signed: document.getElementById('row-signed').checked,
+  };
+}
+
 // The languages a copy can be entered in, in ManaBox's spelling.
 const CARD_LANGS = ['en', 'de', 'fr', 'it', 'es', 'pt', 'ja', 'ko', 'ru', 'zhs', 'zht'];
 
@@ -745,7 +804,7 @@ function cardGroupModalHTML(group) {
     .map((v) => {
       const mp = variantMarketPrice(v);
       const price = mp != null ? formatCurrency(mp, 'EUR') : '–';
-      const foilTag = v.foil && v.foil !== 'normal' ? ` <span class="lang-foil">${escapeHTML(v.foil)}</span>` : '';
+      const foilTag = (v.foil && v.foil !== 'normal' ? ` <span class="lang-foil">${escapeHTML(v.foil)}</span>` : '') + gradingBadgesHTML(v);
       return `
         <tr>
           <td>${languageFlag(v.language)} ${escapeHTML((v.language || '?').toUpperCase())}${foilTag}</td>

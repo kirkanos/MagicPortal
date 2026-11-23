@@ -97,7 +97,7 @@ func createExport(now time.Time) (int64, []exportedRow, error) {
 	q, err := tx.Query(`SELECT id, quantity, COALESCE(binder_name, ''), COALESCE(binder_type, ''), set_code,
 		COALESCE(set_name, ''), collector_number, name, COALESCE(scryfall_id, ''), COALESCE(rarity, ''), foil, language,
 		condition, COALESCE(purchase_price, 0), COALESCE(currency, ''), COALESCE(added, '')
-		FROM collection WHERE origin = 'app' AND quantity > 0 ORDER BY binder_name, name, set_code, collector_number`)
+		FROM collection WHERE origin = 'app' AND quantity > 0 AND grader = '' AND signed = 0 ORDER BY binder_name, name, set_code, collector_number`)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -222,7 +222,7 @@ func confirmExport(id int64, now time.Time) (confirmResult, error) {
 			INSERT INTO collection (binder_name, binder_type, scryfall_id, set_code, set_name, collector_number, name,
 				foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at, origin)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'csv')
-			ON CONFLICT (binder_name, set_code, collector_number, foil, language, condition, origin)
+			ON CONFLICT (binder_name, set_code, collector_number, foil, language, condition, origin, grader, grade, signed)
 			DO UPDATE SET quantity = quantity + excluded.quantity, updated_at = excluded.updated_at`,
 			x.BinderName, x.BinderType, x.ScryfallID, x.SetCode, x.SetName, x.CollectorNumber, x.Name,
 			x.Foil, x.Rarity, x.Language, n, x.PurchasePrice, x.Currency, x.Condition, x.Added, ts); err != nil {

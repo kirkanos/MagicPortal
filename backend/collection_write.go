@@ -49,6 +49,10 @@ type writeItem struct {
 	BinderName      string   `json:"binderName"`
 	BinderType      string   `json:"binderType"`
 	PurchasePrice   *float64 `json:"purchasePrice"`
+	// A graded copy (slab): grader "PSA", "BGS", ... and grade 1..10.
+	Grader string  `json:"grader"`
+	Grade  float64 `json:"grade"`
+	Signed bool    `json:"signed"`
 }
 
 type rowOut struct {
@@ -69,6 +73,9 @@ type rowOut struct {
 	BinderType      string  `json:"binderType"`
 	Added           string  `json:"added"`
 	Origin          string  `json:"origin"`
+	Grader          string  `json:"grader,omitempty"`
+	Grade           float64 `json:"grade,omitempty"`
+	Signed          bool    `json:"signed,omitempty"`
 	// The next CSV import will reset this row (origin csv).
 	Volatile bool `json:"volatile,omitempty"`
 }
@@ -137,7 +144,33 @@ func (it *writeItem) normalize(i int) error {
 	if it.PurchasePrice != nil && (*it.PurchasePrice < 0 || *it.PurchasePrice > 1e6) {
 		return badItem(i, "purchasePrice out of range")
 	}
+	if it.Grader, it.Grade, err = normGrading(it.Grader, it.Grade); err != nil {
+		return badItem(i, "%v", err)
+	}
 	return nil
+}
+
+// The grading companies the UI offers, in their usual spelling; any other
+// name is kept as given.
+var knownGraders = map[string]string{"psa": "PSA", "bgs": "BGS", "beckett": "BGS", "cgc": "CGC", "sgc": "SGC", "tag": "TAG"}
+
+// normGrading: no grader means no grade; a grader needs a grade of 1..10 in
+// half steps (BGS 9.5).
+func normGrading(grader string, grade float64) (string, float64, error) {
+	grader = strings.TrimSpace(grader)
+	if grader == "" {
+		return "", 0, nil
+	}
+	if k, ok := knownGraders[strings.ToLower(grader)]; ok {
+		grader = k
+	}
+	if len(grader) > 20 {
+		return "", 0, fmt.Errorf("grader too long")
+	}
+	if grade < 1 || grade > 10 || grade*2 != float64(int(grade*2)) {
+		return "", 0, fmt.Errorf("grade must be 1..10 in steps of 0.5")
+	}
+	return grader, grade, nil
 }
 
 func normFoil(f string) (string, error) {
@@ -272,8 +305,8 @@ func addCards(items []writeItem, key string, now time.Time) (addResult, bool, er
 		}
 		var existing int64
 		err = tx.QueryRow(`SELECT id FROM collection WHERE binder_name = ? AND set_code = ? AND collector_number = ?
-			AND foil = ? AND language = ? AND condition = ? AND origin = 'app'`,
-			it.BinderName, it.SetCode, cat.number, it.Foil, it.Language, it.Condition).Scan(&existing)
+			AND foil = ? AND language = ? AND condition = ? AND origin = 'app' AND grader = ? AND grade = ? AND signed = ?`,
+			it.BinderName, it.SetCode, cat.number, it.Foil, it.Language, it.Condition, it.Grader, it.Grade, it.Signed).Scan(&existing)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return res, false, err
 		}
@@ -284,13 +317,13 @@ func addCards(items []writeItem, key string, now time.Time) (addResult, bool, er
 		var id int64
 		if err := tx.QueryRow(`
 			INSERT INTO collection (binder_name, binder_type, scryfall_id, set_code, set_name, collector_number, name,
-				foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at, origin)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'EUR', ?, ?, ?, 'app')
-			ON CONFLICT (binder_name, set_code, collector_number, foil, language, condition, origin)
+				foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at, origin, grader, grade, signed)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'EUR', ?, ?, ?, 'app', ?, ?, ?)
+			ON CONFLICT (binder_name, set_code, collector_number, foil, language, condition, origin, grader, grade, signed)
 			DO UPDATE SET quantity = quantity + excluded.quantity, updated_at = excluded.updated_at
 			RETURNING id`,
 			it.BinderName, binderType, cat.scryfallID, it.SetCode, cat.setName, cat.number, cat.name,
-			it.Foil, cat.rarity, it.Language, it.Quantity, price, it.Condition, added, ts).Scan(&id); err != nil {
+			it.Foil, cat.rarity, it.Language, it.Quantity, price, it.Condition, added, ts, it.Grader, it.Grade, it.Signed).Scan(&id); err != nil {
 			return res, false, err
 		}
 		row, err := rowTx(tx, id)
@@ -365,14 +398,15 @@ func binderTypeTx(tx *sql.Tx, name, given string) (string, error) {
 
 const rowColumns = `id, name, set_code, COALESCE(set_name, ''), collector_number, COALESCE(scryfall_id, ''),
 	COALESCE(rarity, ''), foil, language, condition, quantity, COALESCE(purchase_price, 0), COALESCE(currency, ''),
-	COALESCE(binder_name, ''), COALESCE(binder_type, ''), COALESCE(added, ''), origin`
+	COALESCE(binder_name, ''), COALESCE(binder_type, ''), COALESCE(added, ''), origin, grader, grade, signed`
 
 type rowScanner interface{ Scan(dest ...any) error }
 
 func scanRow(s rowScanner) (rowOut, error) {
 	var o rowOut
 	err := s.Scan(&o.ID, &o.Name, &o.SetCode, &o.SetName, &o.CollectorNumber, &o.ScryfallID, &o.Rarity, &o.Foil,
-		&o.Language, &o.Condition, &o.Quantity, &o.PurchasePrice, &o.Currency, &o.BinderName, &o.BinderType, &o.Added, &o.Origin)
+		&o.Language, &o.Condition, &o.Quantity, &o.PurchasePrice, &o.Currency, &o.BinderName, &o.BinderType, &o.Added, &o.Origin,
+		&o.Grader, &o.Grade, &o.Signed)
 	o.SetCode = strings.ToUpper(o.SetCode)
 	o.Volatile = o.Origin == "csv"
 	return o, err
@@ -421,12 +455,21 @@ type rowPatch struct {
 	// the row; name, set name, rarity and Scryfall id follow from the catalog.
 	SetCode         *string `json:"setCode"`
 	CollectorNumber *string `json:"collectorNumber"`
+	// Grading and signature of a single copy. Set on a ManaBox row or a row
+	// of several copies, one copy is split off into a row of its own.
+	Grader *string  `json:"grader"`
+	Grade  *float64 `json:"grade"`
+	Signed *bool    `json:"signed"`
 }
 
 type patchResult struct {
 	Row        *rowOut `json:"row,omitempty"`
 	Deleted    bool    `json:"deleted,omitempty"`
 	MergedInto int64   `json:"mergedInto,omitempty"`
+	// After a split: what is left of the row the copy came from (Source), or
+	// that it is gone (SourceDeleted). Row is then the copy's row.
+	Source        *rowOut `json:"source,omitempty"`
+	SourceDeleted bool    `json:"sourceDeleted,omitempty"`
 }
 
 func handleCollectionPatch(w http.ResponseWriter, r *http.Request) {
@@ -510,6 +553,28 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 		}
 		next.PurchasePrice = *p.PurchasePrice
 	}
+	if p.Grader != nil || p.Grade != nil {
+		g, gr := cur.Grader, cur.Grade
+		if p.Grader != nil {
+			g = *p.Grader
+		}
+		if p.Grade != nil {
+			gr = *p.Grade
+		}
+		if next.Grader, next.Grade, err = normGrading(g, gr); err != nil {
+			return res, "", badItem(-1, "%v", err)
+		}
+	}
+	if p.Signed != nil {
+		next.Signed = *p.Signed
+	}
+	marked := next.Grader != cur.Grader || next.Grade != cur.Grade || next.Signed != cur.Signed
+	// A graded or signed copy is a row of its own, and never a ManaBox row.
+	split := marked && (cur.Origin == "csv" || cur.Quantity > 1)
+	if split && (p.Quantity != nil || p.QuantityDelta != nil) {
+		return res, "", badItem(-1, "grading a copy and changing the quantity exclude each other")
+	}
+
 	setCode := strings.ToLower(cur.SetCode)
 	number := cur.CollectorNumber
 	var cat *catalogFacts
@@ -532,6 +597,10 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 	}
 	ts := now.UTC().Format(time.RFC3339)
 
+	if split {
+		return splitCopy(tx, cur, next, setCode, number, cat, p.BinderType, ts)
+	}
+
 	var op string
 	switch {
 	case next.Quantity == 0:
@@ -540,7 +609,7 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 		}
 		res.Deleted, op = true, "delete"
 
-	case cat != nil || next.BinderName != cur.BinderName || next.Foil != cur.Foil || next.Language != cur.Language || next.Condition != cur.Condition:
+	case marked || cat != nil || next.BinderName != cur.BinderName || next.Foil != cur.Foil || next.Language != cur.Language || next.Condition != cur.Condition:
 		given := ""
 		if p.BinderType != nil {
 			if given, err = normBinderType(*p.BinderType); err != nil {
@@ -555,8 +624,9 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 		}
 		var target int64
 		err := tx.QueryRow(`SELECT id FROM collection WHERE binder_name = ? AND set_code = ? AND collector_number = ?
-			AND foil = ? AND language = ? AND condition = ? AND origin = ?`,
-			next.BinderName, setCode, number, next.Foil, next.Language, next.Condition, cur.Origin).Scan(&target)
+			AND foil = ? AND language = ? AND condition = ? AND origin = ? AND grader = ? AND grade = ? AND signed = ?`,
+			next.BinderName, setCode, number, next.Foil, next.Language, next.Condition, cur.Origin,
+			next.Grader, next.Grade, next.Signed).Scan(&target)
 		switch {
 		case err == nil && target == id:
 			// Same key after all (a number spelled differently): nothing moves.
@@ -577,8 +647,9 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 			id = target
 		case errors.Is(err, sql.ErrNoRows):
 			if _, err := tx.Exec(`UPDATE collection SET binder_name = ?, binder_type = ?, foil = ?, language = ?, condition = ?,
-				quantity = ?, purchase_price = ?, updated_at = ? WHERE id = ?`,
-				next.BinderName, next.BinderType, next.Foil, next.Language, next.Condition, next.Quantity, next.PurchasePrice, ts, id); err != nil {
+				quantity = ?, purchase_price = ?, updated_at = ?, grader = ?, grade = ?, signed = ? WHERE id = ?`,
+				next.BinderName, next.BinderType, next.Foil, next.Language, next.Condition, next.Quantity, next.PurchasePrice, ts,
+				next.Grader, next.Grade, next.Signed, id); err != nil {
 				return res, "", err
 			}
 			op = "move"
@@ -611,6 +682,68 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 		return res, "", err
 	}
 	return res, op, tx.Commit()
+}
+
+// splitCopy takes one copy out of cur into the app row with next's key
+// (joining it if it exists): grading or signing a copy of a ManaBox row or
+// of a row of several copies. Ends the transaction.
+func splitCopy(tx *sql.Tx, cur, next rowOut, setCode, number string, cat *catalogFacts, binderType *string, ts string) (patchResult, string, error) {
+	var res patchResult
+	given := cur.BinderType
+	if next.BinderName != cur.BinderName {
+		given = ""
+		if binderType != nil {
+			var err error
+			if given, err = normBinderType(*binderType); err != nil {
+				return res, "", badItem(-1, "%v", err)
+			}
+		}
+	}
+	btype, err := binderTypeTx(tx, next.BinderName, given)
+	if err != nil {
+		return res, "", err
+	}
+	facts := catalogFacts{number: number, name: cur.Name, setName: cur.SetName, rarity: cur.Rarity, scryfallID: cur.ScryfallID}
+	if cat != nil {
+		facts = *cat
+	}
+	var id int64
+	if err := tx.QueryRow(`
+		INSERT INTO collection (binder_name, binder_type, scryfall_id, set_code, set_name, collector_number, name,
+			foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at, origin, grader, grade, signed)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 'app', ?, ?, ?)
+		ON CONFLICT (binder_name, set_code, collector_number, foil, language, condition, origin, grader, grade, signed)
+		DO UPDATE SET quantity = quantity + 1, updated_at = excluded.updated_at
+		RETURNING id`,
+		next.BinderName, btype, facts.scryfallID, setCode, facts.setName, facts.number, facts.name,
+		next.Foil, facts.rarity, next.Language, next.PurchasePrice, cur.Currency, next.Condition, cur.Added, ts,
+		next.Grader, next.Grade, next.Signed).Scan(&id); err != nil {
+		return res, "", err
+	}
+	if cur.Quantity <= 1 {
+		if _, err := tx.Exec(`DELETE FROM collection WHERE id = ?`, cur.ID); err != nil {
+			return res, "", err
+		}
+		res.SourceDeleted = true
+	} else {
+		if _, err := tx.Exec(`UPDATE collection SET quantity = quantity - 1, updated_at = ? WHERE id = ?`, ts, cur.ID); err != nil {
+			return res, "", err
+		}
+		src, err := rowTx(tx, cur.ID)
+		if err != nil {
+			return res, "", err
+		}
+		res.Source = &src
+	}
+	row, err := rowTx(tx, id)
+	if err != nil {
+		return res, "", err
+	}
+	res.Row = &row
+	if err := bumpCollectionRev(tx); err != nil {
+		return res, "", err
+	}
+	return res, "split", tx.Commit()
 }
 
 // ---- POST /api/collection/move ----
@@ -720,8 +853,9 @@ func moveRows(m moveRequest, now time.Time) (moveResult, error) {
 		split := m.Quantity > 0 && m.Quantity < cur.Quantity
 		var target int64
 		err = tx.QueryRow(`SELECT id FROM collection WHERE binder_name = ? AND set_code = ? AND collector_number = ?
-			AND foil = ? AND language = ? AND condition = ? AND origin = ?`,
-			name, strings.ToLower(cur.SetCode), cur.CollectorNumber, cur.Foil, cur.Language, cur.Condition, cur.Origin).Scan(&target)
+			AND foil = ? AND language = ? AND condition = ? AND origin = ? AND grader = ? AND grade = ? AND signed = ?`,
+			name, strings.ToLower(cur.SetCode), cur.CollectorNumber, cur.Foil, cur.Language, cur.Condition, cur.Origin,
+			cur.Grader, cur.Grade, cur.Signed).Scan(&target)
 		qty := cur.Quantity
 		if split {
 			qty = m.Quantity
@@ -742,9 +876,9 @@ func moveRows(m moveRequest, now time.Time) (moveResult, error) {
 			res.Merged++
 		case errors.Is(err, sql.ErrNoRows) && split:
 			if _, err := tx.Exec(`INSERT INTO collection (binder_name, binder_type, scryfall_id, set_code, set_name, collector_number,
-					name, foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at, origin)
+					name, foil, rarity, language, quantity, purchase_price, currency, condition, added, updated_at, origin, grader, grade, signed)
 				SELECT ?, ?, scryfall_id, set_code, set_name, collector_number,
-					name, foil, rarity, language, ?, purchase_price, currency, condition, added, ?, origin
+					name, foil, rarity, language, ?, purchase_price, currency, condition, added, ?, origin, grader, grade, signed
 				FROM collection WHERE id = ?`, name, btype, qty, ts, id); err != nil {
 				return res, err
 			}
@@ -874,16 +1008,19 @@ func patchBinder(from string, p binderPatch, now time.Time) (binderPatchResult, 
 		set, number, foil, lang, cond, origin string
 		qty                                   int
 		btype                                 string
+		grader                                string
+		grade                                 float64
+		signed                                bool
 	}
-	q, err := tx.Query(`SELECT id, set_code, collector_number, foil, language, condition, origin, quantity, COALESCE(binder_type, '')
-		FROM collection WHERE binder_name = ?`, from)
+	q, err := tx.Query(`SELECT id, set_code, collector_number, foil, language, condition, origin, quantity, COALESCE(binder_type, ''),
+		grader, grade, signed FROM collection WHERE binder_name = ?`, from)
 	if err != nil {
 		return res, err
 	}
 	var rows []row
 	for q.Next() {
 		var x row
-		if err := q.Scan(&x.id, &x.set, &x.number, &x.foil, &x.lang, &x.cond, &x.origin, &x.qty, &x.btype); err != nil {
+		if err := q.Scan(&x.id, &x.set, &x.number, &x.foil, &x.lang, &x.cond, &x.origin, &x.qty, &x.btype, &x.grader, &x.grade, &x.signed); err != nil {
 			q.Close()
 			return res, err
 		}
@@ -915,8 +1052,8 @@ func patchBinder(from string, p binderPatch, now time.Time) (binderPatchResult, 
 		err := sql.ErrNoRows
 		if to != from {
 			err = tx.QueryRow(`SELECT id FROM collection WHERE binder_name = ? AND set_code = ? AND collector_number = ?
-				AND foil = ? AND language = ? AND condition = ? AND origin = ?`,
-				to, x.set, x.number, x.foil, x.lang, x.cond, x.origin).Scan(&target)
+				AND foil = ? AND language = ? AND condition = ? AND origin = ? AND grader = ? AND grade = ? AND signed = ?`,
+				to, x.set, x.number, x.foil, x.lang, x.cond, x.origin, x.grader, x.grade, x.signed).Scan(&target)
 		}
 		switch {
 		case err == nil:

@@ -201,7 +201,8 @@ class ScannerViewModel(
                 if (BuildConfig.DEBUG) Log.d(TAG, "$reading -> ${match?.printing?.let { "${it.setCode}/${it.collectorNumber} ${it.name}" }} ${match?.source} ${match?.confidence}")
                 dump(frame, raw.name ?: match?.printing?.name ?: "none")
                 val defaults = _state.value
-                val added = session.offer(match, reading.language ?: defaults.defaultLanguage, defaults.defaultFoil)
+                // A German title tells the language where the bottom line cannot (pre-2014 frames).
+                val added = session.offer(match, reading.language ?: match?.language ?: defaults.defaultLanguage, defaults.defaultFoil)
                 _state.update { st ->
                     st.copy(
                         items = session.items,

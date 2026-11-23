@@ -80,7 +80,7 @@ func importCSV(db *sql.DB, r io.Reader) (importResult, error) {
 			binder_type = ?, scryfall_id = ?, set_name = ?, name = ?, rarity = ?,
 			quantity = ?, purchase_price = ?, currency = ?, added = ?, updated_at = ?
 		WHERE binder_name = ? AND set_code = ? AND collector_number = ? AND foil = ? AND language = ? AND condition = ?
-		  AND origin = 'csv'`)
+		  AND origin = 'csv' AND grader = '' AND signed = 0`)
 	if err != nil {
 		return res, err
 	}

@@ -52,3 +52,29 @@ func TestImportNamesAndSearch(t *testing.T) {
 }
 
 func urlQuery(s string) string { return url.QueryEscape(s) }
+
+func TestCatalogKnowsGermanNames(t *testing.T) {
+	newTestDB(t)
+	seedWriteCatalog(t)
+	if _, err := importNames(db, strings.NewReader(namesDump)); err != nil {
+		t.Fatal(err)
+	}
+	catalogMu.Lock()
+	catalogCache = nil
+	catalogMu.Unlock()
+	t.Cleanup(func() { catalogMu.Lock(); catalogCache = nil; catalogMu.Unlock() })
+
+	c, err := catalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	hits := searchNames(c, "Kontobuchschreder", 3)
+	if len(hits) == 0 || hits[0].Name != "Ledger Shredder" {
+		t.Errorf("German name: %+v", hits)
+	}
+	// German only: the Japanese name stays out of the phone's index.
+	idx := string(c.index)
+	if !strings.Contains(idx, `["Kontobuchschredder","Ledger Shredder","de"]`) || strings.Contains(idx, "帳簿") {
+		t.Errorf("index names: %s", idx)
+	}
+}

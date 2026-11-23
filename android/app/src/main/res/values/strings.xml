@@ -549,6 +549,14 @@
     <string name="detail_edit_merged">Geändert und mit dem vorhandenen Eintrag zusammengeführt.</string>
     <string name="detail_edit_printing">Edition</string>
     <string name="detail_edit_reprinted">Nach %1$s geändert.</string>
+    <string name="detail_edit_grader">Grading</string>
+    <string name="detail_edit_not_graded">Nicht gegradet</string>
+    <string name="detail_edit_other_grader">Andere</string>
+    <string name="detail_edit_grade">Note</string>
+    <string name="detail_edit_signed">Unterschrieben</string>
+    <string name="detail_edit_split_hint">Gegradet oder unterschrieben ist immer ein einzelnes Exemplar: es wird als eigene Zeile abgespalten.</string>
+    <string name="detail_edit_split_hint_csv">Gegradet oder unterschrieben ist immer ein einzelnes Exemplar: es wird als eigene Zeile abgespalten. Nimm es in ManaBox heraus, sonst zählt es nach dem nächsten Import doppelt.</string>
+    <string name="detail_edit_split">Ein Exemplar als eigene Zeile abgespalten.</string>
     <string name="detail_origin_app">aus der App</string>
     <string name="detail_edit_volatile">Geändert – aber das ist eine ManaBox-Zeile: der nächste ManaBox-Import setzt sie zurück.</string>
     <string name="binders_rename">Umbenennen</string>

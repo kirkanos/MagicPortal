@@ -30,6 +30,9 @@ fun applyWrite(variants: List<VariantDto>, row: CollectionRowDto?, removed: Set<
         quantity = row.quantity,
         binderName = row.binderName,
         binderType = row.binderType,
+        grader = row.grader,
+        grade = row.grade,
+        signed = row.signed,
     )
     return if (existing != null) kept.map { if (it.id == row.id) updated else it } else kept + updated
 }

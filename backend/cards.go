@@ -42,6 +42,9 @@ type cardRow struct {
 	PurchasePrice   float64
 	Currency        string
 	Added           string
+	Grader          string
+	Grade           float64
+	Signed          bool
 	BinderName      string
 	BinderType      string
 	Origin          string
@@ -104,6 +107,7 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 	rows, err := db.Query(`
 		SELECT c.id, c.name, c.set_code, c.set_name, c.collector_number, c.rarity, c.foil, c.language,
 		       c.condition, c.quantity, c.purchase_price, c.currency, c.added, c.binder_name, c.binder_type, c.origin,
+		       c.grader, c.grade, c.signed,
 		       s.scryfall_id, COALESCE(s.type_line, ''), COALESCE(s.mana_cost, ''), COALESCE(s.oracle_text, ''),
 		       COALESCE(s.colors, ''), COALESCE(s.image_normal, '') <> '',
 		       COALESCE(s.image_back_normal, '') <> '', s.price_eur, s.price_eur_foil, COALESCE(s.styles, '')
@@ -126,6 +130,7 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 		if err := rows.Scan(&c.ID, &c.Name, &c.SetCode, &c.SetName, &c.CollectorNumber, &c.Rarity, &c.Foil,
 			&c.Language, &c.Condition, &c.Quantity, &c.PurchasePrice, &c.Currency, &c.Added,
 			&c.BinderName, &c.BinderType, &c.Origin,
+			&c.Grader, &c.Grade, &c.Signed,
 			&sID, &c.TypeLine, &c.ManaCost, &c.OracleText, &colorsJSON, &hasImage, &c.HasBack,
 			&priceEur, &priceFoil, &styles); err != nil {
 			return nil, nil, err
@@ -375,6 +380,9 @@ type variantOut struct {
 	BinderName    string   `json:"binderName"`
 	BinderType    string   `json:"binderType"`
 	MarketPrice   *float64 `json:"marketPrice"`
+	Grader        string   `json:"grader,omitempty"`
+	Grade         float64  `json:"grade,omitempty"`
+	Signed        bool     `json:"signed,omitempty"`
 }
 
 type groupOut struct {
@@ -473,6 +481,7 @@ func buildGroups(rows []*cardRow, sets map[string]string) []*groupOut {
 				Language: v.Language, Foil: v.Foil, Condition: v.Condition, Quantity: v.Quantity,
 				PurchasePrice: v.PurchasePrice, Currency: v.Currency, Added: v.Added,
 				BinderName: v.BinderName, BinderType: v.BinderType, MarketPrice: mpp,
+				Grader: v.Grader, Grade: v.Grade, Signed: v.Signed,
 			})
 		}
 		out = append(out, g)

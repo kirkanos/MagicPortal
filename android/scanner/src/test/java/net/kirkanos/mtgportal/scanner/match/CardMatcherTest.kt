@@ -95,7 +95,7 @@ class CardMatcherTest {
         assertEquals("Bruce Banner // The Incredible Hulk", index.printing(idx[0]).name)
         assertTrue(score > 0.9f)
         // ... while "A Little Chat" keeps its "A".
-        assertEquals("A Little Chat", index.printing(matcher.bestNames("A Little Chat")!!.first[0]).name)
+        assertEquals("A Little Chat", index.printing(matcher.bestNames("A Little Chat")!!.cards[0]).name)
     }
 
     // ---- readings from the first scans on the device (24.10.2026) ----

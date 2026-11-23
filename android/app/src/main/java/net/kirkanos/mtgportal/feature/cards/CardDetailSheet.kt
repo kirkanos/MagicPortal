@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
@@ -47,6 +49,7 @@ import kotlinx.coroutines.launch
 import net.kirkanos.mtgportal.R
 import net.kirkanos.mtgportal.core.ui.components.HelpButton
 import net.kirkanos.mtgportal.core.model.Condition
+import net.kirkanos.mtgportal.core.model.Grading
 import net.kirkanos.mtgportal.core.model.ImageUrls
 import net.kirkanos.mtgportal.core.model.Language
 import net.kirkanos.mtgportal.core.model.SetCode
@@ -98,6 +101,7 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
     val volatileText = stringResource(R.string.detail_edit_volatile)
     val mergedText = stringResource(R.string.detail_edit_merged)
     val reprintedText = stringResource(R.string.detail_edit_reprinted)
+    val splitText = stringResource(R.string.detail_edit_split)
 
     fun write(block: suspend () -> String?) {
         if (busy) return
@@ -153,6 +157,8 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("${Language.flag(v.language)} ${v.language.ifEmpty { "?" }.uppercase()}")
                         if (v.foil.isNotEmpty() && v.foil != "normal") Badge(v.foil, PortalColors.Accent2, foreground = PortalColors.Text)
+                        if (v.grader.isNotEmpty()) Badge("${v.grader} ${Grading.format(v.grade)}", PortalColors.Accent)
+                        if (v.signed) Text("✍")
                         Text(Condition.label(v.condition), color = PortalColors.TextDim, modifier = Modifier.weight(1f))
                         Text("×${v.quantity}")
                         Text(Format.eur(v.marketPrice), modifier = Modifier.width(76.dp), maxLines = 1)
@@ -214,16 +220,20 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
             write {
                 when (val r = c.collectionWrite.patch(v.id, patch)) {
                     is ApiResult.Success -> {
+                        // A graded or signed copy split off: the rest of its row stays.
+                        val split = r.data.source != null || r.data.sourceDeleted
+                        r.data.source?.let { rows = applyWrite(rows, it) }
                         if (patch.setCode != null) {
                             // Another card now: the copies leave this one; the grid reloads.
-                            rows = applyWrite(rows, null, setOf(v.id))
+                            if (!split || r.data.sourceDeleted) rows = applyWrite(rows, null, setOf(v.id))
                             if (rows.isEmpty()) onDismiss()
                             val row = r.data.row
                             return@write row?.let { reprintedText.format("${it.setName} (${it.setCode} #${it.collectorNumber})") }
                         }
                         val merged = r.data.mergedInto != 0L
-                        rows = applyWrite(rows, r.data.row, if (merged) setOf(v.id) else emptySet())
+                        rows = applyWrite(rows, r.data.row, if (merged || r.data.sourceDeleted) setOf(v.id) else emptySet())
                         when {
+                            split -> splitText
                             v.origin == "csv" -> volatileText
                             merged -> mergedText
                             else -> null
@@ -266,6 +276,11 @@ private fun EditVariantDialog(v: VariantDto, printings: List<PrintDto>, onSave: 
     var printsOpen by remember { mutableStateOf(false) }
     fun printLabel(p: PrintDto) = "${p.setName.ifEmpty { p.setCode }} (${p.setCode.uppercase()} #${p.collectorNumber})"
     // A value outside the lists (old ManaBox spellings) stays selectable.
+    var grader by remember { mutableStateOf(if (v.grader.isEmpty() || v.grader in Grading.COMPANIES) v.grader else Grading.OTHER) }
+    var otherGrader by remember { mutableStateOf(if (v.grader in Grading.COMPANIES) "" else v.grader) }
+    var grade by remember { mutableStateOf(if (v.grade > 0) v.grade else 10.0) }
+    var gradesOpen by remember { mutableStateOf(false) }
+    var signed by remember { mutableStateOf(v.signed) }
     val langs = if (curLang in Language.CODES) Language.CODES else listOf(curLang) + Language.CODES
     val conds = if (curCond in Condition.ORDER) Condition.ORDER else listOf(curCond) + Condition.ORDER
 
@@ -298,12 +313,43 @@ private fun EditVariantDialog(v: VariantDto, printings: List<PrintDto>, onSave: 
                     when (it) { "foil" -> "Foil"; "etched" -> "Etched"; else -> stringResource(R.string.detail_edit_normal) }
                 }) { foil = it }
                 Choices(stringResource(R.string.detail_edit_condition), conds, cond, { Condition.label(it) }) { cond = it }
+                Choices(stringResource(R.string.detail_edit_grader), listOf("") + Grading.COMPANIES + Grading.OTHER, grader, {
+                    when (it) { "" -> stringResource(R.string.detail_edit_not_graded); Grading.OTHER -> stringResource(R.string.detail_edit_other_grader); else -> it }
+                }) { grader = it }
+                if (grader == Grading.OTHER) {
+                    OutlinedTextField(otherGrader, { otherGrader = it.take(20) }, singleLine = true, label = { Text(stringResource(R.string.detail_edit_grader)) })
+                }
+                if (grader.isNotEmpty()) {
+                    Text(stringResource(R.string.detail_edit_grade), style = MaterialTheme.typography.labelLarge)
+                    Box {
+                        OutlinedButton(onClick = { gradesOpen = true }) { Text(Grading.format(grade)) }
+                        DropdownMenu(expanded = gradesOpen, onDismissRequest = { gradesOpen = false }) {
+                            Grading.GRADES.forEach { x -> DropdownMenuItem(text = { Text(Grading.format(x)) }, onClick = { grade = x; gradesOpen = false }) }
+                        }
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(signed, { signed = it })
+                    Text(stringResource(R.string.detail_edit_signed))
+                }
+                if (v.origin == "csv" || v.quantity > 1) {
+                    Text(
+                        stringResource(if (v.origin == "csv") R.string.detail_edit_split_hint_csv else R.string.detail_edit_split_hint),
+                        fontSize = 12.sp, color = PortalColors.TextDim,
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 val reprint = print !== curPrint
+                val newGrader = if (grader == Grading.OTHER) otherGrader.trim() else grader
+                val newGrade = if (newGrader.isEmpty()) 0.0 else grade
+                val gradingChanged = newGrader != v.grader || (newGrader.isNotEmpty() && newGrade != v.grade)
                 val patch = RowPatchDto(
+                    grader = if (gradingChanged) newGrader else null,
+                    grade = if (gradingChanged) newGrade else null,
+                    signed = signed.takeIf { it != v.signed },
                     setCode = if (reprint) SetCode.key(print.setCode) else null,
                     collectorNumber = if (reprint) print.collectorNumber else null,
                     language = lang.takeIf { it != curLang },

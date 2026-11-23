@@ -63,24 +63,60 @@ class CatalogIndex private constructor(
     private val ids: Array<String>,
     private val flags: IntArray,
     val sets: Map<String, CatalogSet>,
+    /** Printed names in other languages: [printed, English name, language]. */
+    private val foreign: List<Triple<String, String, String>> = emptyList(),
 ) {
     private val byKey: HashMap<String, Int> = HashMap<String, Int>(setCodes.size * 2).apply {
         for (i in setCodes.indices) put(key(setCodes[i], numbers[i]), i)
     }
 
-    /** Normalised name (and each face of a double-faced card) -> printing indices. */
-    val byName: Map<String, IntArray> = run {
+    /**
+     * Normalised name (and each face of a double-faced card) -> printing
+     * indices. A German name leads to the English card's printings.
+     */
+    val byName: Map<String, IntArray>
+
+    /** Normalised names that exist only as a foreign name -> their language. */
+    val nameLanguage: Map<String, String>
+
+    /** English name -> its normalised names in other languages (and their faces). */
+    private val foreignOf: Map<String, List<String>>
+
+    init {
         val tmp = HashMap<String, MutableList<Int>>()
-        for (i in names.indices) {
-            val full = names[i]
-            tmp.getOrPut(NameNormalizer.normalize(full)) { mutableListOf() } += i
-            if ("//" in full) full.split("//").forEach { face ->
+        fun addName(name: String, i: Int) {
+            tmp.getOrPut(NameNormalizer.normalize(name)) { mutableListOf() } += i
+            if ("//" in name) name.split("//").forEach { face ->
                 val n = NameNormalizer.normalize(face)
                 if (n.isNotEmpty()) tmp.getOrPut(n) { mutableListOf() } += i
             }
         }
-        tmp.mapValues { it.value.distinct().toIntArray() }
+        val byEnglish = HashMap<String, MutableList<Int>>()
+        for (i in names.indices) {
+            addName(names[i], i)
+            byEnglish.getOrPut(names[i]) { mutableListOf() } += i
+        }
+        val english = tmp.keys.toHashSet()
+        val langs = HashMap<String, String>()
+        val alias = HashMap<String, MutableList<String>>()
+        for ((printed, name, lang) in foreign) {
+            val ids = byEnglish[name] ?: continue
+            ids.forEach { addName(printed, it) }
+            val forms = listOf(printed) + if ("//" in printed) printed.split("//") else emptyList()
+            for (f in forms) {
+                val n = NameNormalizer.normalize(f)
+                if (n.isEmpty()) continue
+                alias.getOrPut(name) { mutableListOf() } += n
+                if (n !in english) langs[n] = lang
+            }
+        }
+        byName = tmp.mapValues { it.value.distinct().toIntArray() }
+        nameLanguage = langs
+        foreignOf = alias
     }
+
+    /** The normalised foreign names of a card (English catalog name). */
+    fun foreignNames(name: String): List<String> = foreignOf[name].orEmpty()
 
     val size get() = setCodes.size
 
@@ -104,7 +140,11 @@ class CatalogIndex private constructor(
     companion object {
         private fun key(set: String, number: String) = set.lowercase() + "|" + number.lowercase()
 
-        /** Parses the JSON of /api/catalog/index: {"sets":[[...]],"cards":[[set,num,name,id,flags]]}. */
+        /**
+         * Parses the JSON of /api/catalog/index:
+         * {"sets":[[...]],"cards":[[set,num,name,id,flags]],"names":[[printed,name,lang]]}.
+         * "names" is missing from older servers.
+         */
         fun parse(json: String): CatalogIndex {
             val root = JSONObject(json)
             val setArr = root.getJSONArray("sets")
@@ -130,8 +170,14 @@ class CatalogIndex private constructor(
                 ids[i] = c.getString(3)
                 flags[i] = c.optInt(4)
             }
+            val foreignArr = root.optJSONArray("names")
+            val foreign = ArrayList<Triple<String, String, String>>(foreignArr?.length() ?: 0)
+            if (foreignArr != null) for (i in 0 until foreignArr.length()) {
+                val f = foreignArr.getJSONArray(i)
+                foreign += Triple(f.getString(0), f.getString(1), f.optString(2, "de"))
+            }
             @Suppress("UNCHECKED_CAST")
-            return CatalogIndex(setCodes as Array<String>, numbers as Array<String>, names as Array<String>, ids as Array<String>, flags, sets)
+            return CatalogIndex(setCodes as Array<String>, numbers as Array<String>, names as Array<String>, ids as Array<String>, flags, sets, foreign)
         }
     }
 }

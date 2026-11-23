@@ -528,6 +528,14 @@
     <string name="detail_edit_merged">Changed and merged with the existing entry.</string>
     <string name="detail_edit_printing">Printing</string>
     <string name="detail_edit_reprinted">Changed to %1$s.</string>
+    <string name="detail_edit_grader">Grading</string>
+    <string name="detail_edit_not_graded">Not graded</string>
+    <string name="detail_edit_other_grader">Other</string>
+    <string name="detail_edit_grade">Grade</string>
+    <string name="detail_edit_signed">Signed</string>
+    <string name="detail_edit_split_hint">Graded or signed is always a single copy: it is split off into a row of its own.</string>
+    <string name="detail_edit_split_hint_csv">Graded or signed is always a single copy: it is split off into a row of its own. Take it out in ManaBox, or it counts twice after the next import.</string>
+    <string name="detail_edit_split">One copy split off into a row of its own.</string>
     <string name="detail_origin_app">from the app</string>
     <string name="detail_edit_volatile">Changed – but this is a ManaBox row: the next ManaBox import resets it.</string>
     <string name="binders_rename">Rename</string>
