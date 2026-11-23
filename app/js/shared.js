@@ -502,11 +502,6 @@ function syncWishButtons(name) {
   });
 }
 
-const LANGUAGE_FLAG = {
-  en: '🇬🇧', de: '🇩🇪', fr: '🇫🇷', it: '🇮🇹', es: '🇪🇸', pt: '🇵🇹',
-  ja: '🇯🇵', ko: '🇰🇷', ru: '🇷🇺', zhs: '🇨🇳', zht: '🇹🇼',
-};
-
 /* ---- grading and signature of single copies ---- */
 
 const GRADERS = ['PSA', 'BGS', 'CGC', 'SGC', 'TAG'];
@@ -569,8 +564,36 @@ function gradingFieldsValue() {
 // The languages a copy can be entered in, in ManaBox's spelling.
 const CARD_LANGS = ['en', 'de', 'fr', 'it', 'es', 'pt', 'ja', 'ko', 'ru', 'zhs', 'zht'];
 
+// Flags as inline SVG, not emoji: Windows shows flag emoji as two letters.
+// Simplified, 3:2, drawn small next to a language code.
+const FLAG_SVG = {
+  en: '<rect width="30" height="20" fill="#012169"/><path d="M0 0L30 20M30 0L0 20" stroke="#fff" stroke-width="4"/><path d="M0 0L30 20M30 0L0 20" stroke="#C8102E" stroke-width="1.5"/><path d="M15 0V20M0 10H30" stroke="#fff" stroke-width="6"/><path d="M15 0V20M0 10H30" stroke="#C8102E" stroke-width="3.5"/>',
+  de: '<rect width="30" height="20" fill="#FFCE00"/><rect width="30" height="13.33" fill="#DD0000"/><rect width="30" height="6.67" fill="#000"/>',
+  fr: '<rect width="30" height="20" fill="#EF4135"/><rect width="20" height="20" fill="#fff"/><rect width="10" height="20" fill="#0055A4"/>',
+  it: '<rect width="30" height="20" fill="#CE2B37"/><rect width="20" height="20" fill="#fff"/><rect width="10" height="20" fill="#009246"/>',
+  es: '<rect width="30" height="20" fill="#AA151B"/><rect y="5" width="30" height="10" fill="#F1BF00"/>',
+  pt: '<rect width="30" height="20" fill="#FF0000"/><rect width="12" height="20" fill="#006600"/><circle cx="12" cy="10" r="4" fill="#FFCC00"/>',
+  ja: '<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="6" fill="#BC002D"/>',
+  ko: '<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="5.5" fill="#0047A0"/><path d="M9.5 10a5.5 5.5 0 0 1 11 0z" fill="#CD2E3A"/>',
+  ru: '<rect width="30" height="20" fill="#D52B1E"/><rect width="30" height="13.33" fill="#0039A6"/><rect width="30" height="6.67" fill="#fff"/>',
+  zhs: '<rect width="30" height="20" fill="#EE1C25"/><path d="M6 3l1.18 3.63h3.82l-3.09 2.24 1.18 3.63L6 10.26 2.91 12.5l1.18-3.63L1 6.63h3.82z" fill="#FFFF00"/>',
+  zht: '<rect width="30" height="20" fill="#FE0000"/><rect width="15" height="10" fill="#000095"/><circle cx="7.5" cy="5" r="2.6" fill="#fff"/>',
+};
+
+const LANGUAGE_FLAG_TEXT = {
+  en: '🇬🇧', de: '🇩🇪', fr: '🇫🇷', it: '🇮🇹', es: '🇪🇸', pt: '🇵🇹',
+  ja: '🇯🇵', ko: '🇰🇷', ru: '🇷🇺', zhs: '🇨🇳', zht: '🇹🇼',
+};
+
+/* The flag of a card language as HTML (inline SVG); '' when unknown. */
 function languageFlag(lang) {
-  return LANGUAGE_FLAG[String(lang || '').toLowerCase()] || '';
+  const svg = FLAG_SVG[String(lang || '').toLowerCase()];
+  return svg ? `<svg class="flag" viewBox="0 0 30 20" aria-hidden="true">${svg}</svg>` : '';
+}
+
+/* The flag as emoji, for places that take only text (<option>). */
+function languageFlagText(lang) {
+  return LANGUAGE_FLAG_TEXT[String(lang || '').toLowerCase()] || '';
 }
 
 // Official, standard card types (keeps joke/Un-set oddities out). type_line per

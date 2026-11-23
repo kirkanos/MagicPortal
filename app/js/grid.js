@@ -304,6 +304,15 @@ function armLoadMore() {
   loadMoreObserver.observe(sentinel);
 }
 
+/* Grading on the tile: the best grade among the copies, a pen when one is signed. */
+function tileGradingHTML(g) {
+  const graded = (g.variants || []).filter((v) => v.grader).sort((a, b) => b.grade - a.grade);
+  const signed = (g.variants || []).some((v) => v.signed);
+  if (!graded.length && !signed) return '';
+  const label = graded.length ? `${escapeHTML(graded[0].grader)} ${formatGrade(graded[0].grade)}` : '';
+  return `<span class="grade-tile" title="${t('Gegradet / unterschrieben', 'Graded / signed')}">${label}${signed ? (label ? ' ' : '') + '✍' : ''}</span>`;
+}
+
 function buildCardTile(g) {
   const img = cardImage(g.rep, 'small');
   const flags = g.langs
@@ -332,6 +341,7 @@ function buildCardTile(g) {
     <div class="thumb">
       ${img ? `<img loading="lazy" src="${img}" alt="${escapeHTML(g.name)}">` : `<div class="no-image">${t('Kein Bild', 'No image')}</div>`}
       ${g.anyFoil ? '<span class="foil-badge">Foil</span>' : ''}
+      ${tileGradingHTML(g)}
       ${g.totalQty > 1 ? `<span class="qty-badge">×${g.totalQty}</span>` : ''}
       ${flags ? `<div class="lang-flags">${flags}</div>` : ''}
     </div>
@@ -594,7 +604,7 @@ async function editRow(act, id) {
       document.getElementById('row-edit').innerHTML = `
         <span>${t('Ändern', 'Change')}:</span>
         <select id="row-print" title="${t('Edition', 'Printing')}">${printOptionsHTML(g)}</select>
-        <select id="row-lang" title="${t('Sprache', 'Language')}">${opts(CARD_LANGS, v.language || 'en', (l) => `${languageFlag(l)} ${l.toUpperCase()}`)}</select>
+        <select id="row-lang" title="${t('Sprache', 'Language')}">${opts(CARD_LANGS, v.language || 'en', (l) => `${languageFlagText(l)} ${l.toUpperCase()}`)}</select>
         <select id="row-foil" title="Foil">${opts(['normal', 'foil', 'etched'], v.foil || 'normal', (f) => (f === 'normal' ? t('Normal', 'Normal') : f === 'foil' ? 'Foil' : 'Etched'))}</select>
         <select id="row-cond" title="${t('Zustand', 'Condition')}">${opts(CONDITION_ORDER, v.condition || 'near_mint', conditionLabel)}</select>
         ${gradingFieldsHTML(v)}
