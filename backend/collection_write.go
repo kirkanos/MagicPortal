@@ -417,6 +417,10 @@ type rowPatch struct {
 	Language      *string  `json:"language"`
 	Condition     *string  `json:"condition"`
 	PurchasePrice *float64 `json:"purchasePrice"`
+	// SetCode and CollectorNumber together change the printing (edition) of
+	// the row; name, set name, rarity and Scryfall id follow from the catalog.
+	SetCode         *string `json:"setCode"`
+	CollectorNumber *string `json:"collectorNumber"`
 }
 
 type patchResult struct {
@@ -506,8 +510,27 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 		}
 		next.PurchasePrice = *p.PurchasePrice
 	}
-	ts := now.UTC().Format(time.RFC3339)
 	setCode := strings.ToLower(cur.SetCode)
+	number := cur.CollectorNumber
+	var cat *catalogFacts
+	if (p.SetCode == nil) != (p.CollectorNumber == nil) {
+		return res, "", badItem(-1, "setCode and collectorNumber go together")
+	}
+	if p.SetCode != nil {
+		set := strings.ToLower(strings.TrimSpace(*p.SetCode))
+		num := strings.TrimSpace(*p.CollectorNumber)
+		if set != setCode || num != number {
+			c, err := catalogPrintingTx(tx, set, num)
+			if errors.Is(err, sql.ErrNoRows) {
+				return res, "", &writeError{http.StatusNotFound, -1, fmt.Sprintf("%s #%s is not in the catalog", strings.ToUpper(set), num)}
+			}
+			if err != nil {
+				return res, "", err
+			}
+			cat, setCode, number = &c, set, c.number
+		}
+	}
+	ts := now.UTC().Format(time.RFC3339)
 
 	var op string
 	switch {
@@ -517,7 +540,7 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 		}
 		res.Deleted, op = true, "delete"
 
-	case next.BinderName != cur.BinderName || next.Foil != cur.Foil || next.Language != cur.Language || next.Condition != cur.Condition:
+	case cat != nil || next.BinderName != cur.BinderName || next.Foil != cur.Foil || next.Language != cur.Language || next.Condition != cur.Condition:
 		given := ""
 		if p.BinderType != nil {
 			if given, err = normBinderType(*p.BinderType); err != nil {
@@ -533,8 +556,15 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 		var target int64
 		err := tx.QueryRow(`SELECT id FROM collection WHERE binder_name = ? AND set_code = ? AND collector_number = ?
 			AND foil = ? AND language = ? AND condition = ? AND origin = ?`,
-			next.BinderName, setCode, cur.CollectorNumber, next.Foil, next.Language, next.Condition, cur.Origin).Scan(&target)
+			next.BinderName, setCode, number, next.Foil, next.Language, next.Condition, cur.Origin).Scan(&target)
 		switch {
+		case err == nil && target == id:
+			// Same key after all (a number spelled differently): nothing moves.
+			if _, err := tx.Exec(`UPDATE collection SET quantity = ?, purchase_price = ?, updated_at = ? WHERE id = ?`,
+				next.Quantity, next.PurchasePrice, ts, id); err != nil {
+				return res, "", err
+			}
+			op = "update"
 		case err == nil:
 			// The target key exists: add the cards there, drop this row.
 			if _, err := tx.Exec(`UPDATE collection SET quantity = quantity + ?, updated_at = ? WHERE id = ?`, next.Quantity, ts, target); err != nil {
@@ -552,6 +582,13 @@ func patchRow(id int64, p rowPatch, now time.Time) (patchResult, string, error) 
 				return res, "", err
 			}
 			op = "move"
+			if cat != nil {
+				if _, err := tx.Exec(`UPDATE collection SET set_code = ?, collector_number = ?, name = ?, set_name = ?, rarity = ?,
+					scryfall_id = ? WHERE id = ?`, setCode, number, cat.name, cat.setName, cat.rarity, cat.scryfallID, id); err != nil {
+					return res, "", err
+				}
+				op = "reprint"
+			}
 		default:
 			return res, "", err
 		}

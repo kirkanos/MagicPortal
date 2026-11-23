@@ -30,4 +30,15 @@ class VariantEditsTest {
         val out = applyWrite(listOf(csvRow, foilRow), CollectionRowDto(id = 2, origin = "csv", foil = "foil", quantity = 3), setOf(1L))
         assertEquals(listOf(2L to 3), out.map { it.id to it.quantity })
     }
+
+    @Test
+    fun aChangedFinishTakesThePriceOfThatFinish() {
+        val out = applyWrite(listOf(csvRow, foilRow), CollectionRowDto(id = 1, origin = "csv", foil = "foil", language = "de", condition = "played", quantity = 2, binderName = "Box"))
+        val row = out.first { it.id == 1L }
+        assertEquals("de" to "played", row.language to row.condition)
+        assertEquals(9.0, row.marketPrice!!, 0.0)
+        // No variant with the new finish: the price is unknown, not the old one.
+        val etched = applyWrite(listOf(csvRow), CollectionRowDto(id = 1, origin = "csv", foil = "etched", quantity = 2))
+        assertEquals(null, etched.single().marketPrice)
+    }
 }

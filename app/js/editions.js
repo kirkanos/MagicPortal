@@ -516,7 +516,6 @@ let eoSelecting = false;
 const eoSelected = new Map(); // collectorNumber -> card (owned ones only)
 
 const ADD_LANG_KEY = 'mtg_add_lang';
-const ADD_LANGS = ['en', 'de', 'fr', 'it', 'es', 'pt', 'ja', 'ko', 'ru', 'zhs', 'zht'];
 
 function binderTypeSelectHTML(id) {
   return `<select id="${id}" title="${t('Typ, falls der Ordner neu ist', 'Type, if the folder is new')}">
@@ -548,7 +547,7 @@ function ownershipEditHTML(card) {
     .join('');
   let lang = 'en';
   try { lang = localStorage.getItem(ADD_LANG_KEY) || 'en'; } catch (e) { /* ignore */ }
-  const langOpts = ADD_LANGS.map((l) => `<option value="${l}"${l === lang ? ' selected' : ''}>${languageFlag(l)} ${l.toUpperCase()}</option>`).join('');
+  const langOpts = CARD_LANGS.map((l) => `<option value="${l}"${l === lang ? ' selected' : ''}>${languageFlag(l)} ${l.toUpperCase()}</option>`).join('');
   return `
     ${o
       ? `<h3 class="lang-table-title">${t('In deiner Sammlung', 'In your collection')} (${o.copies}×)</h3>

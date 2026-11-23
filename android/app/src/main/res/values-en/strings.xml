@@ -519,6 +519,15 @@
         <item quantity="other">Handed over: %1$d cards count as ManaBox cards now (%2$d removed in the meantime).</item>
     </plurals>
     <string name="detail_move">Move</string>
+    <string name="detail_edit">Edit</string>
+    <string name="detail_edit_title">Change copy</string>
+    <string name="detail_edit_language">Language</string>
+    <string name="detail_edit_finish">Finish</string>
+    <string name="detail_edit_normal">Normal</string>
+    <string name="detail_edit_condition">Condition</string>
+    <string name="detail_edit_merged">Changed and merged with the existing entry.</string>
+    <string name="detail_edit_printing">Printing</string>
+    <string name="detail_edit_reprinted">Changed to %1$s.</string>
     <string name="detail_origin_app">from the app</string>
     <string name="detail_edit_volatile">Changed – but this is a ManaBox row: the next ManaBox import resets it.</string>
     <string name="binders_rename">Rename</string>

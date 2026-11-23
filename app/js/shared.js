@@ -507,6 +507,9 @@ const LANGUAGE_FLAG = {
   ja: '🇯🇵', ko: '🇰🇷', ru: '🇷🇺', zhs: '🇨🇳', zht: '🇹🇼',
 };
 
+// The languages a copy can be entered in, in ManaBox's spelling.
+const CARD_LANGS = ['en', 'de', 'fr', 'it', 'es', 'pt', 'ja', 'ko', 'ru', 'zhs', 'zht'];
+
 function languageFlag(lang) {
   return LANGUAGE_FLAG[String(lang || '').toLowerCase()] || '';
 }
@@ -755,6 +758,7 @@ function cardGroupModalHTML(group) {
             <button type="button" data-act="minus" data-id="${v.id}" title="${t('Ein Exemplar weniger', 'One copy less')}">−1</button>
             <button type="button" data-act="plus" data-id="${v.id}" title="${t('Ein Exemplar mehr', 'One copy more')}">+1</button>
             <button type="button" data-act="move" data-id="${v.id}">${t('Ordner…', 'Folder…')}</button>
+            <button type="button" data-act="edit" data-id="${v.id}" title="${t('Sprache, Foil und Zustand ändern', 'Change language, finish and condition')}">${t('Bearbeiten…', 'Edit…')}</button>
           </td>` : ''}
         </tr>`;
     })
@@ -804,6 +808,8 @@ async function loadCardVariants(group) {
   } catch (e) {
     /* ignore */
   }
+  // Kept for changing the printing of a row (grid.js).
+  group.prints = prints;
   // Drop the printing that is currently open – only OTHER editions are listed.
   const others = prints.filter(
     (p) =>

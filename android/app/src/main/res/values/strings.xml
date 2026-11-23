@@ -540,6 +540,15 @@
         <item quantity="other">Übergeben: %1$d Karten zählen jetzt als ManaBox-Karten (%2$d inzwischen entfernt).</item>
     </plurals>
     <string name="detail_move">Verschieben</string>
+    <string name="detail_edit">Bearbeiten</string>
+    <string name="detail_edit_title">Exemplar ändern</string>
+    <string name="detail_edit_language">Sprache</string>
+    <string name="detail_edit_finish">Ausführung</string>
+    <string name="detail_edit_normal">Normal</string>
+    <string name="detail_edit_condition">Zustand</string>
+    <string name="detail_edit_merged">Geändert und mit dem vorhandenen Eintrag zusammengeführt.</string>
+    <string name="detail_edit_printing">Edition</string>
+    <string name="detail_edit_reprinted">Nach %1$s geändert.</string>
     <string name="detail_origin_app">aus der App</string>
     <string name="detail_edit_volatile">Geändert – aber das ist eine ManaBox-Zeile: der nächste ManaBox-Import setzt sie zurück.</string>
     <string name="binders_rename">Umbenennen</string>

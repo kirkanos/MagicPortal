@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,7 +15,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -71,7 +78,7 @@ import net.kirkanos.mtgportal.core.ui.theme.PortalColors
  * totals, the wishlist star, one row per language/finish/condition variant and
  * the other printings of the card.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
     val c = appContainer()
@@ -86,8 +93,11 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
     var busy by remember(g.key) { mutableStateOf(false) }
     var notice by remember(g.key) { mutableStateOf<String?>(null) }
     var moving by remember(g.key) { mutableStateOf<VariantDto?>(null) }
+    var editing by remember(g.key) { mutableStateOf<VariantDto?>(null) }
     var binders by remember { mutableStateOf<List<BinderDto>>(emptyList()) }
     val volatileText = stringResource(R.string.detail_edit_volatile)
+    val mergedText = stringResource(R.string.detail_edit_merged)
+    val reprintedText = stringResource(R.string.detail_edit_reprinted)
 
     fun write(block: suspend () -> String?) {
         if (busy) return
@@ -154,7 +164,7 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
                     ).joinToString(" · ")
                     if (meta.isNotEmpty()) Text(meta, fontSize = 12.sp, color = PortalColors.TextDim)
                     if (unlocked && v.id != 0L) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        FlowRow(verticalArrangement = Arrangement.Center) {
                             TextButton(enabled = !busy, onClick = {
                                 write {
                                     when (val r = c.collectionWrite.patch(v.id, RowPatchDto(quantityDelta = -1))) {
@@ -178,6 +188,7 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
                                 moving = v
                                 scope.launch { (safeCall { c.api.binders() } as? ApiResult.Success)?.let { binders = it.data } }
                             }) { Text(stringResource(R.string.detail_move)) }
+                            TextButton(enabled = !busy, onClick = { editing = v }) { Text(stringResource(R.string.detail_edit)) }
                         }
                     }
                 }
@@ -195,6 +206,35 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
         }
     }
 
+    editing?.let { v ->
+        val current = PrintDto(setCode = g.setCode, setName = g.setName, collectorNumber = g.collectorNumber)
+        EditVariantDialog(v, listOf(current) + prints.orEmpty(), onDismiss = { editing = null }, onSave = { patch ->
+            editing = null
+            if (patch == null) return@EditVariantDialog
+            write {
+                when (val r = c.collectionWrite.patch(v.id, patch)) {
+                    is ApiResult.Success -> {
+                        if (patch.setCode != null) {
+                            // Another card now: the copies leave this one; the grid reloads.
+                            rows = applyWrite(rows, null, setOf(v.id))
+                            if (rows.isEmpty()) onDismiss()
+                            val row = r.data.row
+                            return@write row?.let { reprintedText.format("${it.setName} (${it.setCode} #${it.collectorNumber})") }
+                        }
+                        val merged = r.data.mergedInto != 0L
+                        rows = applyWrite(rows, r.data.row, if (merged) setOf(v.id) else emptySet())
+                        when {
+                            v.origin == "csv" -> volatileText
+                            merged -> mergedText
+                            else -> null
+                        }
+                    }
+                    else -> failure(r)
+                }
+            }
+        })
+    }
+
     moving?.let { v ->
         MoveDialog(v, binders, g.setCode, onDismiss = { moving = null }, onPick = { target ->
             moving = null
@@ -210,6 +250,71 @@ fun CardDetailSheet(g: CardGroupDto, onDismiss: () -> Unit) {
             }
         })
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun EditVariantDialog(v: VariantDto, printings: List<PrintDto>, onSave: (RowPatchDto?) -> Unit, onDismiss: () -> Unit) {
+    val curLang = v.language.ifEmpty { "en" }
+    val curFoil = v.foil.ifEmpty { "normal" }
+    val curCond = v.condition.ifEmpty { "near_mint" }
+    var lang by remember { mutableStateOf(curLang) }
+    var foil by remember { mutableStateOf(curFoil) }
+    var cond by remember { mutableStateOf(curCond) }
+    val curPrint = printings.first()
+    var print by remember { mutableStateOf(curPrint) }
+    var printsOpen by remember { mutableStateOf(false) }
+    fun printLabel(p: PrintDto) = "${p.setName.ifEmpty { p.setCode }} (${p.setCode.uppercase()} #${p.collectorNumber})"
+    // A value outside the lists (old ManaBox spellings) stays selectable.
+    val langs = if (curLang in Language.CODES) Language.CODES else listOf(curLang) + Language.CODES
+    val conds = if (curCond in Condition.ORDER) Condition.ORDER else listOf(curCond) + Condition.ORDER
+
+    @Composable
+    fun Choices(title: String, options: List<String>, selected: String, label: @Composable (String) -> String, onPick: (String) -> Unit) {
+        Text(title, style = MaterialTheme.typography.labelLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            options.forEach { o -> FilterChip(selected = o == selected, onClick = { onPick(o) }, label = { Text(label(o)) }) }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.detail_edit_title)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.detail_edit_printing), style = MaterialTheme.typography.labelLarge)
+                Box {
+                    OutlinedButton(onClick = { printsOpen = true }, enabled = printings.size > 1, modifier = Modifier.fillMaxWidth()) {
+                        Text(printLabel(print), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    DropdownMenu(expanded = printsOpen, onDismissRequest = { printsOpen = false }) {
+                        printings.forEach { p ->
+                            DropdownMenuItem(text = { Text(printLabel(p)) }, onClick = { print = p; printsOpen = false })
+                        }
+                    }
+                }
+                Choices(stringResource(R.string.detail_edit_language), langs, lang, { "${Language.flag(it)} ${it.uppercase()}".trim() }) { lang = it }
+                Choices(stringResource(R.string.detail_edit_finish), listOf("normal", "foil", "etched"), foil, {
+                    when (it) { "foil" -> "Foil"; "etched" -> "Etched"; else -> stringResource(R.string.detail_edit_normal) }
+                }) { foil = it }
+                Choices(stringResource(R.string.detail_edit_condition), conds, cond, { Condition.label(it) }) { cond = it }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val reprint = print !== curPrint
+                val patch = RowPatchDto(
+                    setCode = if (reprint) SetCode.key(print.setCode) else null,
+                    collectorNumber = if (reprint) print.collectorNumber else null,
+                    language = lang.takeIf { it != curLang },
+                    foil = foil.takeIf { it != curFoil },
+                    condition = cond.takeIf { it != curCond },
+                )
+                onSave(if (patch == RowPatchDto()) null else patch)
+            }) { Text(stringResource(R.string.binder_note_save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) } },
+    )
 }
 
 @Composable

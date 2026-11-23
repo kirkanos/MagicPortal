@@ -187,6 +187,42 @@ func TestPatchRow(t *testing.T) {
 	}
 }
 
+func TestPatchRowChangesPrinting(t *testing.T) {
+	newTestDB(t)
+	seedWriteCatalog(t)
+	if _, err := db.Exec(`INSERT INTO sets(code, name) VALUES ('5ed', 'Fifth Edition');
+		INSERT INTO scryfall_cards(set_code, collector_number, scryfall_id, name, rarity) VALUES ('5ed', '77', 'id-bs5', 'Brainstorm', 'common')`); err != nil {
+		t.Fatal(err)
+	}
+	res := decode[addResult](t, call(t, "POST", "/api/collection/cards", `{"items":[
+		{"setCode":"ice","collectorNumber":"61","binderName":"Box","quantity":2},
+		{"setCode":"5ed","collectorNumber":"77","binderName":"Box","language":"de"}]}`))
+	ice, fifth := res.Items[0].ID, res.Items[1].ID
+	path := func(id int64) string { return "/api/collection/cards/" + itoa64(id) }
+
+	if rec := call(t, "PATCH", path(ice), `{"setCode":"5ed"}`); rec.Code != 400 {
+		t.Errorf("set without number: %d", rec.Code)
+	}
+	if rec := call(t, "PATCH", path(ice), `{"setCode":"5ed","collectorNumber":"999"}`); rec.Code != 404 {
+		t.Errorf("unknown printing: %d", rec.Code)
+	}
+	// Same printing, number spelled with a zero: nothing changes.
+	p := decode[patchResult](t, call(t, "PATCH", path(ice), `{"setCode":"ICE","collectorNumber":"061"}`))
+	if p.Row.ID != ice || p.Row.SetCode != "ICE" || p.MergedInto != 0 {
+		t.Errorf("same printing: %+v", p)
+	}
+	// A new printing takes the catalog's facts.
+	p = decode[patchResult](t, call(t, "PATCH", path(ice), `{"setCode":"5ed","collectorNumber":"77"}`))
+	if p.Row.ID != ice || p.Row.SetCode != "5ED" || p.Row.SetName != "Fifth Edition" || p.Row.ScryfallID != "id-bs5" || p.Row.Quantity != 2 {
+		t.Errorf("reprint: %+v", p.Row)
+	}
+	// Into a key that exists already (with the language): merged.
+	p = decode[patchResult](t, call(t, "PATCH", path(ice), `{"language":"de"}`))
+	if p.MergedInto != fifth || p.Row.Quantity != 3 {
+		t.Errorf("merge: %+v %+v", p, p.Row)
+	}
+}
+
 func TestEditingACSVRowIsVolatile(t *testing.T) {
 	newTestDB(t)
 	if _, err := importCSV(db, strings.NewReader(testCSV)); err != nil {

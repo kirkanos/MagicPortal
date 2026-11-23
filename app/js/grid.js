@@ -548,6 +548,17 @@ function applyRow(g, row, removed) {
   else document.getElementById('card-modal').classList.remove('open');
 }
 
+/* The printings of the open card as <option>s, the current one first; the
+   list comes from loadCardVariants (or is fetched if that has not finished). */
+function printOptionsHTML(g) {
+  const cur = { setCode: g.setCode, collectorNumber: g.collectorNumber, setName: g.setName };
+  const others = (g.prints || []).filter((p) => !((p.setCode || '').toLowerCase() === g.setCode.toLowerCase() && String(p.collectorNumber) === String(g.collectorNumber)));
+  return [cur, ...others].map((p) => {
+    const label = `${p.setName || p.setCode} (${String(p.setCode).toUpperCase()} #${p.collectorNumber})`;
+    return `<option value="${escapeHTML(String(p.setCode).toUpperCase() + '|' + p.collectorNumber)}">${escapeHTML(label)}</option>`;
+  }).join('');
+}
+
 async function editRow(act, id) {
   const g = modalGroup;
   const v = g && g.variants.find((x) => x.id === id);
@@ -573,6 +584,51 @@ async function editRow(act, id) {
         <select id="row-binder-type"><option value="binder">${t('Ordner', 'Binder')}</option><option value="list">${t('Liste', 'List')}</option><option value="deck">Deck</option></select>
         <button type="button" class="primary" data-act="move-ok" data-id="${id}">OK</button>`;
       document.getElementById('row-binder').focus();
+    } else if (act === 'edit') {
+      if (!g.prints) await loadCardVariants(g);
+      // Language, finish and condition of the row; a key that exists already
+      // in the same binder takes the copies over (the server merges).
+      const opts = (list, cur, label) => (list.includes(cur) || !cur ? list : [cur, ...list])
+        .map((x) => `<option value="${escapeHTML(x)}"${x === cur ? ' selected' : ''}>${escapeHTML(label(x))}</option>`).join('');
+      document.getElementById('row-edit').innerHTML = `
+        <span>${t('Ändern', 'Change')}:</span>
+        <select id="row-print" title="${t('Edition', 'Printing')}">${printOptionsHTML(g)}</select>
+        <select id="row-lang" title="${t('Sprache', 'Language')}">${opts(CARD_LANGS, v.language || 'en', (l) => `${languageFlag(l)} ${l.toUpperCase()}`)}</select>
+        <select id="row-foil" title="Foil">${opts(['normal', 'foil', 'etched'], v.foil || 'normal', (f) => (f === 'normal' ? t('Normal', 'Normal') : f === 'foil' ? 'Foil' : 'Etched'))}</select>
+        <select id="row-cond" title="${t('Zustand', 'Condition')}">${opts(CONDITION_ORDER, v.condition || 'near_mint', conditionLabel)}</select>
+        <button type="button" class="primary" data-act="edit-ok" data-id="${id}">OK</button>
+        <button type="button" data-act="edit-cancel" data-id="${id}">${t('Abbrechen', 'Cancel')}</button>`;
+      document.getElementById('row-print').focus();
+    } else if (act === 'edit-cancel') {
+      document.getElementById('row-edit').innerHTML = '';
+    } else if (act === 'edit-ok') {
+      const patch = {};
+      const lang = document.getElementById('row-lang').value;
+      const foil = document.getElementById('row-foil').value;
+      const cond = document.getElementById('row-cond').value;
+      const [set, num] = document.getElementById('row-print').value.split('|');
+      const printChanged = set.toLowerCase() !== g.setCode.toLowerCase() || num !== g.collectorNumber;
+      if (printChanged) Object.assign(patch, { setCode: set.toLowerCase(), collectorNumber: num });
+      if (lang !== (v.language || 'en')) patch.language = lang;
+      if (foil !== (v.foil || 'normal')) patch.foil = foil;
+      if (cond !== (v.condition || 'near_mint')) patch.condition = cond;
+      if (!Object.keys(patch).length) {
+        document.getElementById('row-edit').innerHTML = '';
+        return;
+      }
+      const r = await writeAPI('PATCH', `/collection/cards/${id}`, patch);
+      if (printChanged) {
+        // The copies now belong to another card: they leave this one, and
+        // the grid reloads to show them where they are now.
+        applyRow(g, null, [id]);
+        showNotice(t(`Nach ${r.row.setName} (${r.row.setCode} #${r.row.collectorNumber}) geändert.`,
+          `Changed to ${r.row.setName} (${r.row.setCode} #${r.row.collectorNumber}).`));
+        await refreshAfterWrite();
+        return;
+      }
+      applyRow(g, r.row, r.mergedInto ? [id] : []);
+      if (r.mergedInto) showNotice(t('Geändert und mit dem vorhandenen Eintrag zusammengeführt.', 'Changed and merged with the existing entry.'));
+      if (v.origin === 'csv') showNotice(t('Geändert – aber das ist eine ManaBox-Zeile: der nächste Import setzt sie zurück.', 'Changed – but this is a ManaBox row: the next import resets it.'));
     } else if (act === 'move-ok') {
       const name = binderValue('row-binder');
       if (name === null) return showNotice(t('Bitte einen Namen für den neuen Ordner eingeben.', 'Please enter a name for the new folder.'), true);
@@ -594,8 +650,8 @@ document.addEventListener('click', (e) => {
   if (btn) editRow(btn.dataset.act, Number(btn.dataset.id));
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && (e.target.id === 'row-binder' || e.target.id === 'row-binder-new')) {
-    const ok = document.querySelector('#row-edit [data-act="move-ok"]');
+  if (e.key === 'Enter' && ['row-binder', 'row-binder-new', 'row-print', 'row-lang', 'row-foil', 'row-cond'].includes(e.target.id)) {
+    const ok = document.querySelector('#row-edit [data-act="move-ok"], #row-edit [data-act="edit-ok"]');
     if (ok) ok.click();
   }
 });

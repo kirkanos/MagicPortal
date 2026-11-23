@@ -501,6 +501,7 @@ data class CollectionRowDto(
     val id: Long,
     val name: String = "",
     val setCode: String = "",
+    val setName: String = "",
     val collectorNumber: String = "",
     val quantity: Int = 0,
     val foil: String = "normal",
@@ -533,6 +534,9 @@ data class RowPatchDto(
     val foil: String? = null,
     val language: String? = null,
     val condition: String? = null,
+    /** With [collectorNumber]: change the printing (edition) of the row. */
+    val setCode: String? = null,
+    val collectorNumber: String? = null,
 )
 
 @Serializable

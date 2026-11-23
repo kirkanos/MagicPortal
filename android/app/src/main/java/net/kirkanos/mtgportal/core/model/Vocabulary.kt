@@ -36,6 +36,9 @@ object Language {
         "ja" to "🇯🇵", "ko" to "🇰🇷", "ru" to "🇷🇺", "zhs" to "🇨🇳", "zht" to "🇹🇼",
     )
 
+    /** The languages a copy can be entered in, in ManaBox's spelling (CARD_LANGS in shared.js). */
+    val CODES = listOf("en", "de", "fr", "it", "es", "pt", "ja", "ko", "ru", "zhs", "zht")
+
     fun flag(lang: String?): String = FLAG[lang.orEmpty().lowercase()].orEmpty()
 }
 
