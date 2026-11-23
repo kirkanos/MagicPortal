@@ -46,7 +46,7 @@ func collectionETag(db *sql.DB) string {
 	var count int
 	var maxUpdated sql.NullString
 	_ = db.QueryRow(`SELECT COUNT(*), MAX(updated_at) FROM collection`).Scan(&count, &maxUpdated)
-	return weakETag("c", fmt.Sprintf("%d|%s|%s|%s", count, maxUpdated.String, metaGet(db, "bulk_synced_at"), metaGet(db, "collection_rev")))
+	return weakETag("c", fmt.Sprintf("%d|%s|%s|%s", count, maxUpdated.String, metaGet(db, "bulk_synced_at")+metaGet(db, "names_synced_at"), metaGet(db, "collection_rev")))
 }
 
 type execer interface {

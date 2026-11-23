@@ -516,6 +516,15 @@ func doSync(force bool) error {
 			firstErr = err
 		}
 	}
+	// Names in other languages for the search: a big download, weekly.
+	if foreignNamesEnabled() && namesDue() {
+		if err := syncNames(db); err != nil {
+			log.Printf("[names] failed: %v", err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
 	// Record a value snapshot once the (possibly refreshed) prices are in place.
 	// Only when there is a collection to value, so history starts at first import.
 	if countRows(db, "collection") > 0 {

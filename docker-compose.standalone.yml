@@ -52,6 +52,9 @@ services:
       - IMAGE_SIZES=${IMAGE_SIZES:-small,normal}
       - IMAGE_RATE_PER_SECOND=${IMAGE_RATE_PER_SECOND:-10}
       - IMAGE_MAX_BYTES=${IMAGE_MAX_BYTES:-3221225472}
+      # Card names in every language for the search (default: on), from
+      # Scryfall's all_cards dump once a week (~400 MB download).
+      - FOREIGN_NAMES=${FOREIGN_NAMES:-true}
       # Image hash index for the Android scanner (default: off). Hashes the
       # small scans of old-frame and owned printings at night, ~350 MB fetched
       # once; HASH_SCOPE=collection|old|all.

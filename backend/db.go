@@ -83,6 +83,16 @@ CREATE TABLE IF NOT EXISTS image_files (
   fetched_at TEXT
 );
 
+-- Printed card names in every language (names.go): name is the English
+-- (oracle) name as in scryfall_cards and collection, printed the name on a
+-- printing in lang. Only non-English names; the search finds cards by them.
+CREATE TABLE IF NOT EXISTS card_names (
+  name    TEXT NOT NULL,
+  lang    TEXT NOT NULL,
+  printed TEXT NOT NULL,
+  PRIMARY KEY (name, lang, printed)
+) WITHOUT ROWID;
+
 -- Image hashes of card scans for the Android scanner (hashes.go). ts is the
 -- cache buster of the scan a hash came from: a new picture, a new hash.
 CREATE TABLE IF NOT EXISTS card_hashes (

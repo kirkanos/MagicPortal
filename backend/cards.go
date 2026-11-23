@@ -97,6 +97,10 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 		return cardIndexRows, cardIndexSets, nil
 	}
 
+	// Names in other languages, read before the rows: the query would need
+	// the one DB connection the open result set holds.
+	foreign := foreignNamesOf(db)
+
 	rows, err := db.Query(`
 		SELECT c.id, c.name, c.set_code, c.set_name, c.collector_number, c.rarity, c.foil, c.language,
 		       c.condition, c.quantity, c.purchase_price, c.currency, c.added, c.binder_name, c.binder_type, c.origin,
@@ -142,10 +146,10 @@ func cardRows() ([]*cardRow, map[string]string, error) {
 		if colorsJSON != nil {
 			c.Colors = colorsFromJSON(*colorsJSON)
 		}
-		// Same haystack as the browser: name, rules text and the mana cost
+		// Name, the names in other languages, rules text and the mana cost
 		// without braces and slashes.
 		stripped := strings.NewReplacer("{", "", "}", "", "/", "").Replace(c.ManaCost)
-		c.haystack = strings.ToLower(c.Name + " " + c.OracleText + " " + stripped)
+		c.haystack = strings.ToLower(c.Name + " " + foreign[c.Name] + " " + c.OracleText + " " + stripped)
 		c.types = cardTypesOf(c.TypeLine)
 		c.subtypes = cardSubtypesOf(c.TypeLine)
 		out = append(out, &c)

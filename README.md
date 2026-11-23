@@ -158,6 +158,9 @@ details in **[docs/roadmap.md](docs/roadmap.md)**.
 `HASH_INDEX` (default `false`) builds the image hash index the Android scanner uses for
 old and foreign cards: nightly at `HASH_SYNC_HOUR` (default 4), for `HASH_SCOPE`
 `old` (default: old frame before July 2003 plus the collection), `collection` or `all`.
+`FOREIGN_NAMES` (default `true`) lets the card search find cards by their printed names in
+every language (German, French, Japanese, …): once a week the names are taken from Scryfall's
+`all_cards` dump (~400 MB download, only the names are kept).
 `SYNC_INTERVAL_MINUTES` (default 5) controls the background interval,
 `METRICS_PORT` (default 9090, `off` = disabled) and `METRICS_CACHE_SECONDS` (default 30) the
 Prometheus endpoint.
